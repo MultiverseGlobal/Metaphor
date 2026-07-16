@@ -1,0 +1,109 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+
+:root {
+  --background: #030307;
+  --foreground: #f3f4f6;
+  
+  --card-bg: rgba(13, 13, 23, 0.65);
+  --card-border: rgba(95, 59, 246, 0.15);
+  --card-hover-border: rgba(95, 59, 246, 0.4);
+  
+  --accent-primary: #5f3bf6;
+  --accent-secondary: #00f2fe;
+  
+  /* Node Types Palette */
+  --color-person: #4facfe;
+  --color-meeting: #a18cd1;
+  --color-idea: #ff8177;
+  --color-decision: #f9d423;
+  --color-commit: #4caf50;
+  --color-project: #ec4899;
+  
+  /* Edge Dimensions Palette */
+  --color-structural: #9ca3af;
+  --color-semantic: #3b82f6;
+  --color-temporal: #f59e0b;
+
+  --font-sans: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(95, 59, 246, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(0, 242, 254, 0.06) 0px, transparent 50%);
+  background-attachment: fixed;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism Classes */
+.glass-panel {
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-panel:hover {
+  border-color: var(--card-hover-border);
+  box-shadow: 0 8px 32px 0 rgba(95, 59, 246, 0.1);
+}
+
+.glow-btn {
+  background: linear-gradient(135deg, var(--accent-primary), #4726df);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 15px rgba(95, 59, 246, 0.4);
+}
+
+.glow-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 25px rgba(95, 59, 246, 0.7);
+}
+
+.glow-text {
+  background: linear-gradient(to right, #fff, var(--accent-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.1);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(95, 59, 246, 0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(95, 59, 246, 0.6);
+}
+
+/* Pulse animation for running/indexing state */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(0, 242, 254, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 242, 254, 0.8);
+  }
+}
+
+.indexing-pulse {
+  animation: pulse-glow 2s infinite;
+}
