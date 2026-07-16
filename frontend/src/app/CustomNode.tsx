@@ -32,14 +32,15 @@ const CustomNodeComponent = ({ data }: { data: NodeData }) => {
   
   // Choose color theme based on node type
   const borderVar = `var(--color-${typeLower}, var(--accent-primary))`;
-  const bgVar = `rgba(13, 13, 23, 0.85)`;
+  const bgVar = `#ffffff`;
 
   return (
     <div 
-      className="glass-panel px-4 py-3 rounded-lg flex items-center gap-3 border shadow-lg hover:scale-105 transition-all min-w-[200px]"
+      className="timbal-panel px-4 py-3 flex items-center gap-3 border shadow-md hover:scale-105 transition-all min-w-[200px]"
       style={{
         borderColor: borderVar,
         background: bgVar,
+        borderRadius: "14px"
       }}
     >
       {/* Node handles for connections */}
@@ -51,9 +52,9 @@ const CustomNodeComponent = ({ data }: { data: NodeData }) => {
       
       {/* Icon Container */}
       <div 
-        className="p-2 rounded-md flex items-center justify-center text-white"
+        className="p-2 rounded-lg flex items-center justify-center text-white"
         style={{
-          backgroundColor: borderVar + "25", // Apply transparent alpha
+          backgroundColor: borderVar + "15", // Apply transparent alpha
           color: borderVar
         }}
       >
@@ -62,10 +63,10 @@ const CustomNodeComponent = ({ data }: { data: NodeData }) => {
 
       {/* Info Container */}
       <div className="flex flex-col text-left">
-        <span className="text-xs uppercase tracking-wider opacity-60 font-semibold" style={{ color: borderVar }}>
+        <span className="text-[10px] uppercase tracking-wider opacity-85 font-bold" style={{ color: borderVar }}>
           {data.type}
         </span>
-        <span className="text-sm font-semibold text-gray-100 max-w-[160px] truncate">
+        <span className="text-sm font-semibold text-slate-800 max-w-[160px] truncate">
           {data.name}
         </span>
       </div>

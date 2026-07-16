@@ -210,81 +210,197 @@ export default function Dashboard() {
     }
   };
 
+  // Composer Query State
+  const [composerQuery, setComposerQuery] = useState("");
+
+  const handleComposeSubmit = () => {
+    if (!composerQuery) return;
+    // Auto-search or explain connections matching query entities if present
+    // For V1, we search the nodes to see if we can auto-fill selections from query
+    const words = composerQuery.toLowerCase();
+    let foundA: string | null = null;
+    let foundB: string | null = null;
+
+    // Scan node names
+    for (const node of nodes) {
+      const nameLower = node.data.name.toLowerCase();
+      if (words.includes(nameLower)) {
+        if (!foundA) {
+          foundA = node.data.name;
+        } else if (foundA !== node.data.name) {
+          foundB = node.data.name;
+          break;
+        }
+      }
+    }
+
+    if (foundA && foundB) {
+      setSelectedNodeA(foundA);
+      setSelectedNodeB(foundB);
+      setActiveTab("explain");
+      // Trigger explain
+      setIsExplaining(true);
+      setExplanation("Asking Claude to analyze causal and semantic pathways...");
+      fetchFromMetaphor("/explain", {
+        node_a_name: foundA,
+        node_b_name: foundB
+      }).then(data => {
+        setExplanation(data.explanation);
+        setIsExplaining(false);
+      }).catch(err => {
+        setExplanation(`Could not explain connection: ${err.message}`);
+        setIsExplaining(false);
+      });
+    } else if (foundA) {
+      setSelectedNodeA(foundA);
+      alert(`Mapped query to object '${foundA}'. Select a second object to explain relationships.`);
+    } else {
+      alert("Type a query referencing mapped objects (e.g. 'Sarah Client Sync' or 'Value-based Pricing') to explain their relationship.");
+    }
+  };
+
   return (
-    <main className="min-h-screen flex flex-col p-4 md:p-6 select-none bg-[#030307]">
-      {/* HEADER SECTION */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-gray-800 pb-5">
-        <div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="text-[#00f2fe] h-6 w-6 animate-pulse" />
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight glow-text">
-              METAPHOR
-            </h1>
-            <span className="text-xs px-2 py-0.5 bg-[#5f3bf6]/20 border border-[#5f3bf6]/40 text-[#a18cd1] rounded-full uppercase tracking-wider font-semibold">
-              V1 Context Engine
-            </span>
+    <main className="min-h-screen flex flex-col p-4 md:p-6 select-none bg-white relative">
+      {/* Background gradient blur container */}
+      <div className="grainient-bg"></div>
+
+      {/* HEADER SECTION (TIMBAL STYLING) */}
+      <header className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-5 border-b border-slate-100">
+        <div className="flex items-center gap-3">
+          {/* Logo symbol */}
+          <div className="bg-slate-900 text-white p-2 rounded-xl flex items-center justify-center shadow-md">
+            <Sparkles className="h-5 w-5 text-[#00f2fe]" />
           </div>
-          <p className="text-sm text-gray-400 mt-1">
-            Metaphor builds a continuously evolving model of your world, enabling AI systems to reason over relationships, history, and context.
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 font-sans">
+                METAPHOR
+              </h1>
+              <span className="text-[10px] px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-600 rounded-full uppercase tracking-wider font-bold">
+                World Modeling
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Continuously evolving model of the user's world for multi-agent reasoning.
+            </p>
+          </div>
         </div>
         
         <div className="flex items-center gap-3">
-          {/* Quick Counter */}
-          <div className="hidden sm:flex items-center gap-4 text-xs text-gray-400 mr-2">
+          {/* Sync Stats badge */}
+          <div className="hidden sm:flex items-center gap-4 text-xs text-slate-500 mr-2 bg-slate-50 border border-slate-100 px-4 py-2 rounded-full font-medium">
             <div>
-              <span className="text-gray-100 font-bold block text-sm">{nodes.length}</span>
-              Objects Mapped
+              <span className="text-slate-900 font-bold inline">{nodes.length}</span> Objects Mapped
             </div>
-            <div className="border-l border-gray-800 h-6"></div>
+            <div className="border-l border-slate-200 h-4"></div>
             <div>
-              <span className="text-gray-100 font-bold block text-sm">{edges.length}</span>
-              Edges Linked
+              <span className="text-slate-900 font-bold inline">{edges.length}</span> Causal Links
             </div>
           </div>
           
           <button 
             onClick={runSync} 
             disabled={isSyncing}
-            className={`glow-btn flex items-center gap-2 ${isSyncing ? "indexing-pulse opacity-85" : ""}`}
+            className={`timbal-btn-primary flex items-center gap-2 ${isSyncing ? "opacity-75" : ""}`}
           >
-            <RefreshCw size={16} className={isSyncing ? "animate-spin" : ""} />
+            <RefreshCw size={14} className={isSyncing ? "animate-spin" : ""} />
             {isSyncing ? "Syncing..." : "Sync Workspace"}
           </button>
         </div>
       </header>
 
+      {/* TIMBAL HERO INTRO & COMPOSER CONTAINER */}
+      <section className="relative z-10 max-w-4xl mx-auto w-full text-center mb-10 flex flex-col items-center">
+        {/* Banner badge */}
+        <span className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70 py-1 pr-3 pl-1 shadow-sm shadow-slate-100/50 backdrop-blur-xl mb-4">
+          <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[9px] font-bold tracking-wider text-white uppercase shadow-sm shadow-blue-600/25">NEW</span>
+          <span className="text-[11px] font-semibold text-slate-700">Say hello to Metaphor Compose</span>
+        </span>
+        
+        <h2 className="hero-title max-w-2xl mb-4 font-sans font-medium text-slate-900">
+          The end-to-end context layer for <span className="text-blue-600 font-semibold">AI agents</span>
+        </h2>
+        <p className="mx-auto max-w-lg text-[13px] sm:text-[14px] leading-snug font-medium text-slate-500 mb-8">
+          Ask questions, trace commit timelines, and let your models reason over relationships rather than isolated documents.
+        </p>
+
+        {/* COMPOSER CARD (TIMBAL COMPOSE STYLE) */}
+        <div className="w-full max-w-2xl composer-card p-3 text-left">
+          <textarea
+            value={composerQuery}
+            onChange={(e) => setComposerQuery(e.target.value)}
+            className="w-full resize-none border-0 bg-transparent px-1 py-1 font-sans text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none min-h-[50px]"
+            placeholder="Search connections (e.g. 'Sarah Client Sync and Value-based Pricing')..."
+            rows={1}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleComposeSubmit();
+              }
+            }}
+          />
+          <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-1">
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setActiveTab("keys")}
+                className="timbal-btn-secondary flex items-center gap-1.5"
+              >
+                <Key size={12} />
+                <span>Configure Keys</span>
+              </button>
+              <button 
+                onClick={clearSelection}
+                className="timbal-btn-secondary flex items-center gap-1.5"
+              >
+                <span>Reset View</span>
+              </button>
+            </div>
+            
+            <button
+              onClick={handleComposeSubmit}
+              disabled={!composerQuery}
+              className="send-ball transition-opacity duration-200"
+              title="Send to Claude"
+            >
+              <Sparkles size={16} />
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* DASHBOARD SPLIT GRID */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[680px]">
+      <div className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[600px]">
         {/* GRAPH CANVAS AREA */}
-        <section className="lg:col-span-8 glass-panel h-[680px] overflow-hidden flex flex-col relative">
+        <section className="lg:col-span-8 timbal-panel h-[600px] overflow-hidden flex flex-col relative bg-[#f8fafc]">
+          {/* Dimension badges */}
           <div className="absolute top-4 left-4 z-10 flex gap-2">
-            <span className="px-2 py-1 bg-gray-900/80 border border-gray-800 text-xs rounded text-gray-300 flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span> Structural
+            <span className="px-2.5 py-1 bg-white border border-slate-200 text-[10px] rounded-full text-slate-600 font-bold flex items-center gap-1.5 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-slate-400 inline-block"></span> Structural
             </span>
-            <span className="px-2 py-1 bg-gray-900/80 border border-gray-800 text-xs rounded text-[#3b82f6] flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span> Semantic
+            <span className="px-2.5 py-1 bg-white border border-slate-200 text-[10px] rounded-full text-[#3b82f6] font-bold flex items-center gap-1.5 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-blue-500 inline-block"></span> Semantic
             </span>
-            <span className="px-2 py-1 bg-gray-900/80 border border-gray-800 text-xs rounded text-[#f59e0b] flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> Temporal (Causal)
+            <span className="px-2.5 py-1 bg-white border border-slate-200 text-[10px] rounded-full text-[#f59e0b] font-bold flex items-center gap-1.5 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span> Temporal (Causal)
             </span>
           </div>
 
-          <div className="absolute bottom-4 left-4 z-10 max-w-xs p-3 bg-black/90 border border-gray-800 rounded-lg text-xs">
-            <h4 className="font-bold text-[#00f2fe] mb-1 flex items-center gap-1">
-              <Activity size={12} /> Selection Controller
+          {/* Active selection helper */}
+          <div className="absolute bottom-4 left-4 z-10 max-w-xs p-3.5 bg-white border border-slate-200 rounded-2xl text-xs shadow-md">
+            <h4 className="font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+              <Activity size={12} className="text-blue-600" /> Selection State
             </h4>
-            <p className="text-gray-400">Click a node to select A. Click another to select B to explain connections.</p>
-            <div className="mt-2 text-gray-200">
-              <div className="truncate">Node A: <span className="text-[#ff8177] font-semibold">{selectedNodeA || "(None)"}</span></div>
-              <div className="truncate">Node B: <span className="text-[#4facfe] font-semibold">{selectedNodeB || "(None)"}</span></div>
+            <p className="text-slate-500 text-[11px] leading-snug">Click graph nodes to configure focus relationships.</p>
+            <div className="mt-2.5 space-y-1 text-slate-700">
+              <div className="truncate">Node A: <span className="text-[#ea580c] font-bold">{selectedNodeA || "(None)"}</span></div>
+              <div className="truncate">Node B: <span className="text-[#0284c7] font-bold">{selectedNodeB || "(None)"}</span></div>
             </div>
             {(selectedNodeA || selectedNodeB) && (
               <button 
                 onClick={clearSelection} 
-                className="mt-2 w-full text-center text-[10px] text-red-400 hover:text-red-300 border border-red-500/20 bg-red-500/5 py-1 rounded"
+                className="mt-2.5 w-full text-center text-[10px] text-red-500 hover:text-red-600 border border-red-100 bg-red-50/50 py-1.5 rounded-lg font-semibold transition-colors"
               >
-                Clear Selections
+                Clear Selection
               </button>
             )}
           </div>
@@ -297,71 +413,71 @@ export default function Dashboard() {
             nodeTypes={nodeTypes}
             onNodeClick={onNodeClick}
             fitView
-            className="bg-[#040409]"
+            className="bg-[#f8fafc]"
           >
-            <Background color="#1f2937" gap={18} />
-            <Controls className="fill-white" />
+            <Background color="#cbd5e1" gap={18} />
+            <Controls className="fill-slate-700" />
             <MiniMap 
               nodeColor={(n) => {
                 const colors: Record<string, string> = {
-                  person: "#4facfe",
-                  meeting: "#a18cd1",
-                  idea: "#ff8177",
-                  decision: "#f9d423",
-                  commit: "#4caf50",
-                  project: "#ec4899"
+                  person: "#0284c7",
+                  meeting: "#7c3aed",
+                  idea: "#ea580c",
+                  decision: "#db2777",
+                  commit: "#16a34a",
+                  project: "#4f46e5"
                 };
-                return colors[n.type || ""] || "#9ca3af";
+                return colors[n.type || ""] || "#94a3b8";
               }}
-              className="bg-black/90 rounded border border-gray-800"
+              className="bg-white rounded-xl border border-slate-200 shadow-sm"
             />
           </ReactFlow>
         </section>
 
         {/* SIDE PANELS (REASONING & CONFIG) */}
-        <section className="lg:col-span-4 flex flex-col h-[680px]">
+        <section className="lg:col-span-4 flex flex-col h-[600px]">
           {/* TAB HEADERS */}
-          <div className="flex border-b border-gray-800 bg-[#0d0d17]/40 rounded-t-lg">
+          <div className="flex border-b border-slate-200 bg-slate-50/50 rounded-t-2xl">
             <button
               onClick={() => setActiveTab("explain")}
-              className={`flex-1 py-3 text-xs uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-colors ${activeTab === "explain" ? "border-b-2 border-[#5f3bf6] text-[#00f2fe]" : "text-gray-400 hover:text-gray-200"}`}
+              className={`flex-1 py-3.5 text-[11px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-colors ${activeTab === "explain" ? "border-b-2 border-slate-900 text-slate-900" : "text-slate-400 hover:text-slate-600"}`}
             >
-              <HelpCircle size={14} /> Explain
+              <HelpCircle size={13} /> Explain
             </button>
             <button
               onClick={() => setActiveTab("timeline")}
-              className={`flex-1 py-3 text-xs uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-colors ${activeTab === "timeline" ? "border-b-2 border-[#5f3bf6] text-[#00f2fe]" : "text-gray-400 hover:text-gray-200"}`}
+              className={`flex-1 py-3.5 text-[11px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-colors ${activeTab === "timeline" ? "border-b-2 border-slate-900 text-slate-900" : "text-slate-400 hover:text-slate-600"}`}
             >
-              <Clock size={14} /> Timeline
+              <Clock size={13} /> Timeline
             </button>
             <button
               onClick={() => setActiveTab("keys")}
-              className={`flex-1 py-3 text-xs uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-colors ${activeTab === "keys" ? "border-b-2 border-[#5f3bf6] text-[#00f2fe]" : "text-gray-400 hover:text-gray-200"}`}
+              className={`flex-1 py-3.5 text-[11px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-colors ${activeTab === "keys" ? "border-b-2 border-slate-900 text-slate-900" : "text-slate-400 hover:text-slate-600"}`}
             >
-              <Key size={14} /> Keys
+              <Key size={13} /> Keys
             </button>
           </div>
 
           {/* TAB CONTENTS */}
-          <div className="flex-1 glass-panel rounded-t-none p-4 overflow-y-auto bg-[#0d0d17]/80 flex flex-col">
+          <div className="flex-1 timbal-panel rounded-t-none p-4 overflow-y-auto bg-white flex flex-col">
             
             {/* TAB: EXPLAIN CONNECTIONS */}
             {activeTab === "explain" && (
               <div className="flex-1 flex flex-col">
                 <div className="mb-4">
-                  <h3 className="text-sm font-bold text-gray-200 flex items-center gap-2">
-                    <MessageSquare size={16} className="text-[#5f3bf6]" /> Relationship Explainer
+                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <MessageSquare size={14} className="text-blue-600" /> Relationship Explainer
                   </h3>
-                  <p className="text-xs text-gray-400 mt-1">Select two nodes on the left canvas to ask Claude to explain their causal or structural relationship.</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Select two nodes on the left canvas to ask Claude to explain their causal or structural relationship.</p>
                 </div>
 
-                <div className="flex-1 border border-gray-800/60 rounded-lg p-3 bg-black/40 flex flex-col justify-between mb-4">
+                <div className="flex-1 border border-slate-100 rounded-2xl p-3 bg-slate-50/30 flex flex-col justify-between mb-4 overflow-y-auto max-h-[340px]">
                   {explanation ? (
-                    <div className="text-sm text-gray-300 overflow-y-auto whitespace-pre-wrap leading-relaxed max-h-[400px]">
+                    <div className="text-[13px] text-slate-600 overflow-y-auto whitespace-pre-wrap leading-relaxed">
                       {explanation}
                     </div>
                   ) : (
-                    <div className="text-xs text-gray-500 text-center my-auto">
+                    <div className="text-xs text-slate-400 text-center my-auto">
                       Select two nodes in the graph view and press the button below.
                     </div>
                   )}
@@ -370,9 +486,9 @@ export default function Dashboard() {
                 <button
                   onClick={runExplanation}
                   disabled={isExplaining || !selectedNodeA || !selectedNodeB}
-                  className="glow-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-lg disabled:opacity-50 disabled:pointer-events-none"
+                  className="timbal-btn-primary w-full flex items-center justify-center gap-2 py-2.5 rounded-xl disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  <Sparkles size={16} />
+                  <Sparkles size={14} />
                   {isExplaining ? "Analyzing..." : "Explain Relationship"}
                 </button>
               </div>
@@ -382,34 +498,34 @@ export default function Dashboard() {
             {activeTab === "timeline" && (
               <div className="flex flex-col flex-1">
                 <div className="mb-4">
-                  <h3 className="text-sm font-bold text-gray-200 flex items-center gap-2">
-                    <Clock size={16} className="text-[#f59e0b]" /> Chronological World History
+                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <Clock size={14} className="text-amber-500" /> Chronological Timeline
                   </h3>
-                  <p className="text-xs text-gray-400 mt-1">Causal evolution of decisions, code commits, and project milestones.</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Causal evolution of decisions, commits, and milestones.</p>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+                <div className="flex-1 overflow-y-auto space-y-4 pr-1 max-h-[400px]">
                   {timeline.length > 0 ? (
                     timeline.map((item, idx) => (
-                      <div key={item.id} className="relative pl-6 border-l border-gray-800">
+                      <div key={item.id} className="relative pl-6 border-l border-slate-150">
                         {/* Bullet indicators */}
                         <span 
-                          className="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full border border-black"
+                          className="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm"
                           style={{
                             backgroundColor: `var(--color-${item.type.toLowerCase()}, var(--accent-primary))`
                           }}
                         ></span>
-                        <div className="text-[10px] text-[#f59e0b] font-mono">{item.display_date}</div>
-                        <div className="text-sm font-semibold text-gray-200 mt-0.5">{item.name}</div>
-                        <div className="text-xs text-gray-400 uppercase tracking-wider">{item.type}</div>
+                        <div className="text-[10px] text-amber-600 font-mono font-semibold">{item.display_date}</div>
+                        <div className="text-[13px] font-semibold text-slate-950 mt-0.5">{item.name}</div>
+                        <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">{item.type}</div>
                         
                         {item.causes && item.causes.length > 0 && (
-                          <div className="mt-1.5 bg-black/30 p-2 rounded border border-gray-800/40 text-xs">
+                          <div className="mt-2 bg-slate-50/50 p-2 rounded-xl border border-slate-100 text-[11px] text-slate-600 space-y-1">
                             {item.causes.map((c: any, cidx: number) => (
-                              <div key={cidx} className="flex items-start gap-1 text-[11px] text-gray-300">
-                                <Link2 size={12} className="text-[#00f2fe] mt-0.5 flex-shrink-0" />
+                              <div key={cidx} className="flex items-start gap-1">
+                                <Link2 size={11} className="text-blue-500 mt-0.5 flex-shrink-0" />
                                 <span>
-                                  Led to <strong className="text-gray-100">{c.target_name}</strong>: {c.description}
+                                  Led to <strong className="text-slate-800 font-semibold">{c.target_name}</strong>: {c.description}
                                 </span>
                               </div>
                             ))}
@@ -418,8 +534,8 @@ export default function Dashboard() {
                       </div>
                     ))
                   ) : (
-                    <div className="text-xs text-gray-500 text-center py-10">
-                      No chronological history synced yet. Click 'Sync Workspace' to build the world history logs.
+                    <div className="text-xs text-slate-400 text-center py-10">
+                      No chronological history synced yet. Click 'Sync Workspace' to build the world history.
                     </div>
                   )}
                 </div>
@@ -431,40 +547,40 @@ export default function Dashboard() {
               <div className="space-y-4 flex-1 flex flex-col justify-between">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-sm font-bold text-gray-200 flex items-center gap-2">
-                      <Key size={16} className="text-[#00f2fe]" /> developer Access Keys
+                    <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <Key size={14} className="text-blue-500" /> developer Keys
                     </h3>
-                    <p className="text-xs text-gray-400 mt-1">Configure development secret access keys used locally by the parsers. Keys are stored safely in browser localStorage.</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Configure developer access keys. Keys are saved securely in your browser's localStorage.</p>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-3.5">
                     <div>
-                      <label className="block text-xs text-gray-400 font-semibold mb-1 uppercase tracking-wider">Metaphor Internal API Key</label>
+                      <label className="block text-[10px] text-slate-500 font-bold mb-1 uppercase tracking-wider">Metaphor API Key</label>
                       <input 
                         type="password" 
                         value={apiKey}
                         onChange={(e) => setApiKey(e.target.value)}
-                        className="w-full text-sm bg-black/60 border border-gray-800 rounded p-2 text-gray-200 focus:outline-none focus:border-[#5f3bf6]" 
+                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-850 focus:outline-none focus:border-slate-800" 
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-400 font-semibold mb-1 uppercase tracking-wider">Notion Integration Token</label>
+                      <label className="block text-[10px] text-slate-500 font-bold mb-1 uppercase tracking-wider">Notion Integration Token</label>
                       <input 
                         type="password" 
                         value={notionToken}
                         onChange={(e) => setNotionToken(e.target.value)}
                         placeholder="secret_..."
-                        className="w-full text-sm bg-black/60 border border-gray-800 rounded p-2 text-gray-200 focus:outline-none focus:border-[#5f3bf6]" 
+                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-850 focus:outline-none focus:border-slate-800" 
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-400 font-semibold mb-1 uppercase tracking-wider">GitHub Personal Access Token (PAT)</label>
+                      <label className="block text-[10px] text-slate-500 font-bold mb-1 uppercase tracking-wider">GitHub Personal Token</label>
                       <input 
                         type="password" 
                         value={githubToken}
                         onChange={(e) => setGithubToken(e.target.value)}
                         placeholder="ghp_..."
-                        className="w-full text-sm bg-black/60 border border-gray-800 rounded p-2 text-gray-200 focus:outline-none focus:border-[#5f3bf6]" 
+                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-850 focus:outline-none focus:border-slate-800" 
                       />
                     </div>
                   </div>
@@ -472,9 +588,9 @@ export default function Dashboard() {
 
                 <button
                   onClick={saveKeys}
-                  className="glow-btn w-full flex items-center justify-center gap-2 py-2 rounded-lg"
+                  className="timbal-btn-primary w-full flex items-center justify-center gap-2 py-2.5 rounded-xl"
                 >
-                  <Key size={16} /> Save Configuration
+                  <Key size={14} /> Save Configuration
                 </button>
               </div>
             )}
