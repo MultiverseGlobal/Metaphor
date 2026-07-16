@@ -1,5 +1,6 @@
 import pytest
 import uuid
+from unittest.mock import AsyncMock, MagicMock, patch
 from sqlmodel import SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -7,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.models import Node, Edge, Chunk
 from app.reflection import reflection_engine
+from app.routes.context import get_context_snapshot, SnapshotRequest
 
 # Use in-memory SQLite for testing if desired, or test mock extraction output
 @pytest.mark.asyncio
@@ -33,3 +35,36 @@ async def test_mock_reflection_schema():
     assert "structural" in edge_dims
     assert "semantic" in edge_dims
     assert "temporal" in edge_dims
+
+
+@pytest.mark.asyncio
+@patch("app.routes.context.llm_provider")
+async def test_context_snapshot(mock_llm_provider):
+    mock_llm_provider.query_claude = AsyncMock(return_value="Mocked Narrative Synthesis")
+    # Mock database session
+    mock_session = AsyncMock()
+    
+    # Mock result from select(Node)
+    mock_nodes_result = MagicMock()
+    mock_nodes_result.all.return_value = [
+        Node(id=uuid.uuid4(), name="Atlas", type="Project"),
+        Node(id=uuid.uuid4(), name="Benjamin", type="Person"),
+    ]
+    
+    # Mock result from select(Edge)
+    mock_edges_result = MagicMock()
+    mock_edges_result.all.return_value = []
+    
+    # Mock session.exec
+    mock_session.exec.side_effect = [mock_nodes_result, mock_edges_result]
+    
+    # Call the endpoint handler directly
+    req = SnapshotRequest(consumer="William", intent="morning_brief")
+    response = await get_context_snapshot(req=req, session=mock_session, api_key="mock_key")
+    
+    assert response.consumer == "William"
+    assert response.intent == "morning_brief"
+    assert len(response.active_projects) == 1
+    assert response.active_projects[0]["name"] == "Atlas"
+    assert len(response.key_people) == 1
+    assert response.key_people[0]["name"] == "Benjamin"

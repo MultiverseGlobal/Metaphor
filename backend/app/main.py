@@ -7,6 +7,7 @@ from app.config import settings
 from app.database import init_db
 from app.routes.sync import router as sync_router
 from app.routes.graph import router as graph_router
+from app.routes.context import router as context_router
 
 # Setup logger
 logging.basicConfig(level=logging.INFO)
@@ -28,8 +29,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.APP_NAME,
-    description="Metaphor is a Context Engine and World Modeling platform.",
-    version="1.0.0",
+    description="Metaphor is a Context Engine and World Modeling platform. It builds a continuously evolving model of your world and serves structured context to AI consumers like William, Atlas, and Weave.",
+    version="1.1.0",
     lifespan=lifespan
 )
 
@@ -45,6 +46,7 @@ app.add_middleware(
 # Attach routers
 app.include_router(sync_router, prefix=settings.API_PREFIX, tags=["sync"])
 app.include_router(graph_router, prefix=settings.API_PREFIX, tags=["graph"])
+app.include_router(context_router, prefix=settings.API_PREFIX, tags=["context"])
 
 @app.get("/")
 async def root():

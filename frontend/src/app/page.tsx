@@ -8,8 +8,16 @@ import {
   Background,
   useNodesState,
   useEdgesState,
-  MarkerType
+  MarkerType,
+  Node,
+  Edge
 } from "@xyflow/react";
+
+type MetaphorNode = Node<{
+  name: string;
+  type: string;
+  metadata?: Record<string, any>;
+}>;
 import "@xyflow/react/dist/style.css";
 
 import { 
@@ -40,8 +48,8 @@ const nodeTypes = {
 
 export default function Dashboard() {
   // Graph States
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<MetaphorNode>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   
   // App States
   const [isSyncing, setIsSyncing] = useState(false);

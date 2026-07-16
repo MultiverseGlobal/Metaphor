@@ -37,7 +37,7 @@ body {
   font-family: var(--font-sans);
   margin: 0;
   padding: 0;
-  min-h: 100vh;
+  min-height: 100vh;
   position: relative;
 }
 
