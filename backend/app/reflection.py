@@ -15,7 +15,7 @@ class ReflectionEngine:
     def __init__(self):
         pass
 
-    async def reflect_and_evolve(self, session: AsyncSession, raw_logs: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def reflect_and_evolve(self, session: AsyncSession, raw_logs: List[Dict[str, Any]], status: str = "approved") -> Dict[str, Any]:
         """
         Run the Reflection Agent using Anthropic Claude.
         1. Ingest raw log text.
@@ -111,10 +111,10 @@ class ReflectionEngine:
             result = self._get_mock_reflection_results(raw_logs)
 
         # 4. Write data to DB inside transaction
-        report = await self._apply_graph_updates(session, raw_logs, result)
+        report = await self._apply_graph_updates(session, raw_logs, result, status=status)
         return report
 
-    async def _apply_graph_updates(self, session: AsyncSession, raw_logs: List[Dict[str, Any]], parsed_updates: Dict[str, Any]) -> Dict[str, Any]:
+    async def _apply_graph_updates(self, session: AsyncSession, raw_logs: List[Dict[str, Any]], parsed_updates: Dict[str, Any], status: str = "approved") -> Dict[str, Any]:
         """Apply extracted nodes, edges, chunks and evidence linkages to Postgres."""
         
         # A. Store raw logs as Chunks and compute embeddings
@@ -153,7 +153,8 @@ class ReflectionEngine:
                 node = Node(
                     name=name,
                     type=n_type,
-                    metadata_json=metadata
+                    metadata_json=metadata,
+                    status=status
                 )
                 session.add(node)
                 await session.flush()
@@ -212,7 +213,8 @@ class ReflectionEngine:
                         target_id=tgt_node.id,
                         dimension=dim,
                         relationship_type=rel_type,
-                        metadata_json={"description": desc}
+                        metadata_json={"description": desc},
+                        status=status
                     )
                     session.add(edge)
                     created_edges_count += 1

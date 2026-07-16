@@ -17,6 +17,7 @@ class Node(SQLModel, table=True):
     metadata_json: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+    status: str = Field(default="approved", index=True) # approved, pending, rejected
 
     # Relationships
     incoming_edges: List["Edge"] = Relationship(
@@ -38,6 +39,7 @@ class Edge(SQLModel, table=True):
     weight: float = Field(default=1.0)
     metadata_json: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON)) # E.g., {"explanation": "..."}
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    status: str = Field(default="approved", index=True) # approved, pending, rejected
 
 class Chunk(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -51,3 +53,12 @@ class Chunk(SQLModel, table=True):
     nodes: List[Node] = Relationship(
         link_model=NodeEvidence, back_populates="chunks"
     )
+
+
+class Clarification(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    question_text: str = Field(index=True)
+    options_json: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    resolved: bool = Field(default=False, index=True)
+    resolved_answer: Optional[str] = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow)

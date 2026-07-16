@@ -40,7 +40,9 @@ async def test_mock_reflection_schema():
 @pytest.mark.asyncio
 @patch("app.routes.context.llm_provider")
 async def test_context_snapshot(mock_llm_provider):
-    mock_llm_provider.query_claude = AsyncMock(return_value="Mocked Narrative Synthesis")
+    mock_llm_provider.query_claude = AsyncMock(
+        return_value='{"mission": "Mocked Mission", "constraints": ["Constraint 1"], "recommended_focus": "Mocked Focus"}'
+    )
     # Mock database session
     mock_session = AsyncMock()
     
@@ -48,7 +50,7 @@ async def test_context_snapshot(mock_llm_provider):
     mock_nodes_result = MagicMock()
     mock_nodes_result.all.return_value = [
         Node(id=uuid.uuid4(), name="Atlas", type="Project"),
-        Node(id=uuid.uuid4(), name="Benjamin", type="Person"),
+        Node(id=uuid.uuid4(), name="Renamed Tier Pricing", type="Decision"),
     ]
     
     # Mock result from select(Edge)
@@ -62,9 +64,11 @@ async def test_context_snapshot(mock_llm_provider):
     req = SnapshotRequest(consumer="William", intent="morning_brief")
     response = await get_context_snapshot(req=req, session=mock_session, api_key="mock_key")
     
-    assert response.consumer == "William"
-    assert response.intent == "morning_brief"
+    assert response.mission == "Mocked Mission"
+    assert response.recommended_focus == "Mocked Focus"
     assert len(response.active_projects) == 1
     assert response.active_projects[0]["name"] == "Atlas"
-    assert len(response.key_people) == 1
-    assert response.key_people[0]["name"] == "Benjamin"
+    assert len(response.recent_decisions) == 1
+    assert response.recent_decisions[0]["name"] == "Renamed Tier Pricing"
+    assert len(response.constraints) == 1
+    assert response.constraints[0] == "Constraint 1"

@@ -8,8 +8,9 @@ import uuid
 
 from app.database import get_session
 from app.config import settings
-from app.models import Node, Edge, Chunk, NodeEvidence
+from app.models import Node, Edge, Chunk, NodeEvidence, Clarification
 from app.provider import llm_provider
+from app.reflection import reflection_engine
 
 logger = logging.getLogger("metaphor.routes.graph")
 router = APIRouter()
@@ -44,12 +45,12 @@ async def get_graph(
 ):
     """Retrieve the nodes and edges filtering by dimensions or types."""
     try:
-        # Load all nodes
-        nodes_q = await session.exec(select(Node))
+        # Load all approved nodes
+        nodes_q = await session.exec(select(Node).where(Node.status == "approved"))
         nodes = nodes_q.all()
         
-        # Load all edges
-        edges_q = await session.exec(select(Edge))
+        # Load all approved edges
+        edges_q = await session.exec(select(Edge).where(Edge.status == "approved"))
         edges = edges_q.all()
 
         # Apply filtering
@@ -248,4 +249,221 @@ async def get_history(
         return HistoryResponse(timeline=timeline)
     except Exception as e:
         logger.error(f"Error fetching temporal history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Context Inbox Schemas & Routes ───────────────────────────────────────────
+
+class InboxResponse(BaseModel):
+    pending_nodes: List[Dict[str, Any]]
+    pending_edges: List[Dict[str, Any]]
+    clarifications: List[Dict[str, Any]]
+
+class ApproveRequest(BaseModel):
+    item_id: str
+    item_type: str  # "node" or "edge"
+
+class RejectRequest(BaseModel):
+    item_id: str
+    item_type: str  # "node" or "edge"
+
+class ResolveRequest(BaseModel):
+    clarification_id: str
+    selected_option: str
+
+class UnderstandChatRequest(BaseModel):
+    conversation: str
+
+
+@router.get("/inbox", response_model=InboxResponse)
+async def get_inbox(
+    session: AsyncSession = Depends(get_session),
+    api_key: str = Depends(verify_api_key)
+):
+    try:
+        # Load all pending nodes
+        nodes_q = await session.exec(select(Node).where(Node.status == "pending"))
+        pending_nodes = nodes_q.all()
+
+        # Load all pending edges
+        edges_q = await session.exec(select(Edge).where(Edge.status == "pending"))
+        pending_edges = edges_q.all()
+
+        # Load all unresolved clarifications
+        clar_q = await session.exec(select(Clarification).where(Clarification.resolved == False))
+        clarifications = clar_q.all()
+
+        # Serialize pending edges with names
+        edges_serialized = []
+        for e in pending_edges:
+            src_node = await session.get(Node, e.source_id)
+            tgt_node = await session.get(Node, e.target_id)
+            edges_serialized.append({
+                "id": str(e.id),
+                "source_id": str(e.source_id),
+                "target_id": str(e.target_id),
+                "source_name": src_node.name if src_node else "Unknown",
+                "target_name": tgt_node.name if tgt_node else "Unknown",
+                "dimension": e.dimension,
+                "relationship_type": e.relationship_type,
+                "description": e.metadata_json.get("description", "") if e.metadata_json else ""
+            })
+
+        return InboxResponse(
+            pending_nodes=[
+                {
+                    "id": str(n.id),
+                    "name": n.name,
+                    "type": n.type,
+                    "metadata": n.metadata_json
+                }
+                for n in pending_nodes
+            ],
+            pending_edges=edges_serialized,
+            clarifications=[
+                {
+                    "id": str(c.id),
+                    "question_text": c.question_text,
+                    "options_json": c.options_json,
+                    "created_at": c.created_at.isoformat()
+                }
+                for c in clarifications
+            ]
+        )
+    except Exception as e:
+        logger.error(f"Error fetching inbox items: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/inbox/approve")
+async def approve_inbox_item(
+    req: ApproveRequest,
+    session: AsyncSession = Depends(get_session),
+    api_key: str = Depends(verify_api_key)
+):
+    try:
+        item_uuid = uuid.UUID(req.item_id)
+        if req.item_type == "node":
+            node = await session.get(Node, item_uuid)
+            if not node:
+                raise HTTPException(status_code=404, detail="Node not found")
+            node.status = "approved"
+            session.add(node)
+        elif req.item_type == "edge":
+            edge = await session.get(Edge, item_uuid)
+            if not edge:
+                raise HTTPException(status_code=404, detail="Edge not found")
+            edge.status = "approved"
+            session.add(edge)
+        else:
+            raise HTTPException(status_code=400, detail="Invalid item type")
+        
+        await session.commit()
+        return {"status": "success", "message": f"{req.item_type.capitalize()} approved."}
+    except Exception as e:
+        logger.error(f"Error approving item: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/inbox/reject")
+async def reject_inbox_item(
+    req: RejectRequest,
+    session: AsyncSession = Depends(get_session),
+    api_key: str = Depends(verify_api_key)
+):
+    try:
+        item_uuid = uuid.UUID(req.item_id)
+        if req.item_type == "node":
+            node = await session.get(Node, item_uuid)
+            if not node:
+                raise HTTPException(status_code=404, detail="Node not found")
+            # Delete associated edges
+            edges_q = await session.exec(select(Edge).where(
+                (Edge.source_id == item_uuid) | (Edge.target_id == item_uuid)
+            ))
+            for e in edges_q.all():
+                await session.delete(e)
+            await session.delete(node)
+        elif req.item_type == "edge":
+            edge = await session.get(Edge, item_uuid)
+            if not edge:
+                raise HTTPException(status_code=404, detail="Edge not found")
+            await session.delete(edge)
+        else:
+            raise HTTPException(status_code=400, detail="Invalid item type")
+
+        await session.commit()
+        return {"status": "success", "message": f"{req.item_type.capitalize()} rejected and deleted."}
+    except Exception as e:
+        logger.error(f"Error rejecting item: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/inbox/resolve")
+async def resolve_clarification(
+    req: ResolveRequest,
+    session: AsyncSession = Depends(get_session),
+    api_key: str = Depends(verify_api_key)
+):
+    try:
+        clar_uuid = uuid.UUID(req.clarification_id)
+        clar = await session.get(Clarification, clar_uuid)
+        if not clar:
+            raise HTTPException(status_code=404, detail="Clarification not found")
+        
+        clar.resolved = True
+        clar.resolved_answer = req.selected_option
+        session.add(clar)
+
+        # Custom logic for mock context: "Are Atlas and William related?"
+        if "Atlas" in clar.question_text and "William" in clar.question_text:
+            atlas_q = await session.exec(select(Node).where(Node.name == "Atlas"))
+            atlas_node = atlas_q.first()
+            william_q = await session.exec(select(Node).where(Node.name == "William"))
+            william_node = william_q.first()
+
+            if atlas_node and william_node and req.selected_option == "Products in one ecosystem":
+                new_edge = Edge(
+                    source_id=william_node.id,
+                    target_id=atlas_node.id,
+                    dimension="semantic",
+                    relationship_type="ecosystem_peer",
+                    metadata_json={"description": "Resolved via user clarification: Products in one ecosystem."},
+                    status="approved"
+                )
+                session.add(new_edge)
+
+        await session.commit()
+        return {"status": "success", "message": "Clarification resolved successfully."}
+    except Exception as e:
+        logger.error(f"Error resolving clarification: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/inbox/understand-chat")
+async def understand_chat(
+    req: UnderstandChatRequest,
+    session: AsyncSession = Depends(get_session),
+    api_key: str = Depends(verify_api_key)
+):
+    try:
+        if not req.conversation.strip():
+            raise HTTPException(status_code=400, detail="Conversation content cannot be empty.")
+        
+        chat_log = [{
+            "id": f"chat_snippet_{int(datetime.utcnow().timestamp())}",
+            "title": "Chat Conversation Snippet",
+            "content": req.conversation,
+            "source": "chat",
+            "metadata": {}
+        }]
+
+        report = await reflection_engine.reflect_and_evolve(session, chat_log, status="pending")
+        return {
+            "status": "success",
+            "message": "Conversation understood. Extracted nodes/edges have been staged in the Context Inbox.",
+            "report": report
+        }
+    except Exception as e:
+        logger.error(f"Error processing chat understanding: {e}")
         raise HTTPException(status_code=500, detail=str(e))

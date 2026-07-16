@@ -12,7 +12,8 @@ import {
   AlertCircle, 
   Sparkles,
   RefreshCw,
-  GitBranch
+  GitBranch,
+  Bot
 } from "lucide-react";
 import { fetchFromMetaphor } from "../api";
 
@@ -22,6 +23,8 @@ export default function OnboardingPage() {
   const [apiKey, setApiKey] = useState("metaphor_dev_secret_key_123");
   const [notionToken, setNotionToken] = useState("");
   const [githubToken, setGithubToken] = useState("");
+  const [chatgptToken, setChatgptToken] = useState("");
+  const [claudeToken, setClaudeToken] = useState("");
   const [error, setError] = useState("");
   
   // Loading/testing states for Step 2
@@ -29,7 +32,9 @@ export default function OnboardingPage() {
   const [verifyStatus, setVerifyStatus] = useState({
     metaphor: "idle", // idle | checking | success | failed
     notion: "idle",
-    github: "idle"
+    github: "idle",
+    chatgpt: "idle",
+    claude: "idle"
   });
 
   // Syncing states for Step 3
@@ -52,7 +57,7 @@ export default function OnboardingPage() {
     setError("");
 
     if (!apiKey) {
-      setError("Metaphor API Key is required to connect to the context engine.");
+      setError("Metaphor API Key is required to connect to the context operating system.");
       return;
     }
 
@@ -60,6 +65,8 @@ export default function OnboardingPage() {
     localStorage.setItem("metaphor_api_key", apiKey);
     localStorage.setItem("notion_token", notionToken);
     localStorage.setItem("github_token", githubToken);
+    localStorage.setItem("chatgpt_token", chatgptToken);
+    localStorage.setItem("claude_token", claudeToken);
 
     // Transition to Step 2 (Verification)
     setStep(2);
@@ -68,21 +75,35 @@ export default function OnboardingPage() {
 
   const runVerification = () => {
     setVerifying(true);
-    setVerifyStatus({ metaphor: "checking", notion: "checking", github: "checking" });
+    setVerifyStatus({ 
+      metaphor: "checking", 
+      notion: "checking", 
+      github: "checking",
+      chatgpt: "checking",
+      claude: "checking"
+    });
 
     // Step-by-step validation simulations for rich user feedback
     setTimeout(() => {
       setVerifyStatus(prev => ({ ...prev, metaphor: "success" }));
-    }, 800);
+    }, 600);
 
     setTimeout(() => {
       setVerifyStatus(prev => ({ ...prev, notion: notionToken ? "success" : "success-mock" }));
-    }, 1400);
+    }, 1000);
 
     setTimeout(() => {
       setVerifyStatus(prev => ({ ...prev, github: githubToken ? "success" : "success-mock" }));
+    }, 1400);
+
+    setTimeout(() => {
+      setVerifyStatus(prev => ({ ...prev, chatgpt: chatgptToken ? "success" : "success-mock" }));
+    }, 1800);
+
+    setTimeout(() => {
+      setVerifyStatus(prev => ({ ...prev, claude: claudeToken ? "success" : "success-mock" }));
       setVerifying(false);
-    }, 2000);
+    }, 2200);
   };
 
   const runSyncIngestion = async () => {
@@ -99,9 +120,9 @@ export default function OnboardingPage() {
       setTimeout(() => {
         setSyncReport({
           status: "success",
-          nodes_created: 13,
-          edges_created: 14,
-          evidence_links_created: 8
+          nodes_created: 15,
+          edges_created: 16,
+          evidence_links_created: 10
         });
         setStep(4);
       }, 2000);
@@ -166,16 +187,16 @@ export default function OnboardingPage() {
           {/* Stepper Headers */}
           <div className="text-left space-y-1.5">
             <h2 className="text-xl font-bold text-white">
-              {step === 1 && "Configure Developer Credentials"}
+              {step === 1 && "Configure Universal Credentials"}
               {step === 2 && "Verifying Integrations"}
-              {step === 3 && "Initialize Workspace Engine Ingestion"}
-              {step === 4 && "Setup Complete!"}
+              {step === 3 && "Initialize World Model Ingestion"}
+              {step === 4 && "Context OS Ready!"}
             </h2>
             <p className="text-xs text-slate-400">
-              {step === 1 && "Input your developer keys to securely integrate Notion, GitHub, and calendar data."}
-              {step === 2 && "Testing the configured credentials and confirming endpoints are accessible."}
-              {step === 3 && "Bootstrapping your world model: we will sync raw events and run the reflection model."}
-              {step === 4 && "Metaphor is successfully configured. You are ready to launch your context engine."}
+              {step === 1 && "Input your tokens to securely integrate Notion, GitHub, ChatGPT, and Claude context."}
+              {step === 2 && "Testing connections and validating integration credentials..."}
+              {step === 3 && "Understanding your world: parsing files and building relationships between objects."}
+              {step === 4 && "Metaphor is successfully configured. Your universal context engine is operational."}
             </p>
           </div>
 
@@ -206,31 +227,63 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Notion Integration Token (Optional)</label>
-                  <div className="relative">
-                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-                    <input 
-                      type="password" 
-                      placeholder="secret_notion_token_here..."
-                      value={notionToken}
-                      onChange={(e) => setNotionToken(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white placeholder-slate-700 focus:outline-none focus:border-violet-500 transition-colors"
-                    />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Notion Token (Optional)</label>
+                    <div className="relative">
+                      <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                      <input 
+                        type="password" 
+                        placeholder="secret_notion..."
+                        value={notionToken}
+                        onChange={(e) => setNotionToken(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white placeholder-slate-750 focus:outline-none focus:border-violet-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">GitHub PAT (Optional)</label>
+                    <div className="relative">
+                      <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                      <input 
+                        type="password" 
+                        placeholder="github_pat..."
+                        value={githubToken}
+                        onChange={(e) => setGithubToken(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white placeholder-slate-755 focus:outline-none focus:border-violet-500 transition-colors"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">GitHub Personal Access Token (Optional)</label>
-                  <div className="relative">
-                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-                    <input 
-                      type="password" 
-                      placeholder="github_pat_token_here..."
-                      value={githubToken}
-                      onChange={(e) => setGithubToken(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white placeholder-slate-700 focus:outline-none focus:border-violet-500 transition-colors"
-                    />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">ChatGPT Key (Optional)</label>
+                    <div className="relative">
+                      <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                      <input 
+                        type="password" 
+                        placeholder="sk-proj-chatgpt..."
+                        value={chatgptToken}
+                        onChange={(e) => setChatgptToken(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white placeholder-slate-755 focus:outline-none focus:border-violet-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Claude Key (Optional)</label>
+                    <div className="relative">
+                      <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                      <input 
+                        type="password" 
+                        placeholder="sk-ant-claude..."
+                        value={claudeToken}
+                        onChange={(e) => setClaudeToken(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white placeholder-slate-755 focus:outline-none focus:border-violet-500 transition-colors"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -254,7 +307,7 @@ export default function OnboardingPage() {
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-slate-300 flex items-center gap-2">
                       <Network size={14} className="text-violet-400 animate-pulse" />
-                      Metaphor Local Engine API
+                      Metaphor Universal Context Core
                     </span>
                     <span className="font-mono">
                       {verifyStatus.metaphor === "checking" && <Loader2 size={12} className="animate-spin text-cyan-400" />}
@@ -263,10 +316,10 @@ export default function OnboardingPage() {
                   </div>
 
                   {/* Notion verification */}
-                  <div className="flex items-center justify-between text-xs border-t border-slate-900 pt-3">
+                  <div className="flex items-center justify-between text-xs border-t border-slate-900/60 pt-3">
                     <span className="font-semibold text-slate-300 flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
-                      Notion Integration Hub
+                      Notion Context Hub
                     </span>
                     <span className="font-mono">
                       {verifyStatus.notion === "checking" && <Loader2 size={12} className="animate-spin text-cyan-400" />}
@@ -276,15 +329,41 @@ export default function OnboardingPage() {
                   </div>
 
                   {/* GitHub verification */}
-                  <div className="flex items-center justify-between text-xs border-t border-slate-900 pt-3">
+                  <div className="flex items-center justify-between text-xs border-t border-slate-900/60 pt-3">
                     <span className="font-semibold text-slate-300 flex items-center gap-2">
                       <GitBranch size={14} className="text-slate-400" />
-                      GitHub Repository Access
+                      GitHub Codebase Logs
                     </span>
                     <span className="font-mono">
                       {verifyStatus.github === "checking" && <Loader2 size={12} className="animate-spin text-cyan-400" />}
                       {verifyStatus.github === "success" && <span className="text-emerald-400 flex items-center gap-1"><Check size={12} /> Connected</span>}
                       {verifyStatus.github === "success-mock" && <span className="text-cyan-400 flex items-center gap-1">Connected (Sandbox Mock)</span>}
+                    </span>
+                  </div>
+
+                  {/* ChatGPT verification */}
+                  <div className="flex items-center justify-between text-xs border-t border-slate-900/60 pt-3">
+                    <span className="font-semibold text-slate-300 flex items-center gap-2">
+                      <Bot size={14} className="text-emerald-400" />
+                      ChatGPT Conversation Sync
+                    </span>
+                    <span className="font-mono">
+                      {verifyStatus.chatgpt === "checking" && <Loader2 size={12} className="animate-spin text-cyan-400" />}
+                      {verifyStatus.chatgpt === "success" && <span className="text-emerald-400 flex items-center gap-1"><Check size={12} /> Connected</span>}
+                      {verifyStatus.chatgpt === "success-mock" && <span className="text-cyan-400 flex items-center gap-1">Connected (Sandbox Mock)</span>}
+                    </span>
+                  </div>
+
+                  {/* Claude verification */}
+                  <div className="flex items-center justify-between text-xs border-t border-slate-900/60 pt-3">
+                    <span className="font-semibold text-slate-300 flex items-center gap-2">
+                      <Bot size={14} className="text-orange-400" />
+                      Claude Conversation Sync
+                    </span>
+                    <span className="font-mono">
+                      {verifyStatus.claude === "checking" && <Loader2 size={12} className="animate-spin text-cyan-400" />}
+                      {verifyStatus.claude === "success" && <span className="text-emerald-400 flex items-center gap-1"><Check size={12} /> Connected</span>}
+                      {verifyStatus.claude === "success-mock" && <span className="text-cyan-400 flex items-center gap-1">Connected (Sandbox Mock)</span>}
                     </span>
                   </div>
 
@@ -295,9 +374,8 @@ export default function OnboardingPage() {
                   disabled={verifying}
                   className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-violet-600 to-cyan-500 text-slate-950 hover:opacity-95 transition-all text-xs shadow-lg shadow-violet-500/10 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
-                  Configure Workspace Sync <ArrowRight size={14} />
+                  Configure Context Understanding <ArrowRight size={14} />
                 </button>
-
               </div>
             )}
 
@@ -309,15 +387,16 @@ export default function OnboardingPage() {
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-1.5 text-cyan-400">
                         <RefreshCw size={12} className="animate-spin" />
-                        <span>Syncing database and reflecting...</span>
+                        <span>Building world model...</span>
                       </div>
-                      <p>&gt; Calling backend POST /api/v1/sync</p>
-                      <p>&gt; Ingesting documents and running Reflection agent...</p>
+                      <p>&gt; Learning your context and projects...</p>
+                      <p>&gt; Discovering semantic and temporal relationships...</p>
+                      <p>&gt; Staging pending memories in Context Inbox...</p>
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <p className="text-slate-500">// Ready to trigger workspace ingestion.</p>
-                      <p>&gt; Click the button below to parse mock documents and bootstrap the graph representation.</p>
+                      <p className="text-slate-500">// Ready to trigger context understanding.</p>
+                      <p>&gt; Metaphor will parse active documents, link decisions, and resolve timelines to initialize your world model.</p>
                     </div>
                   )}
                 </div>
@@ -330,11 +409,11 @@ export default function OnboardingPage() {
                   {syncing ? (
                     <>
                       <Loader2 size={14} className="animate-spin" />
-                      <span>Ingesting Workspace Logs...</span>
+                      <span>Understanding Your World...</span>
                     </>
                   ) : (
                     <>
-                      <span>Initialize First Ingestion Sync</span>
+                      <span>Initialize Context Learning</span>
                       <ArrowRight size={14} />
                     </>
                   )}
@@ -352,14 +431,14 @@ export default function OnboardingPage() {
                     <div className="h-6 w-6 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center font-bold">
                       <Check size={14} className="stroke-[3]" />
                     </div>
-                    <span>Initial Ingestion Succeeded!</span>
+                    <span>World Model Formed!</span>
                   </div>
                   
                   {syncReport && (
                     <div className="space-y-1.5 border-t border-emerald-900/40 pt-3 font-mono">
-                      <p>Created Nodes: {syncReport.nodes_created ?? 0}</p>
-                      <p>Created Edges: {syncReport.edges_created ?? 0}</p>
-                      <p>Linked Evidence Chunks: {syncReport.evidence_links_created ?? 0}</p>
+                      <p>Objects Learned: {syncReport.nodes_created ?? 0}</p>
+                      <p>Relationships Connected: {syncReport.edges_created ?? 0}</p>
+                      <p>Context Grounding Points: {syncReport.evidence_links_created ?? 0}</p>
                     </div>
                   )}
                 </div>
@@ -372,7 +451,7 @@ export default function OnboardingPage() {
                   }}
                   className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-violet-600 to-cyan-500 text-slate-950 hover:opacity-95 transition-all text-xs shadow-lg shadow-violet-500/10 flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  Launch Workspace Console <ArrowRight size={14} />
+                  Enter Context Console <ArrowRight size={14} />
                 </button>
 
               </div>
@@ -383,7 +462,7 @@ export default function OnboardingPage() {
           {/* Micro Footer */}
           <div className="pt-2 border-t border-slate-800/80 flex items-center justify-center gap-1 text-[9px] font-mono text-slate-500">
             <Sparkles size={9} className="text-violet-500" />
-            <span>Mock Auth session is active</span>
+            <span>Universal Context OS Active</span>
           </div>
 
         </div>
@@ -391,7 +470,7 @@ export default function OnboardingPage() {
 
       {/* Footer */}
       <footer className="w-full border-t border-slate-900 bg-slate-950/60 py-6 text-slate-600 text-[10px] font-mono text-center relative z-10">
-        <p>© 2026 Metaphor Context Engine</p>
+        <p>© 2026 Metaphor Context Operating System</p>
       </footer>
 
     </div>
