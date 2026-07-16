@@ -14,10 +14,10 @@ import {
 interface NodeData {
   name: string;
   type: string;
-  metadata?: Record<str, any>;
+  metadata?: Record<string, any>;
 }
 
-const iconMap: Record<str, React.ComponentType<any>> = {
+const iconMap: Record<string, React.ComponentType<any>> = {
   person: User,
   meeting: Calendar,
   idea: Lightbulb,

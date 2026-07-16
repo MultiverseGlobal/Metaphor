@@ -303,7 +303,7 @@ export default function Dashboard() {
             <Controls className="fill-white" />
             <MiniMap 
               nodeColor={(n) => {
-                const colors: Record<str, str> = {
+                const colors: Record<string, string> = {
                   person: "#4facfe",
                   meeting: "#a18cd1",
                   idea: "#ff8177",
