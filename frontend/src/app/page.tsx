@@ -1,611 +1,252 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  ReactFlow,
-  MiniMap,
-  Controls,
-  Background,
-  useNodesState,
-  useEdgesState,
-  MarkerType,
-  Node,
-  Edge
-} from "@xyflow/react";
-
-type MetaphorNode = Node<{
-  name: string;
-  type: string;
-  metadata?: Record<string, any>;
-}>;
-import "@xyflow/react/dist/style.css";
-
+import React from "react";
+import Link from "next/link";
 import { 
-  fetchFromMetaphor 
-} from "./api";
-import { CustomNode } from "./CustomNode";
-import { 
-  RefreshCw, 
-  GitBranch, 
+  Sparkles, 
+  ArrowRight, 
+  Layers, 
   Activity, 
-  HelpCircle, 
-  Clock, 
-  Key, 
-  MessageSquare,
-  Sparkles,
-  Link2
+  GitBranch,
+  Network
 } from "lucide-react";
 
-// Node Types dictionary for React Flow
-const nodeTypes = {
-  person: CustomNode,
-  meeting: CustomNode,
-  idea: CustomNode,
-  decision: CustomNode,
-  commit: CustomNode,
-  project: CustomNode
-};
-
-export default function Dashboard() {
-  // Graph States
-  const [nodes, setNodes, onNodesChange] = useNodesState<MetaphorNode>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-  
-  // App States
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [selectedNodeA, setSelectedNodeA] = useState<string | null>(null);
-  const [selectedNodeB, setSelectedNodeB] = useState<string | null>(null);
-  
-  // Reasoning State
-  const [explanation, setExplanation] = useState<string | null>(null);
-  const [isExplaining, setIsExplaining] = useState(false);
-  
-  // Timeline State
-  const [timeline, setTimeline] = useState<any[]>([]);
-  
-  // Active Panel Tab
-  const [activeTab, setActiveTab] = useState<"explain" | "timeline" | "keys">("explain");
-  
-  // Config States
-  const [apiKey, setApiKey] = useState("metaphor_dev_secret_key_123");
-  const [notionToken, setNotionToken] = useState("");
-  const [githubToken, setGithubToken] = useState("");
-
-  // Load configuration from local storage on mount
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedKey = localStorage.getItem("metaphor_api_key");
-      if (savedKey) setApiKey(savedKey);
-      
-      const savedNotion = localStorage.getItem("notion_token");
-      if (savedNotion) setNotionToken(savedNotion);
-
-      const savedGithub = localStorage.getItem("github_token");
-      if (savedGithub) setGithubToken(savedGithub);
-    }
-    
-    // Fetch initial graph and timeline
-    loadGraphData();
-  }, []);
-
-  // Save config
-  const saveKeys = () => {
-    localStorage.setItem("metaphor_api_key", apiKey);
-    localStorage.setItem("notion_token", notionToken);
-    localStorage.setItem("github_token", githubToken);
-    alert("API Configuration saved locally.");
-  };
-
-  // Main graph loaders
-  const loadGraphData = async () => {
-    try {
-      // 1. Fetch Graph
-      const graphData = await fetchFromMetaphor("/graph");
-      
-      // Map database nodes to React Flow nodes with layout
-      // Simple grid/radial mapping to avoid overlap
-      const mappedNodes = graphData.nodes.map((node: any, index: number) => {
-        // Simple positioning algorithm
-        const angle = (index / graphData.nodes.length) * 2 * Math.PI;
-        const radius = 220 + (index % 2) * 80;
-        const x = 350 + radius * Math.cos(angle);
-        const y = 250 + radius * Math.sin(angle);
-        
-        return {
-          id: node.id,
-          type: node.type.toLowerCase(),
-          data: { name: node.name, type: node.type, metadata: node.metadata },
-          position: { x, y }
-        };
-      });
-
-      // Map database edges to React Flow edges with distinct colors/styles
-      const mappedEdges = graphData.edges.map((edge: any) => {
-        let edgeColor = "var(--color-structural)";
-        let animated = false;
-        let style: any = { strokeWidth: 2 };
-
-        if (edge.dimension === "semantic") {
-          edgeColor = "var(--color-semantic)";
-          style.strokeDasharray = "4 4";
-        } else if (edge.dimension === "temporal") {
-          edgeColor = "var(--color-temporal)";
-          animated = true;
-          style.strokeWidth = 3;
-        }
-
-        return {
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          animated,
-          label: edge.type,
-          labelStyle: { fill: "#a1a1aa", fontSize: 9, fontWeight: 500 },
-          style: { ...style, stroke: edgeColor },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: edgeColor,
-            width: 14,
-            height: 14
-          }
-        };
-      });
-
-      setNodes(mappedNodes);
-      setEdges(mappedEdges);
-
-      // 2. Fetch Timeline History
-      const historyData = await fetchFromMetaphor("/history");
-      setTimeline(historyData.timeline || []);
-
-    } catch (err: any) {
-      console.error("Error loading Metaphor data:", err);
-    }
-  };
-
-  // Trigger sync parser and reflection
-  const runSync = async () => {
-    setIsSyncing(true);
-    try {
-      await fetchFromMetaphor("/sync");
-      await loadGraphData();
-    } catch (err: any) {
-      alert(`Sync failed: ${err.message}`);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  // Node Click Selection for explanation
-  const onNodeClick = useCallback((event: React.MouseEvent, node: any) => {
-    const nodeName = node.data.name;
-    
-    setSelectedNodeA((prev) => {
-      if (!prev) return nodeName;
-      if (prev === nodeName) return null; // toggle off
-      
-      // Node A is set, set Node B
-      setSelectedNodeB((prevB) => {
-        if (prevB === nodeName) return null;
-        return nodeName;
-      });
-      return prev;
-    });
-  }, []);
-
-  // Reset Node selection
-  const clearSelection = () => {
-    setSelectedNodeA(null);
-    setSelectedNodeB(null);
-    setExplanation(null);
-  };
-
-  // Request connection explanation
-  const runExplanation = async () => {
-    if (!selectedNodeA || !selectedNodeB) return;
-    setIsExplaining(true);
-    setExplanation("Asking Claude to analyze causal and semantic pathways...");
-    try {
-      const data = await fetchFromMetaphor("/explain", {
-        node_a_name: selectedNodeA,
-        node_b_name: selectedNodeB
-      });
-      setExplanation(data.explanation);
-    } catch (err: any) {
-      setExplanation(`Could not explain connection: ${err.message}`);
-    } finally {
-      setIsExplaining(false);
-    }
-  };
-
-  // Composer Query State
-  const [composerQuery, setComposerQuery] = useState("");
-
-  const handleComposeSubmit = () => {
-    if (!composerQuery) return;
-    // Auto-search or explain connections matching query entities if present
-    // For V1, we search the nodes to see if we can auto-fill selections from query
-    const words = composerQuery.toLowerCase();
-    let foundA: string | null = null;
-    let foundB: string | null = null;
-
-    // Scan node names
-    for (const node of nodes) {
-      const nameLower = node.data.name.toLowerCase();
-      if (words.includes(nameLower)) {
-        if (!foundA) {
-          foundA = node.data.name;
-        } else if (foundA !== node.data.name) {
-          foundB = node.data.name;
-          break;
-        }
-      }
-    }
-
-    if (foundA && foundB) {
-      setSelectedNodeA(foundA);
-      setSelectedNodeB(foundB);
-      setActiveTab("explain");
-      // Trigger explain
-      setIsExplaining(true);
-      setExplanation("Asking Claude to analyze causal and semantic pathways...");
-      fetchFromMetaphor("/explain", {
-        node_a_name: foundA,
-        node_b_name: foundB
-      }).then(data => {
-        setExplanation(data.explanation);
-        setIsExplaining(false);
-      }).catch(err => {
-        setExplanation(`Could not explain connection: ${err.message}`);
-        setIsExplaining(false);
-      });
-    } else if (foundA) {
-      setSelectedNodeA(foundA);
-      alert(`Mapped query to object '${foundA}'. Select a second object to explain relationships.`);
-    } else {
-      alert("Type a query referencing mapped objects (e.g. 'Sarah Client Sync' or 'Value-based Pricing') to explain their relationship.");
-    }
-  };
-
+export default function LandingPage() {
   return (
-    <main className="min-h-screen flex flex-col p-4 md:p-6 select-none bg-white relative">
-      {/* Background gradient blur container */}
-      <div className="grainient-bg"></div>
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative overflow-hidden font-sans">
+      
+      {/* Decorative Blur Backgrounds */}
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-violet-600/10 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-cyan-500/10 blur-[130px] pointer-events-none" />
+      
+      {/* Grid Overlay */}
+      <div 
+        className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none"
+      />
 
-      {/* HEADER SECTION (TIMBAL STYLING) */}
-      <header className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-5 border-b border-slate-100">
-        <div className="flex items-center gap-3">
-          {/* Logo symbol */}
-          <div className="bg-slate-900 text-white p-2 rounded-xl flex items-center justify-center shadow-md">
-            <Sparkles className="h-5 w-5 text-[#00f2fe]" />
+      {/* Navigation Header */}
+      <header className="w-full max-w-7xl mx-auto px-6 py-5 flex items-center justify-between border-b border-slate-900/50 backdrop-blur-md relative z-10">
+        <div className="flex items-center gap-2">
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-violet-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-violet-500/25">
+            <Network className="text-slate-950 stroke-[2.5]" size={18} />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-slate-900 font-sans">
-                METAPHOR
-              </h1>
-              <span className="text-[10px] px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-600 rounded-full uppercase tracking-wider font-bold">
-                World Modeling
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Continuously evolving model of the user's world for multi-agent reasoning.
-            </p>
-          </div>
+          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-slate-400">
+            Metaphor
+          </span>
         </div>
         
-        <div className="flex items-center gap-3">
-          {/* Sync Stats badge */}
-          <div className="hidden sm:flex items-center gap-4 text-xs text-slate-500 mr-2 bg-slate-50 border border-slate-100 px-4 py-2 rounded-full font-medium">
-            <div>
-              <span className="text-slate-900 font-bold inline">{nodes.length}</span> Objects Mapped
-            </div>
-            <div className="border-l border-slate-200 h-4"></div>
-            <div>
-              <span className="text-slate-900 font-bold inline">{edges.length}</span> Causal Links
-            </div>
-          </div>
-          
-          <button 
-            onClick={runSync} 
-            disabled={isSyncing}
-            className={`timbal-btn-primary flex items-center gap-2 ${isSyncing ? "opacity-75" : ""}`}
+        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
+          <a href="#features" className="hover:text-slate-200 transition-colors">Features</a>
+          <a href="#architecture" className="hover:text-slate-200 transition-colors">Architecture</a>
+          <a href="#api" className="hover:text-slate-200 transition-colors">API Docs</a>
+        </nav>
+
+        <div>
+          <Link 
+            href="/login" 
+            className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 border border-slate-800 hover:border-slate-700 hover:bg-slate-800/80 transition-all duration-300 flex items-center gap-1.5 cursor-pointer text-slate-200"
           >
-            <RefreshCw size={14} className={isSyncing ? "animate-spin" : ""} />
-            {isSyncing ? "Syncing..." : "Sync Workspace"}
-          </button>
+            Launch Console <ArrowRight size={14} />
+          </Link>
         </div>
       </header>
 
-      {/* TIMBAL HERO INTRO & COMPOSER CONTAINER */}
-      <section className="relative z-10 max-w-4xl mx-auto w-full text-center mb-10 flex flex-col items-center">
-        {/* Banner badge */}
-        <span className="group inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70 py-1 pr-3 pl-1 shadow-sm shadow-slate-100/50 backdrop-blur-xl mb-4">
-          <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[9px] font-bold tracking-wider text-white uppercase shadow-sm shadow-blue-600/25">NEW</span>
-          <span className="text-[11px] font-semibold text-slate-700">Say hello to Metaphor Compose</span>
-        </span>
+      {/* Main Content */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-6 flex flex-col justify-center relative z-10 py-16 md:py-24">
         
-        <h2 className="hero-title max-w-2xl mb-4 font-sans font-medium text-slate-900">
-          The end-to-end context layer for <span className="text-blue-600 font-semibold">AI agents</span>
-        </h2>
-        <p className="mx-auto max-w-lg text-[13px] sm:text-[14px] leading-snug font-medium text-slate-500 mb-8">
-          Ask questions, trace commit timelines, and let your models reason over relationships rather than isolated documents.
-        </p>
-
-        {/* COMPOSER CARD (TIMBAL COMPOSE STYLE) */}
-        <div className="w-full max-w-2xl composer-card p-3 text-left">
-          <textarea
-            value={composerQuery}
-            onChange={(e) => setComposerQuery(e.target.value)}
-            className="w-full resize-none border-0 bg-transparent px-1 py-1 font-sans text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none min-h-[50px]"
-            placeholder="Search connections (e.g. 'Sarah Client Sync and Value-based Pricing')..."
-            rows={1}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleComposeSubmit();
-              }
-            }}
-          />
-          <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-1">
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setActiveTab("keys")}
-                className="timbal-btn-secondary flex items-center gap-1.5"
-              >
-                <Key size={12} />
-                <span>Configure Keys</span>
-              </button>
-              <button 
-                onClick={clearSelection}
-                className="timbal-btn-secondary flex items-center gap-1.5"
-              >
-                <span>Reset View</span>
-              </button>
+        {/* Hero Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          
+          {/* Hero Left Text */}
+          <div className="lg:col-span-7 flex flex-col text-left space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-950/40 border border-violet-900/50 text-violet-300 text-xs font-medium w-fit">
+              <Sparkles size={12} className="text-violet-400" />
+              <span>Context Engine for Agentic Teams</span>
             </div>
             
-            <button
-              onClick={handleComposeSubmit}
-              disabled={!composerQuery}
-              className="send-ball transition-opacity duration-200"
-              title="Send to Claude"
-            >
-              <Sparkles size={16} />
-            </button>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-white leading-[1.1]">
+              Continuous World <br className="hidden sm:inline" />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-400 via-cyan-400 to-emerald-400">
+                Modeling for AI
+              </span>
+            </h1>
+            
+            <p className="text-slate-400 text-base md:text-lg max-w-xl leading-relaxed">
+              Metaphor is a Context-as-a-Service engine. It continuously reflects on raw logs, calendar entries, Notion updates, and commits to build a unified relational graph. Serve rich, structured context to your AI agents automatically.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <Link 
+                href="/login" 
+                className="px-6 py-3.5 rounded-xl font-bold bg-gradient-to-r from-violet-600 to-cyan-500 text-slate-950 hover:opacity-95 transition-all text-sm shadow-lg shadow-violet-500/20 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                Enter Sandbox Console <ArrowRight size={16} />
+              </Link>
+              <a 
+                href="#features" 
+                className="px-6 py-3.5 rounded-xl font-bold bg-slate-900/60 border border-slate-800 text-slate-300 hover:bg-slate-800/80 transition-all text-sm flex items-center justify-center gap-2 cursor-pointer"
+              >
+                Learn More
+              </a>
+            </div>
+          </div>
+          
+          {/* Hero Right Visual (Interactive/Mock Graph) */}
+          <div className="lg:col-span-5 relative w-full aspect-square md:aspect-[4/3] lg:aspect-square flex items-center justify-center">
+            
+            {/* Visual Panel mimicking timbal.ai style */}
+            <div className="w-full max-w-md bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 relative overflow-hidden backdrop-blur-md shadow-2xl">
+              
+              {/* Header style */}
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+                </div>
+                <span className="text-[10px] text-slate-500 font-mono">metaphor-graph-viewer.json</span>
+              </div>
+              
+              {/* Animated Mock Node Network */}
+              <div className="relative h-64 border border-slate-950 bg-slate-950/80 rounded-xl overflow-hidden p-4 flex flex-col justify-between">
+                
+                {/* Connecting Lines */}
+                <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                  <path d="M 90,50 L 220,100" stroke="rgba(139, 92, 246, 0.4)" strokeWidth="1.5" strokeDasharray="4" />
+                  <path d="M 320,80 L 220,100" stroke="rgba(6, 182, 212, 0.4)" strokeWidth="2" />
+                  <path d="M 220,100 L 150,180" stroke="rgba(16, 185, 129, 0.4)" strokeWidth="2.5" />
+                  <path d="M 150,180 L 290,195" stroke="rgba(139, 92, 246, 0.3)" strokeWidth="1.5" strokeDasharray="4" />
+                </svg>
+
+                {/* Node 1 */}
+                <div className="absolute top-6 left-6 px-3 py-2 rounded-lg bg-slate-900 border border-violet-500/30 text-left flex flex-col scale-90 hover:scale-95 transition-transform cursor-default">
+                  <span className="text-[8px] text-violet-400 font-bold uppercase tracking-wider">Project</span>
+                  <span className="text-xs font-semibold text-white">Metaphor</span>
+                </div>
+
+                {/* Node 2 */}
+                <div className="absolute top-10 right-8 px-3 py-2 rounded-lg bg-slate-900 border border-cyan-500/30 text-left flex flex-col scale-90 hover:scale-95 transition-transform cursor-default">
+                  <span className="text-[8px] text-cyan-400 font-bold uppercase tracking-wider">Idea</span>
+                  <span className="text-xs font-semibold text-white">Context API</span>
+                </div>
+
+                {/* Node 3 */}
+                <div className="absolute top-24 left-[35%] px-4 py-2.5 rounded-xl bg-slate-900/90 border border-violet-500 shadow-lg shadow-violet-500/10 text-left flex flex-col hover:scale-105 transition-transform cursor-default">
+                  <span className="text-[9px] text-violet-400 font-bold uppercase tracking-wider">Decision</span>
+                  <span className="text-xs font-semibold text-white">OAuth Decoupling</span>
+                </div>
+
+                {/* Node 4 */}
+                <div className="absolute bottom-8 left-8 px-3 py-2 rounded-lg bg-slate-900 border border-emerald-500/30 text-left flex flex-col scale-90 hover:scale-95 transition-transform cursor-default">
+                  <span className="text-[8px] text-emerald-400 font-bold uppercase tracking-wider">Commit</span>
+                  <span className="text-xs font-semibold text-white">fix: decouple keys</span>
+                </div>
+
+                {/* Node 5 */}
+                <div className="absolute bottom-6 right-6 px-3 py-2 rounded-lg bg-slate-900 border border-violet-500/30 text-left flex flex-col scale-90 hover:scale-95 transition-transform cursor-default">
+                  <span className="text-[8px] text-violet-400 font-bold uppercase tracking-wider">Person</span>
+                  <span className="text-xs font-semibold text-white">Benjamin</span>
+                </div>
+
+              </div>
+
+              {/* Feed Console */}
+              <div className="mt-4 text-[10px] font-mono text-left bg-slate-950 p-3 rounded-lg border border-slate-900 text-slate-400 overflow-hidden h-20 relative">
+                <div className="animate-pulse flex items-center gap-1.5 text-cyan-400 mb-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                  <span>Real-time ingestion active...</span>
+                </div>
+                <div className="space-y-0.5">
+                  <p>&gt; Ingested Notion page "Value-based Pricing"</p>
+                  <p>&gt; Extracted link: Project(Atlas) -&gt; Decision(Local Postgres)</p>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </main>
+
+      {/* Features Section */}
+      <section id="features" className="w-full bg-slate-950 border-t border-slate-900/60 py-20 relative z-10">
+        <div className="max-w-7xl mx-auto px-6 text-center space-y-12">
+          
+          <div className="space-y-4 max-w-xl mx-auto">
+            <h2 className="text-3xl font-extrabold text-white">
+              Structured Dimensional Context
+            </h2>
+            <p className="text-slate-400 text-sm md:text-base leading-relaxed">
+              We model and connect knowledge across three distinct axes to provide AI agents with a comprehensive mental map of your operations.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            {/* Feature 1 */}
+            <div className="bg-slate-900/30 border border-slate-800/80 rounded-2xl p-6 text-left hover:border-slate-700/80 transition-all duration-300 backdrop-blur-sm relative group">
+              <div className="h-10 w-10 rounded-xl bg-violet-600/10 text-violet-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Layers size={20} />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Structural Dimension</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Tracks organizational hierarchy, ownership, and containment. Understands which projects contain which documents, designs, and decisions.
+              </p>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="bg-slate-900/30 border border-slate-800/80 rounded-2xl p-6 text-left hover:border-slate-700/80 transition-all duration-300 backdrop-blur-sm relative group">
+              <div className="h-10 w-10 rounded-xl bg-cyan-600/10 text-cyan-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Activity size={20} />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Semantic Dimension</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Connects thematic and conceptual relationships. Discovers associations, user goals, and related research pages across disparate source tools.
+              </p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="bg-slate-900/30 border border-slate-800/80 rounded-2xl p-6 text-left hover:border-slate-700/80 transition-all duration-300 backdrop-blur-sm relative group">
+              <div className="h-10 w-10 rounded-xl bg-emerald-600/10 text-emerald-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <GitBranch size={20} />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Temporal Dimension</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Maps causality and progression. Tracks how a client request caused a brainstorming session, leading to a design decision, ending in a git commit.
+              </p>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* Integration Banner */}
+      <section id="architecture" className="w-full bg-slate-950 border-t border-slate-900/60 py-16 relative z-10 text-slate-400">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="text-left space-y-2 max-w-lg">
+            <h3 className="text-xl font-bold text-white">Out-of-the-box Integrations</h3>
+            <p className="text-xs leading-relaxed">
+              Metaphor automatically listens to events and pages from GitHub, Notion, Google Drive, Google Calendar, and more to synthesize context without manual note-taking.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-4 justify-center">
+            <span className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800/80 text-xs font-semibold text-slate-300">GitHub</span>
+            <span className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800/80 text-xs font-semibold text-slate-300">Notion</span>
+            <span className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800/80 text-xs font-semibold text-slate-300">Google Workspace</span>
           </div>
         </div>
       </section>
 
-      {/* DASHBOARD SPLIT GRID */}
-      <div className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[600px]">
-        {/* GRAPH CANVAS AREA */}
-        <section className="lg:col-span-8 timbal-panel h-[600px] overflow-hidden flex flex-col relative bg-[#f8fafc]">
-          {/* Dimension badges */}
-          <div className="absolute top-4 left-4 z-10 flex gap-2">
-            <span className="px-2.5 py-1 bg-white border border-slate-200 text-[10px] rounded-full text-slate-600 font-bold flex items-center gap-1.5 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-slate-400 inline-block"></span> Structural
-            </span>
-            <span className="px-2.5 py-1 bg-white border border-slate-200 text-[10px] rounded-full text-[#3b82f6] font-bold flex items-center gap-1.5 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-blue-500 inline-block"></span> Semantic
-            </span>
-            <span className="px-2.5 py-1 bg-white border border-slate-200 text-[10px] rounded-full text-[#f59e0b] font-bold flex items-center gap-1.5 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span> Temporal (Causal)
-            </span>
-          </div>
+      {/* Footer */}
+      <footer className="w-full border-t border-slate-900 bg-slate-950/60 py-8 relative z-10 text-slate-500 text-xs font-mono text-center">
+        <div className="max-w-7xl mx-auto px-6">
+          <p>© 2026 Metaphor. Built for the next generation of Agentic Workforces.</p>
+        </div>
+      </footer>
 
-          {/* Active selection helper */}
-          <div className="absolute bottom-4 left-4 z-10 max-w-xs p-3.5 bg-white border border-slate-200 rounded-2xl text-xs shadow-md">
-            <h4 className="font-bold text-slate-800 mb-1 flex items-center gap-1.5">
-              <Activity size={12} className="text-blue-600" /> Selection State
-            </h4>
-            <p className="text-slate-500 text-[11px] leading-snug">Click graph nodes to configure focus relationships.</p>
-            <div className="mt-2.5 space-y-1 text-slate-700">
-              <div className="truncate">Node A: <span className="text-[#ea580c] font-bold">{selectedNodeA || "(None)"}</span></div>
-              <div className="truncate">Node B: <span className="text-[#0284c7] font-bold">{selectedNodeB || "(None)"}</span></div>
-            </div>
-            {(selectedNodeA || selectedNodeB) && (
-              <button 
-                onClick={clearSelection} 
-                className="mt-2.5 w-full text-center text-[10px] text-red-500 hover:text-red-600 border border-red-100 bg-red-50/50 py-1.5 rounded-lg font-semibold transition-colors"
-              >
-                Clear Selection
-              </button>
-            )}
-          </div>
-
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            nodeTypes={nodeTypes}
-            onNodeClick={onNodeClick}
-            fitView
-            className="bg-[#f8fafc]"
-          >
-            <Background color="#cbd5e1" gap={18} />
-            <Controls className="fill-slate-700" />
-            <MiniMap 
-              nodeColor={(n) => {
-                const colors: Record<string, string> = {
-                  person: "#0284c7",
-                  meeting: "#7c3aed",
-                  idea: "#ea580c",
-                  decision: "#db2777",
-                  commit: "#16a34a",
-                  project: "#4f46e5"
-                };
-                return colors[n.type || ""] || "#94a3b8";
-              }}
-              className="bg-white rounded-xl border border-slate-200 shadow-sm"
-            />
-          </ReactFlow>
-        </section>
-
-        {/* SIDE PANELS (REASONING & CONFIG) */}
-        <section className="lg:col-span-4 flex flex-col h-[600px]">
-          {/* TAB HEADERS */}
-          <div className="flex border-b border-slate-200 bg-slate-50/50 rounded-t-2xl">
-            <button
-              onClick={() => setActiveTab("explain")}
-              className={`flex-1 py-3.5 text-[11px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-colors ${activeTab === "explain" ? "border-b-2 border-slate-900 text-slate-900" : "text-slate-400 hover:text-slate-600"}`}
-            >
-              <HelpCircle size={13} /> Explain
-            </button>
-            <button
-              onClick={() => setActiveTab("timeline")}
-              className={`flex-1 py-3.5 text-[11px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-colors ${activeTab === "timeline" ? "border-b-2 border-slate-900 text-slate-900" : "text-slate-400 hover:text-slate-600"}`}
-            >
-              <Clock size={13} /> Timeline
-            </button>
-            <button
-              onClick={() => setActiveTab("keys")}
-              className={`flex-1 py-3.5 text-[11px] uppercase font-bold tracking-wider flex items-center justify-center gap-1.5 transition-colors ${activeTab === "keys" ? "border-b-2 border-slate-900 text-slate-900" : "text-slate-400 hover:text-slate-600"}`}
-            >
-              <Key size={13} /> Keys
-            </button>
-          </div>
-
-          {/* TAB CONTENTS */}
-          <div className="flex-1 timbal-panel rounded-t-none p-4 overflow-y-auto bg-white flex flex-col">
-            
-            {/* TAB: EXPLAIN CONNECTIONS */}
-            {activeTab === "explain" && (
-              <div className="flex-1 flex flex-col">
-                <div className="mb-4">
-                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                    <MessageSquare size={14} className="text-blue-600" /> Relationship Explainer
-                  </h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Select two nodes on the left canvas to ask Claude to explain their causal or structural relationship.</p>
-                </div>
-
-                <div className="flex-1 border border-slate-100 rounded-2xl p-3 bg-slate-50/30 flex flex-col justify-between mb-4 overflow-y-auto max-h-[340px]">
-                  {explanation ? (
-                    <div className="text-[13px] text-slate-600 overflow-y-auto whitespace-pre-wrap leading-relaxed">
-                      {explanation}
-                    </div>
-                  ) : (
-                    <div className="text-xs text-slate-400 text-center my-auto">
-                      Select two nodes in the graph view and press the button below.
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  onClick={runExplanation}
-                  disabled={isExplaining || !selectedNodeA || !selectedNodeB}
-                  className="timbal-btn-primary w-full flex items-center justify-center gap-2 py-2.5 rounded-xl disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  <Sparkles size={14} />
-                  {isExplaining ? "Analyzing..." : "Explain Relationship"}
-                </button>
-              </div>
-            )}
-
-            {/* TAB: TEMPORAL TIMELINE HISTORY */}
-            {activeTab === "timeline" && (
-              <div className="flex flex-col flex-1">
-                <div className="mb-4">
-                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                    <Clock size={14} className="text-amber-500" /> Chronological Timeline
-                  </h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Causal evolution of decisions, commits, and milestones.</p>
-                </div>
-
-                <div className="flex-1 overflow-y-auto space-y-4 pr-1 max-h-[400px]">
-                  {timeline.length > 0 ? (
-                    timeline.map((item, idx) => (
-                      <div key={item.id} className="relative pl-6 border-l border-slate-150">
-                        {/* Bullet indicators */}
-                        <span 
-                          className="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm"
-                          style={{
-                            backgroundColor: `var(--color-${item.type.toLowerCase()}, var(--accent-primary))`
-                          }}
-                        ></span>
-                        <div className="text-[10px] text-amber-600 font-mono font-semibold">{item.display_date}</div>
-                        <div className="text-[13px] font-semibold text-slate-950 mt-0.5">{item.name}</div>
-                        <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">{item.type}</div>
-                        
-                        {item.causes && item.causes.length > 0 && (
-                          <div className="mt-2 bg-slate-50/50 p-2 rounded-xl border border-slate-100 text-[11px] text-slate-600 space-y-1">
-                            {item.causes.map((c: any, cidx: number) => (
-                              <div key={cidx} className="flex items-start gap-1">
-                                <Link2 size={11} className="text-blue-500 mt-0.5 flex-shrink-0" />
-                                <span>
-                                  Led to <strong className="text-slate-800 font-semibold">{c.target_name}</strong>: {c.description}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-xs text-slate-400 text-center py-10">
-                      No chronological history synced yet. Click 'Sync Workspace' to build the world history.
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* TAB: DEV KEYS & SETTINGS */}
-            {activeTab === "keys" && (
-              <div className="space-y-4 flex-1 flex flex-col justify-between">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                      <Key size={14} className="text-blue-500" /> developer Keys
-                    </h3>
-                    <p className="text-[11px] text-slate-500 mt-0.5">Configure developer access keys. Keys are saved securely in your browser's localStorage.</p>
-                  </div>
-
-                  <div className="space-y-3.5">
-                    <div>
-                      <label className="block text-[10px] text-slate-500 font-bold mb-1 uppercase tracking-wider">Metaphor API Key</label>
-                      <input 
-                        type="password" 
-                        value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
-                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-850 focus:outline-none focus:border-slate-800" 
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] text-slate-500 font-bold mb-1 uppercase tracking-wider">Notion Integration Token</label>
-                      <input 
-                        type="password" 
-                        value={notionToken}
-                        onChange={(e) => setNotionToken(e.target.value)}
-                        placeholder="secret_..."
-                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-850 focus:outline-none focus:border-slate-800" 
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] text-slate-500 font-bold mb-1 uppercase tracking-wider">GitHub Personal Token</label>
-                      <input 
-                        type="password" 
-                        value={githubToken}
-                        onChange={(e) => setGithubToken(e.target.value)}
-                        placeholder="ghp_..."
-                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-850 focus:outline-none focus:border-slate-800" 
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={saveKeys}
-                  className="timbal-btn-primary w-full flex items-center justify-center gap-2 py-2.5 rounded-xl"
-                >
-                  <Key size={14} /> Save Configuration
-                </button>
-              </div>
-            )}
-
-          </div>
-        </section>
-      </div>
-    </main>
+    </div>
   );
 }
