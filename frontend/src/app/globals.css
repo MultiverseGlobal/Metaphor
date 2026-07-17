@@ -1,36 +1,66 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
-
+/* Theme definitions */
 :root {
-  --background: #ffffff;
-  --foreground: #0f172a;
-  
-  --card-bg: #ffffff;
-  --card-border: #e2e8f0;
-  --card-hover-border: #cbd5e1;
-  
-  --accent-primary: #2563eb; /* Timbal Blue */
-  --accent-secondary: #4f46e5;
-  --accent-hover: #1d4ed8;
-  
-  /* Node Types Palette (Light theme tailored) */
-  --color-person: #0284c7;
-  --color-meeting: #7c3aed;
-  --color-idea: #ea580c;
-  --color-decision: #db2777;
-  --color-commit: #16a34a;
-  --color-project: #4f46e5;
-  
-  /* Edge Dimensions Palette */
-  --color-structural: #94a3b8;
-  --color-semantic: #3b82f6;
-  --color-temporal: #f59e0b;
-
+  /* Fonts */
+  --font-serif: 'Lora', serif;
   --font-sans: 'Outfit', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 }
 
+/* Theme: Clean (Default Light) */
+.theme-clean {
+  --background: #f4f4f6;
+  --foreground: #18181b;
+  --card-bg: #ffffff;
+  --card-border: #e4e4e7;
+  --card-hover-border: #d4d4d8;
+  --accent-gold: #b45309;
+  --accent-gold-bg: #fef3c7;
+  --accent-gold-hover: #92400e;
+  --sidebar-bg: #fafafa;
+  --sidebar-border: #e4e4e7;
+  --muted: #71717a;
+  --muted-bg: #f4f4f5;
+  --timeline-line: #e4e4e7;
+}
+
+/* Theme: Paper (Warm Cream) */
+.theme-paper {
+  --background: #f2ece4;
+  --foreground: #38332a;
+  --card-bg: #faf8f5;
+  --card-border: #e4dac9;
+  --card-hover-border: #d5c8b3;
+  --accent-gold: #705328;
+  --accent-gold-bg: #f4e6d2;
+  --accent-gold-hover: #563f1d;
+  --sidebar-bg: #eae0d3;
+  --sidebar-border: #dcd0be;
+  --muted: #7c7261;
+  --muted-bg: #eae3d5;
+  --timeline-line: #dcd0be;
+}
+
+/* Theme: Dark (Charcoal/Gold) */
+.dark, .theme-dark {
+  --background: #111317;
+  --foreground: #e4e4e7;
+  --card-bg: #1c1d22;
+  --card-border: #2e3039;
+  --card-hover-border: #3f424e;
+  --accent-gold: #f59e0b;
+  --accent-gold-bg: #2c2211;
+  --accent-gold-hover: #fbbf24;
+  --sidebar-bg: #18191d;
+  --sidebar-border: #25272e;
+  --muted: #a1a1aa;
+  --muted-bg: #25262b;
+  --timeline-line: #2e3039;
+}
+
+/* Base Body settings */
 body {
   background-color: var(--background);
   color: var(--foreground);
@@ -38,123 +68,175 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  position: relative;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Grainient background element mimicking timbal.ai */
-.grainient-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 600px;
-  z-index: 0;
-  pointer-events: none;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(95, 59, 246, 0.08) 0px, transparent 50%),
-    radial-gradient(at 50% 0%, rgba(0, 242, 254, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.06) 0px, transparent 50%);
-  filter: blur(80px);
-  opacity: 0.85;
-}
-
-/* Glassmorphism/Card Panels matching Timbal AI UI */
-.timbal-panel {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03), 0 28px 64px -22px rgba(15, 23, 42, 0.08);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.timbal-panel:hover {
-  border-color: var(--card-hover-border);
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05), 0 32px 72px -20px rgba(15, 23, 42, 0.1);
-}
-
-/* Timbal Composer Container */
-.composer-card {
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06), 0 28px 64px -22px rgba(15, 23, 42, 0.28);
-  border: 1px solid var(--card-border);
-  border-radius: 16px;
-  background: #ffffff;
-}
-
-.timbal-btn-primary {
-  background-color: var(--foreground);
-  color: #ffffff;
-  font-weight: 500;
-  font-size: 13px;
-  border-radius: 9999px;
-  padding: 8px 16px;
-  transition: background-color 0.2s ease;
-}
-
-.timbal-btn-primary:hover {
-  background-color: #1e293b;
-}
-
-.timbal-btn-secondary {
-  background: linear-gradient(to bottom, #ffffff, #f8fafc);
-  border: 1px solid var(--card-border);
-  color: #475569;
-  font-weight: 600;
-  font-size: 12px;
-  border-radius: 9999px;
-  padding: 6px 12px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-  transition: all 0.2s ease;
-}
-
-.timbal-btn-secondary:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-}
-
-/* Send ball styling matching timbal metalball poster */
-.send-ball {
-  background: linear-gradient(135deg, #1e293b, #0f172a);
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-  box-shadow: 0 2px 8px rgba(15,23,42,0.15);
-}
-
-.send-ball:hover:not(:disabled) {
-  transform: scale(1.05);
-}
-
-.send-ball:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Custom Scrollbars for light theme */
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(0,0,0,0.02);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(15, 23, 42, 0.15);
-  border-radius: 3px;
+  background: var(--card-border);
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(15, 23, 42, 0.3);
+  background: var(--card-hover-border);
 }
 
-/* Custom text utility */
-.hero-title {
-  font-size: clamp(2rem, 4vw, 2.75rem);
-  line-height: 1.15;
-  font-weight: 500;
-  letter-spacing: -0.02em;
+/* Serif headers font utility */
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+.font-sans {
+  font-family: var(--font-sans);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Card panels */
+.atlas-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.atlas-card-hover:hover {
+  border-color: var(--card-hover-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+}
+
+/* Layout lines and timeline nodes */
+.timeline-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-gold);
+  background: var(--background);
+  z-index: 10;
+  position: relative;
+}
+
+.timeline-dot-filled {
+  background: var(--accent-gold);
+}
+
+.timeline-dot-active {
+  box-shadow: 0 0 0 4px var(--accent-gold-bg);
+}
+
+/* Form inputs styling */
+.atlas-input {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   color: var(--foreground);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.atlas-input:focus {
+  border-color: var(--accent-gold);
+}
+
+/* Primary Button */
+.atlas-btn-primary {
+  background-color: var(--accent-gold);
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 8px 16px;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.theme-clean .atlas-btn-primary {
+  color: #ffffff;
+}
+
+.theme-paper .atlas-btn-primary {
+  color: #faf8f5;
+}
+
+.dark .atlas-btn-primary {
+  color: #111317;
+  font-weight: 600;
+}
+
+.atlas-btn-primary:hover {
+  opacity: 0.95;
+}
+
+.atlas-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Secondary Button */
+.atlas-btn-secondary {
+  background-color: var(--muted-bg);
+  border: 1px solid var(--card-border);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 8px 16px;
+  transition: background-color 0.15s ease;
+}
+
+.atlas-btn-secondary:hover {
+  background-color: var(--card-border);
+}
+
+/* Monospace small badges */
+.atlas-badge {
+  font-family: var(--font-mono);
+  font-size: 0.675rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--muted-bg);
+  border: 1px solid var(--card-border);
+  color: var(--muted);
+}
+
+/* Custom Table for Gap Analysis */
+.gap-analysis-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.gap-analysis-table th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 0.675rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.gap-analysis-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--card-border);
+  color: var(--foreground);
+}
+
+.gap-analysis-table tr:last-child td {
+  border-bottom: none;
 }

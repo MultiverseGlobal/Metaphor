@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Metaphor | World Modeling Context Engine",
-  description: "A continuously evolving model of your world, enabling AI systems to reason over relationships, history, and context.",
+  title: "Atlas — See what's next",
+  description: "Atlas turns activity into one map: the constraint slowing you down, the evidence behind it, and the next move.",
 };
 
 export default function RootLayout({
@@ -13,6 +13,23 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  const stored = localStorage.getItem("atlas.theme") || "theme-clean";
+                  document.documentElement.className = stored;
+                  if (stored === "dark") {
+                    document.documentElement.classList.add("dark");
+                  }
+                } catch (_) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="antialiased">
         {children}
       </body>
