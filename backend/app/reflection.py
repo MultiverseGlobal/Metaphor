@@ -5,7 +5,8 @@ from typing import List, Dict, Any
 from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Node, Edge, Chunk, NodeEvidence
+from app.models import Node, Edge, Chunk, NodeEvidence, UniversalEvent
+from app.ingestion.normalizer import normalizer
 from app.provider import llm_provider
 from app.database import get_session
 
@@ -18,7 +19,7 @@ class ReflectionEngine:
     async def reflect_and_evolve(self, session: AsyncSession, raw_logs: List[Dict[str, Any]], status: str = "approved") -> Dict[str, Any]:
         """
         Run the Reflection Agent using Anthropic Claude.
-        1. Ingest raw log text.
+        1. Ingest raw log text and convert to UniversalEvent records.
         2. Read existing nodes from DB for reference (context mapping).
         3. Prompt Claude to extract structured Objects, Edges, and Evidence links.
         4. Commit changes to PostgreSQL.
@@ -26,6 +27,14 @@ class ReflectionEngine:
         if not raw_logs:
             logger.info("No raw logs to reflect on.")
             return {"status": "success", "message": "No logs provided"}
+
+        # 0. Normalize and record Universal Events
+        normalized_events: List[UniversalEvent] = []
+        for log in raw_logs:
+            event = normalizer.normalize(log)
+            session.add(event)
+            normalized_events.append(event)
+        await session.flush()
 
         # 1. Fetch existing graph nodes to prevent duplicate objects and map connections
         existing_nodes_query = await session.exec(select(Node))
@@ -54,16 +63,11 @@ class ReflectionEngine:
             "Your objective is to model the user's world. Instead of indexing isolated documents, "
             "you identify the underlying Objects (Nodes) and the Relationships (Edges) between them.\n"
             "Objects can be:\n"
-            "- Person (e.g. Benjamin, Sarah)\n"
-            "- Meeting (e.g. Pricing Sync)\n"
-            "- Idea (e.g. Context API)\n"
-            "- Decision (e.g. V1 Developer Keys First)\n"
-            "- Commit (e.g. git commit messages)\n"
-            "- Project (e.g. Metaphor, Atlas, William)\n\n"
+            "- Person, Meeting, Idea, Decision, Commit, Project, Task, Document, Company, Email, Note, Product, Goal, Event\n\n"
             "Relationships must be categorized into three dimensions:\n"
-            "- Structural: Hierarchy or ownership (e.g. Project contains Idea)\n"
-            "- Semantic: Semantic association or thematic relevance (e.g. Idea relates to Project)\n"
-            "- Temporal: Causal, chronological, or event sequencing (e.g. Meeting created Idea -> Idea led to Decision -> Decision implemented in Commit)\n\n"
+            "- Structural: Hierarchy or ownership (e.g., Project contains Idea, owns, belongs_to, assigned_to)\n"
+            "- Semantic: Semantic association or thematic relevance (e.g., Idea relates to Project, mentions, depends_on)\n"
+            "- Temporal: Causal, chronological, or event sequencing (e.g., Meeting created Idea -> scheduled_after -> blocked_by)\n\n"
             "Ensure you resolve names to existing nodes to connect logs into the unified graph."
         )
 
@@ -76,10 +80,10 @@ class ReflectionEngine:
             f"Respond STRICTLY in JSON format with no additional conversation. Use this exact schema:\n"
             f"{{\n"
             f"  \"nodes_to_create\": [\n"
-            f"    {{\"name\": \"Object Name\", \"type\": \"Person|Meeting|Idea|Decision|Commit|Project\", \"metadata\": {{...}}}}\n"
+            f"    {{\"name\": \"Object Name\", \"type\": \"Person|Meeting|Idea|Decision|Commit|Project|Task|Document|Company|Email|Note|Product|Goal|Event\", \"metadata\": {{...}}}}\n"
             f"  ],\n"
             f"  \"edges_to_create\": [\n"
-            f"    {{\"source_node_name\": \"Name\", \"target_node_name\": \"Name\", \"dimension\": \"structural|semantic|temporal\", \"relationship_type\": \"caused_by|contains|evidence_for|decided_in|implemented_in|etc\", \"description\": \"Why/how are they related?\"}}\n"
+            f"    {{\"source_node_name\": \"Name\", \"target_node_name\": \"Name\", \"dimension\": \"structural|semantic|temporal\", \"relationship_type\": \"owns|created|mentions|depends_on|related_to|belongs_to|scheduled_after|blocked_by|assigned_to\", \"description\": \"Why/how are they related?\"}}\n"
             f"  ],\n"
             f"  \"evidence_links\": [\n"
             f"    {{\"node_name\": \"Object Name\", \"log_id\": \"Log ID\"}}\n"
@@ -97,7 +101,6 @@ class ReflectionEngine:
 
         try:
             # Parse response
-            # Sometimes Claude returns code block formatting, strip it
             clean_response = response_text.strip()
             if clean_response.startswith("```json"):
                 clean_response = clean_response[7:]
@@ -107,11 +110,11 @@ class ReflectionEngine:
             result = json.loads(clean_response)
         except Exception as e:
             logger.error(f"Failed to parse Claude reflection JSON: {e}. Raw response: {response_text}")
-            # Fallback mock database evolution if LLM keys are not configured or parse error
             result = self._get_mock_reflection_results(raw_logs)
 
         # 4. Write data to DB inside transaction
         report = await self._apply_graph_updates(session, raw_logs, result, status=status)
+        report["normalized_events_count"] = len(normalized_events)
         return report
 
     async def _apply_graph_updates(self, session: AsyncSession, raw_logs: List[Dict[str, Any]], parsed_updates: Dict[str, Any], status: str = "approved") -> Dict[str, Any]:

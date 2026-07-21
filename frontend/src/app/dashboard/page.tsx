@@ -263,8 +263,8 @@ export default function Dashboard() {
           </div>
           {!sidebarCollapsed && (
             <div className="text-left">
-              <h1 className="text-sm font-bold font-serif tracking-tight">Atlas</h1>
-              <p className="text-[9px] text-[var(--muted)] font-mono tracking-wider">STRATEGIC PROSTHETIC</p>
+              <h1 className="text-sm font-bold font-serif tracking-tight">Metaphor</h1>
+              <p className="text-[9px] text-[var(--muted)] font-mono tracking-wider">CONTEXT OPERATING SYSTEM</p>
             </div>
           )}
         </div>
@@ -272,13 +272,13 @@ export default function Dashboard() {
         {/* Navigation Items */}
         <nav className="flex-1 px-3 py-6 space-y-1">
           {[
-            { id: "maps", label: "Maps", icon: Compass },
-            { id: "timeline", label: "Timeline", icon: Clock },
-            { id: "notifications", label: "Notifications", icon: Inbox },
-            { id: "reports", label: "Reports", icon: FileText },
-            { id: "datasources", label: "Data sources", icon: Plug },
-            { id: "publicpage", label: "Public page", icon: Globe },
-            { id: "settings", label: "Settings", icon: Settings }
+            { id: "maps", label: "Ontology Control", icon: Compass },
+            { id: "timeline", label: "Context Feed", icon: Clock },
+            { id: "notifications", label: "Inbox Signals", icon: Inbox },
+            { id: "reports", label: "Context Health", icon: FileText },
+            { id: "datasources", label: "Connectors", icon: Plug },
+            { id: "publicpage", label: "Public Shares", icon: Globe },
+            { id: "settings", label: "API Credentials", icon: Settings }
           ].map((item) => {
             const IconComp = item.icon;
             const isActive = activeTab === item.id;
@@ -328,8 +328,8 @@ export default function Dashboard() {
           <div className={`pt-2 border-t border-[var(--sidebar-border)] flex items-center ${sidebarCollapsed ? "justify-center" : "justify-between"}`}>
             {!sidebarCollapsed && (
               <div className="text-left pl-2">
-                <p className="text-xs font-bold text-[var(--foreground)]">John Doe</p>
-                <p className="text-[10px] text-[var(--muted)] font-mono">@john</p>
+                <p className="text-xs font-bold text-[var(--foreground)]">Benjamin</p>
+                <p className="text-[10px] text-[var(--muted)] font-mono">@benjamin</p>
               </div>
             )}
             <button
@@ -348,386 +348,170 @@ export default function Dashboard() {
       {/* Main Panel Content */}
       <main className="flex-1 flex flex-col min-w-0 bg-[var(--background)] relative z-10 overflow-y-auto">
         
+        {/* Mission Control Top Bar */}
+        <header className="border-b border-[var(--card-border)] bg-[var(--card-bg)] px-6 py-3.5 flex items-center justify-between z-20">
+          <div className="flex items-center gap-4">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--muted)]">Connected Sources:</span>
+            <div className="flex items-center gap-2">
+              {[
+                { name: "GitHub", active: true },
+                { name: "Notion", active: true },
+                { name: "Calendar", active: true },
+                { name: "Stripe", active: true },
+                { name: "Gmail", active: true }
+              ].map((src) => (
+                <div key={src.name} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--card-border)] bg-[var(--background)] text-[10px] font-mono font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span>{src.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-bold">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>94% Context Health</span>
+            </div>
+
+            <button 
+              onClick={async () => {
+                setIsSyncing(true);
+                try {
+                  await fetchFromMetaphor("/sync", {}, "POST");
+                  await loadAllData();
+                } catch (e) {
+                  console.error("Sync error:", e);
+                } finally {
+                  setIsSyncing(false);
+                }
+              }}
+              disabled={isSyncing}
+              className="atlas-btn-primary py-1.5 px-3 text-xs flex items-center gap-1.5 font-semibold cursor-pointer"
+            >
+              <RefreshCw size={12} className={isSyncing ? "animate-spin" : ""} />
+              <span>{isSyncing ? "Syncing..." : "Sync Workspace"}</span>
+            </button>
+          </div>
+        </header>
+
         {/* Loading Overlay */}
         {loading && (
           <div className="absolute inset-0 bg-[var(--background)]/85 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="flex flex-col items-center gap-3">
               <Loader2 size={36} className="animate-spin text-[var(--accent-gold)]" />
-              <p className="text-xs text-[var(--muted)] font-mono">Loading Strategy Map...</p>
+              <p className="text-xs text-[var(--muted)] font-mono">Loading Metaphor Context OS...</p>
             </div>
           </div>
         )}
 
-        <div className="flex-1 p-8">
+        <div className="flex-1 p-6">
           
-          {/* TAB 1: MAPS VIEW (CORE FLOW) */}
+          {/* TAB 1: ONTOLOGY CONTROL VIEW */}
           {activeTab === "maps" && (
-            <div className="max-w-4xl mx-auto space-y-8">
+            <div className="space-y-6 text-left">
               
-              {/* State A: Maps List */}
-              {selectedMapId === null ? (
-                <div className="space-y-8 text-left">
-                  
-                  {/* Headline Title */}
-                  <div className="flex justify-between items-end">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-[var(--accent-gold)] font-mono text-[9px] tracking-wider uppercase font-bold">
-                        <CircleDot size={12} />
-                        <span>Your Maps</span>
-                      </div>
-                      <h2 className="text-3xl font-serif font-semibold text-[var(--foreground)] leading-tight">Where are you trying to get?</h2>
-                      <p className="text-xs text-[var(--muted)]">Each map is a goal. Atlas diagnoses what's blocking it.</p>
-                    </div>
-
-                    <button className="atlas-btn-primary flex items-center gap-1.5">
-                      <Plus size={14} /> New map
-                    </button>
+              {/* Headline Title & Awareness Summary */}
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-[var(--accent-gold)] font-mono text-[9px] tracking-wider uppercase font-bold">
+                    <CircleDot size={12} />
+                    <span>Palantir Foundry Ontology Engine</span>
                   </div>
-
-                  {/* Goal Cards */}
-                  <div className="grid grid-cols-1 gap-4">
-                    <div 
-                      onClick={() => setSelectedMapId("da3ad08c-854d-4d1c-9909-de44d91b9740")}
-                      className="atlas-card atlas-card-hover cursor-pointer border-[var(--card-border)] relative overflow-hidden transition-all duration-300"
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-gold)]" />
-                          <span className="atlas-badge">Starter</span>
-                          <span className="text-[10px] text-[var(--muted)] font-mono">about 10 hours ago</span>
-                        </div>
-                        <ArrowRight size={14} className="text-[var(--muted)]" />
-                      </div>
-
-                      <h3 className="text-lg font-serif font-semibold text-[var(--foreground)] mb-1">
-                        Ship the beta of my SaaS by end of month
-                      </h3>
-                      <p className="text-xs text-[var(--muted)] mb-4">
-                        Ship the beta of my SaaS by end of month
-                      </p>
-
-                      {/* Accent gold bar at the bottom */}
-                      <div className="absolute bottom-0 left-0 h-1 bg-[var(--accent-gold)]" style={{ width: "120px" }} />
-                    </div>
-                  </div>
-
+                  <h2 className="text-2xl font-serif font-semibold text-[var(--foreground)] leading-tight">Living Context Graph</h2>
+                  <p className="text-xs text-[var(--muted)]">Continuous object-relational model linking raw exhaust from connected tools into clear operational entities.</p>
                 </div>
-              ) : (
+              </div>
+
+              {/* Grid: Left Ontology Explorer + Right Live Feed */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
-                /* State B: Map Detail & Diagnostic timeline flow */
-                <div className="space-y-8 text-left">
-                  
-                  {/* Breadcrumb controls */}
-                  <div className="flex items-center justify-between border-b border-[var(--card-border)] pb-4">
-                    <button 
-                      onClick={() => setSelectedMapId(null)}
-                      className="text-xs font-mono text-[var(--muted)] hover:text-[var(--foreground)] flex items-center gap-1 cursor-pointer"
-                    >
-                      <ChevronLeft size={14} /> YOUR MAPS
-                    </button>
-
-                    <div className="flex items-center gap-3">
-                      <span className="text-[9px] font-mono font-bold uppercase text-[var(--muted)] bg-[var(--muted-bg)] px-2 py-0.5 rounded border border-[var(--card-border)]">Private</span>
-                      <span className="text-[9px] font-mono text-[var(--muted)]">Focus Mode</span>
-                    </div>
-                  </div>
-
-                  {/* Goal Header */}
-                  <div className="space-y-1.5">
-                    <h2 className="text-3xl font-serif font-semibold text-[var(--foreground)] tracking-tight">
-                      Ship the beta of my SaaS by end of month
-                    </h2>
-                    <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-[var(--accent-gold)] uppercase tracking-wider">
-                      <span>Goal:</span>
-                      <span>Ship the beta of my SaaS by end of month</span>
-                    </div>
-                  </div>
-
-                  {/* Signals and Context Panel */}
-                  <div className="atlas-card bg-[var(--card-bg)] border-[var(--card-border)] rounded-xl space-y-4">
-                    <h3 className="text-xs font-bold text-[var(--muted)] uppercase tracking-wider font-mono">Context Signals</h3>
+                {/* Ontology & Objects Panel (2 Cols) */}
+                <div className="lg:col-span-2 space-y-4">
+                  <div className="atlas-card bg-[var(--card-bg)] border-[var(--card-border)] rounded-xl p-5 space-y-4">
                     
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex justify-between items-center border-b border-[var(--card-border)] pb-3">
+                      <span className="text-xs font-mono font-bold text-[var(--accent-gold)] uppercase tracking-wider">Active Entities (Ontology)</span>
+                      <span className="text-[10px] font-mono text-[var(--muted)]">14 Entities Indexed</span>
+                    </div>
+
+                    {/* Entity Cards Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {[
-                        { label: "GitHub", connected: true },
-                        { label: "Stripe", connected: true },
-                        { label: "Notion", connected: true },
-                        { label: "Slack", connected: true }
-                      ].map((sig) => (
-                        <div key={sig.label} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--card-border)] bg-[var(--background)] text-xs">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          <span className="font-semibold">{sig.label} Connected</span>
+                        { id: "o1", name: "Metaphor Core OS", type: "Project", status: "approved", metadata: { desc: "Context OS Backend Service" }, conn: ["GitHub", "Docker"] },
+                        { id: "o2", name: "Atlas Strategy Portal", type: "Project", status: "approved", metadata: { desc: "Visual Strategy Interface" }, conn: ["Next.js", "XYFlow"] },
+                        { id: "o3", name: "William Agent", type: "Project", status: "approved", metadata: { desc: "Daily Scheduling Agent" }, conn: ["Calendar", "API"] },
+                        { id: "o4", name: "Benjamin", type: "Person", status: "approved", metadata: { role: "Founder / Engineer" }, conn: ["GitHub", "Gmail"] },
+                        { id: "o5", name: "Deploy Postgres + pgvector inside Docker", type: "Decision", status: "approved", metadata: { reason: "Enable vector similarity" }, conn: ["Postgres"] },
+                        { id: "o6", name: "Atlas & Metaphor Alignment Sync", type: "Meeting", status: "approved", metadata: { host: "Benjamin", date: "2026-07-21" }, conn: ["Calendar"] },
+                        { id: "o7", name: "feat: add pgvector table", type: "Commit", status: "approved", metadata: { repo: "pseudonyms/metaphor", sha: "123456" }, conn: ["GitHub"] },
+                        { id: "o8", name: "Increase Atlas pricing to $500", type: "Decision", status: "pending", metadata: { reason: "Reflect enterprise context layer" }, conn: ["Stripe"] }
+                      ].map((entity) => (
+                        <div 
+                          key={entity.id}
+                          className="atlas-card atlas-card-hover border-[var(--card-border)] bg-[var(--background)] rounded-xl p-3.5 space-y-2 cursor-pointer relative overflow-hidden"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[var(--accent-gold-bg)] text-[var(--accent-gold)]">
+                              {entity.type}
+                            </span>
+                            {entity.status === "pending" && (
+                              <span className="text-[9px] font-mono text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30">
+                                Pending Approval
+                              </span>
+                            )}
+                          </div>
+
+                          <h4 className="text-xs font-semibold text-[var(--foreground)] truncate">{entity.name}</h4>
+                          <p className="text-[10px] text-[var(--muted)] truncate">{entity.metadata.desc || entity.metadata.reason || entity.metadata.repo}</p>
+                          
+                          <div className="flex items-center gap-1.5 pt-1 text-[9px] font-mono text-[var(--muted)]">
+                            <span className="font-bold">Sources:</span>
+                            {entity.conn.map(c => <span key={c} className="underline">{c}</span>)}
+                          </div>
                         </div>
                       ))}
-
-                      {/* Qualitative note context connection */}
-                      <button 
-                        onClick={() => setShowNoteInput(!showNoteInput)}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-xs cursor-pointer ${
-                          diagnosed 
-                            ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400" 
-                            : "bg-[var(--accent-gold-bg)] border-[var(--card-border)] text-[var(--accent-gold)]"
-                        }`}
-                      >
-                        <span className={`w-1.5 h-1.5 rounded-full ${diagnosed ? "bg-emerald-500" : "bg-[var(--accent-gold)] animate-pulse"}`} />
-                        <span className="font-semibold">Qualitative Note</span>
-                      </button>
                     </div>
 
-                    {/* Qualitative Note Input */}
-                    {(showNoteInput || !diagnosed) && (
-                      <div className="space-y-3 bg-[var(--background)] p-4 rounded-lg border border-[var(--card-border)]">
-                        <label className="text-[10px] font-bold text-[var(--muted)] font-mono uppercase block">Staged Context Note</label>
-                        <textarea
-                          rows={3}
-                          value={qualitativeNote}
-                          onChange={(e) => setQualitativeNote(e.target.value)}
-                          className="w-full atlas-input font-sans text-xs focus:border-[var(--accent-gold)]"
-                        />
-                        <div className="flex justify-end gap-2">
-                          <button 
-                            onClick={triggerDiagnosis}
-                            disabled={isDiagnosing}
-                            className="atlas-btn-primary py-2 px-4 text-xs font-semibold flex items-center gap-2"
-                          >
-                            {isDiagnosing ? (
-                              <>
-                                <Loader2 size={12} className="animate-spin text-current" />
-                                <span>Diagnosing blocks...</span>
-                              </>
-                            ) : (
-                              <span>Diagnose now</span>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    )}
                   </div>
-
-                  {/* Vertical Timeline Diagnostic Flow */}
-                  {diagnosed && (
-                    <div className="relative pl-10 pt-4 space-y-12">
-                      
-                      {/* Vertical line connector */}
-                      <div className="absolute left-[7px] top-0 bottom-8 w-0.5 border-l border-dashed border-[var(--timeline-line)]" />
-
-                      {/* 1. Goal Node */}
-                      <div className="relative">
-                        <div className="absolute -left-[45px] top-1.5 h-5 w-5 rounded-full border-2 border-[var(--accent-gold)] bg-[var(--background)] flex items-center justify-center">
-                          <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-gold)]" />
-                        </div>
-                        
-                        <span className="text-[9px] font-mono text-[var(--accent-gold)] uppercase tracking-wider font-bold block mb-1">Goal</span>
-                        <h3 className="text-xl font-serif font-medium text-[var(--foreground)]">Ship the beta of my SaaS by end of month</h3>
-                      </div>
-
-                      {/* 2. Constraint Node */}
-                      <div className="relative">
-                        <div className="absolute -left-[45px] top-1.5 h-5 w-5 rounded-full border-2 border-red-500 bg-[var(--background)] flex items-center justify-center">
-                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping absolute" />
-                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 relative z-10" />
-                        </div>
-                        
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[9px] font-mono text-red-500 uppercase tracking-wider font-bold">Constraint</span>
-                          <span className="bg-red-100 text-red-700 text-[8px] font-mono uppercase font-black px-1.5 py-0.25 rounded border border-red-200">Blocking</span>
-                        </div>
-
-                        <h3 className="text-xl font-serif font-semibold text-[var(--foreground)] mb-4">
-                          No GitHub commits have been made in the last 14 days
-                        </h3>
-
-                        {/* Audit Details */}
-                        <div className="space-y-6">
-                          
-                          {/* Diagnostic audit card */}
-                          <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-5 text-red-900 dark:text-red-400 font-serif text-sm italic leading-relaxed">
-                            <span className="text-[10px] font-mono font-bold uppercase text-red-500 block not-italic mb-1 tracking-wider">Atlas Diagnostic Audit</span>
-                            "The founder's goal of shipping the SaaS beta by the end of the month is at risk due to the pause in GitHub commits. With no recent integration activity logs, it is unclear what progress has been made on the beta development. The current trajectory suggests that the beta may not be ready to ship by the end of the month. The lack of GitHub activity and unclear development status are major concerns. The founder needs to refocus on development and provide a clear plan to get the beta ready for shipping."
-                          </div>
-
-                          {/* Quantified gap table */}
-                          <div className="atlas-card bg-[var(--card-bg)] border-[var(--card-border)] rounded-xl overflow-hidden p-5">
-                            <span className="text-[10px] font-mono font-bold uppercase text-[var(--muted)] block mb-3 tracking-wider">Quantified Goal Gap Analysis</span>
-                            
-                            <table className="gap-analysis-table">
-                              <thead>
-                                <tr>
-                                  <th>Metric</th>
-                                  <th>Current</th>
-                                  <th>Target</th>
-                                  <th>Deficit / Action</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <tr>
-                                  <td className="font-semibold text-xs">GitHub commits per week</td>
-                                  <td className="font-mono text-xs">0</td>
-                                  <td className="font-mono font-bold text-[var(--accent-gold)] text-xs">10+</td>
-                                  <td className="text-xs text-[var(--muted)]">The current commit rate is not sufficient to meet the shipping goal</td>
-                                </tr>
-                                <tr>
-                                  <td className="font-semibold text-xs">Days until shipping goal</td>
-                                  <td className="font-mono text-xs">Less than 14</td>
-                                  <td className="font-mono font-bold text-[var(--accent-gold)] text-xs">0</td>
-                                  <td className="text-xs text-[var(--muted)] font-serif italic text-red-500">Time is running out to complete the beta development</td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-
-                          {/* Strategic Alternatives */}
-                          <div className="space-y-3">
-                            <span className="text-[10px] font-mono font-bold uppercase text-[var(--muted)] block tracking-wider">Strategic Alternatives (V1 Paths)</span>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="atlas-card bg-[var(--card-bg)] border-[var(--card-border)] rounded-xl flex flex-col justify-between">
-                                <div className="space-y-1">
-                                  <h4 className="text-sm font-bold text-[var(--foreground)]">Outsourced Development</h4>
-                                  <p className="text-[11px] text-[var(--muted)]">Hire external developers to accelerate the beta development</p>
-                                </div>
-                                <div className="mt-4 pt-3 border-t border-[var(--card-border)] text-[9px] font-mono text-[var(--accent-gold)] font-bold">
-                                  LOAD: 10 HRS/WEEK, SIGNIFICANT BUDGET
-                                </div>
-                              </div>
-
-                              <div className="atlas-card bg-[var(--card-bg)] border-[var(--card-border)] rounded-xl flex flex-col justify-between">
-                                <div className="space-y-1">
-                                  <h4 className="text-sm font-bold text-[var(--foreground)]">Internal Development Sprint</h4>
-                                  <p className="text-[11px] text-[var(--muted)]">Focus internal resources on a development sprint to complete the beta</p>
-                                </div>
-                                <div className="mt-4 pt-3 border-t border-[var(--card-border)] text-[9px] font-mono text-[var(--accent-gold)] font-bold">
-                                  LOAD: 40 HRS/WEEK, NO BUDGET
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* "This isn't right" roadmap update toggle button */}
-                            <div className="pt-2 flex justify-start">
-                              <button 
-                                onClick={() => {
-                                  setRoadmapType(roadmapType === "sales" ? "reboot" : "sales");
-                                  setCurrentMilestoneIndex(0);
-                                }}
-                                className="px-4 py-2 border border-[var(--card-border)] hover:border-[var(--card-hover-border)] text-xs font-mono font-bold rounded-lg text-[var(--accent-gold)] cursor-pointer"
-                              >
-                                {roadmapType === "sales" ? "This isn't right" : "Switch to Outbound focus"}
-                              </button>
-                            </div>
-                          </div>
-
-                        </div>
-                      </div>
-
-                      {/* 3. Evidence Node */}
-                      <div className="relative">
-                        <div className="absolute -left-[45px] top-1.5 h-5 w-5 rounded-full border-2 border-emerald-500 bg-[var(--background)] flex items-center justify-center">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        </div>
-                        
-                        <span className="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-wider font-bold block mb-1">Evidence</span>
-                        <h3 className="text-xl font-serif font-semibold text-[var(--foreground)]">
-                          Last commit was 14 days ago and no recent integration activity logs
-                        </h3>
-                      </div>
-
-                      {/* 4. Next Move Node */}
-                      <div className="relative">
-                        <div className="absolute -left-[45px] top-1.5 h-5 w-5 rounded-full border-2 border-[var(--foreground)] bg-[var(--background)] flex items-center justify-center">
-                          <div className="w-1.5 h-1.5 rounded-full bg-[var(--foreground)]" />
-                        </div>
-                        
-                        <div className="flex items-center gap-1.5 mb-1 text-[9px] font-mono uppercase tracking-wider font-bold">
-                          <span className="text-[var(--foreground)]">Next Move</span>
-                          <span className="text-[var(--muted)]">· Check back 2026-07-24</span>
-                        </div>
-
-                        <h3 className="text-xl font-serif font-semibold text-[var(--foreground)] max-w-xl">
-                          Save a note explaining the current status of the project, specifically addressing why development has paused.
-                        </h3>
-                      </div>
-
-                      {/* 5. Campaign Roadmap */}
-                      <div className="relative">
-                        <div className="absolute -left-[45px] top-1.5 h-5 w-5 rounded-full border-2 border-[var(--accent-gold)] bg-[var(--background)] flex items-center justify-center">
-                          <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-gold)]" />
-                        </div>
-                        
-                        <div className="atlas-card bg-[var(--card-bg)] border-[var(--card-border)] rounded-xl p-6 space-y-6">
-                          
-                          <div className="flex justify-between items-center border-b border-[var(--card-border)] pb-3">
-                            <span className="text-xs font-bold text-[var(--accent-gold)] uppercase tracking-wider font-mono">Campaign Roadmap</span>
-                            <span className="text-[9px] font-mono text-[var(--muted)]">Active Sequence</span>
-                          </div>
-
-                          {/* Milestones checklist rendering */}
-                          <div className="space-y-6 pl-4 border-l border-[var(--card-border)]">
-                            {currentMilestones.map((ms, index) => {
-                              const isCompleted = index < currentMilestoneIndex;
-                              const isActive = index === currentMilestoneIndex;
-                              
-                              return (
-                                <div key={ms.title} className="relative space-y-1">
-                                  {/* Milestone checkpoint icon */}
-                                  <div className={`absolute -left-[24px] top-1 h-[14px] w-[14px] rounded-full border flex items-center justify-center ${
-                                    isCompleted 
-                                      ? "bg-[var(--accent-gold)] border-[var(--accent-gold)] text-[var(--card-bg)]" 
-                                      : isActive 
-                                        ? "border-[var(--accent-gold)] bg-[var(--card-bg)]" 
-                                        : "border-[var(--card-border)] bg-[var(--background)]"
-                                  }`}>
-                                    {isCompleted && <Check size={8} className="stroke-[3]" />}
-                                  </div>
-
-                                  <div className="flex justify-between items-start">
-                                    <span className={`text-sm font-serif font-medium ${isCompleted ? "line-through text-[var(--muted)]" : "text-[var(--foreground)]"}`}>
-                                      Milestone {index + 1}: {ms.title}
-                                    </span>
-                                    <span className="text-[9px] font-mono text-[var(--muted)]">{ms.est}</span>
-                                  </div>
-                                  <p className={`text-xs ${isCompleted ? "text-[var(--muted)]" : "text-[var(--muted)]/80"}`}>{ms.desc}</p>
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          {/* Active milestone block */}
-                          {currentMilestoneIndex < currentMilestones.length ? (
-                            <div className="bg-[var(--background)] border border-[var(--card-border)] rounded-xl p-5 space-y-4">
-                              <div className="flex justify-between items-center border-b border-[var(--card-border)] pb-2">
-                                <span className="text-[9px] font-mono font-bold text-[var(--accent-gold)] uppercase tracking-wider">Active Milestone</span>
-                                <span className="text-[9px] font-mono text-[var(--muted)]">{currentMilestones[currentMilestoneIndex].est}</span>
-                              </div>
-                              
-                              <h4 className="text-base font-serif font-semibold text-[var(--foreground)]">
-                                {currentMilestones[currentMilestoneIndex].title}
-                              </h4>
-                              
-                              <div className="flex justify-end pt-2">
-                                <button 
-                                  onClick={handleMarkComplete}
-                                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer shadow-sm"
-                                >
-                                  <Check size={12} className="stroke-[3]" /> Mark milestone complete
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-xl p-5 text-center space-y-2">
-                              <CheckCircle2 size={24} className="mx-auto text-emerald-500" />
-                              <h4 className="font-serif font-bold text-base">Campaign Complete!</h4>
-                              <p className="text-xs">All objectives achieved. The operational constraint is resolved.</p>
-                            </div>
-                          )}
-
-                        </div>
-                      </div>
-
-                    </div>
-                  )}
-
                 </div>
-              )}
+
+                {/* Right Column: Live Context Feed (Digital Exhaust Stream) */}
+                <div className="space-y-4">
+                  <div className="atlas-card bg-[var(--card-bg)] border-[var(--card-border)] rounded-xl p-5 space-y-4">
+                    
+                    <div className="flex justify-between items-center border-b border-[var(--card-border)] pb-3">
+                      <div className="flex items-center gap-2 text-xs font-mono font-bold text-[var(--foreground)]">
+                        <Clock size={14} className="text-[var(--accent-gold)]" />
+                        <span>Live Context Feed</span>
+                      </div>
+                      <span className="text-[9px] font-mono text-emerald-500 font-bold uppercase flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+                      </span>
+                    </div>
+
+                    <div className="space-y-3 relative pl-4 border-l border-[var(--card-border)]">
+                      {[
+                        { time: "09:10", source: "GitHub", title: "Commit pushed: feat: add pgvector table", desc: "Added Docker configuration with postgres vector embeddings." },
+                        { time: "09:30", source: "Calendar", title: "Meeting ended: Atlas & Metaphor Sync", desc: "Discussed product boundaries between Atlas and Metaphor." },
+                        { time: "10:05", source: "Stripe", title: "Invoice paid: $500 Founder Sprint", desc: "Received subscription payment for operating sprint." },
+                        { time: "11:20", source: "Notion", title: "Page updated: Metaphor OS Architecture", desc: "Updated specification for entity resolution and Context API." }
+                      ].map((evt, idx) => (
+                        <div key={idx} className="relative space-y-1">
+                          <div className="absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full border border-[var(--accent-gold)] bg-[var(--card-bg)]" />
+                          <div className="flex justify-between items-center text-[10px] font-mono text-[var(--muted)]">
+                            <span>{evt.time} · {evt.source}</span>
+                          </div>
+                          <h5 className="text-xs font-semibold text-[var(--foreground)]">{evt.title}</h5>
+                          <p className="text-[10px] text-[var(--muted)] leading-relaxed">{evt.desc}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
 
             </div>
           )}

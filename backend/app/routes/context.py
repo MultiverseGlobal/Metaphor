@@ -43,6 +43,20 @@ class SnapshotResponse(BaseModel):
     confidence: float
 
 
+class ContextQueryRequest(BaseModel):
+    query: str
+    consumer: str = "general"
+    top_k: int = 5
+    entity_types: Optional[List[str]] = None
+
+
+class ContextQueryResponse(BaseModel):
+    query: str
+    relevant_nodes: List[Dict[str, Any]]
+    relevant_chunks: List[Dict[str, Any]]
+    synthesized_answer: str
+
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 def _serialize_node(n: Node) -> Dict[str, Any]:
     return {
@@ -76,7 +90,7 @@ async def get_context_snapshot(
     Context-as-a-Service endpoint.
 
     Downstream AIs (William, Atlas, Weave) query this to get an updated,
-    narrative-enriched operational mental model of Benjamin's world.
+    narrative-enriched operational mental model of the user's world.
     """
     logger.info(f"[context/snapshot] consumer={req.consumer!r}  intent={req.intent!r}")
 
@@ -104,7 +118,7 @@ async def get_context_snapshot(
         ideas      = [_serialize_node(n) for n in by_type.get("idea",     [])[:10]]
 
         # ── 3. Build Timeline ──────────────────────────────────────────────
-        timeline_nodes = [n for n in all_nodes if n.type.lower() in ("meeting", "commit", "decision")]
+        timeline_nodes = [n for n in all_nodes if n.type.lower() in ("meeting", "commit", "decision", "event")]
         temporal_edges = [e for e in all_edges if e.dimension == "temporal"]
         
         timeline = []
@@ -166,8 +180,7 @@ async def get_context_snapshot(
             "You are the Metaphor Context Operating System. Your role is to synthesise the user's "
             "world model graph into core operational context for downstream AI agents. "
             "Respond STRICTLY in JSON format with keys: 'mission', 'constraints', and 'recommended_focus'. "
-            "Do not hallucinate. Use only the provided data. "
-            "Write in the third person about the user ('Benjamin')."
+            "Do not hallucinate. Use only the provided data."
         )
         user_prompt = (
             f"Consumer: {req.consumer}\n"
@@ -204,7 +217,6 @@ async def get_context_snapshot(
         if settings.GITHUB_PERSONAL_ACCESS_TOKEN: active_integrations += 1
         if settings.GOOGLE_SERVICE_ACCOUNT_JSON_PATH: active_integrations += 1
         
-        # Calculate dynamic confidence
         confidence = 0.70 + (active_integrations * 0.08)
         if len(all_nodes) > 8:
             confidence += 0.05
@@ -223,3 +235,72 @@ async def get_context_snapshot(
     except Exception as e:
         logger.error(f"[context/snapshot] Error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Context snapshot failed: {str(e)}")
+
+
+@router.post("/context/query", response_model=ContextQueryResponse)
+async def query_context(
+    req: ContextQueryRequest,
+    session: AsyncSession = Depends(get_session),
+    api_key: str = Depends(verify_api_key),
+):
+    """
+    Query Metaphor's Context Engine using semantic graph search.
+    Allows William, Atlas, and external agents to query state by keyword/intent.
+    """
+    logger.info(f"[context/query] consumer={req.consumer!r} query={req.query!r}")
+    try:
+        # Search matching nodes
+        nodes_q = await session.exec(
+            select(Node).where(Node.status == "approved")
+        )
+        all_nodes = nodes_q.all()
+
+        query_lower = req.query.lower()
+        matching_nodes = [
+            _serialize_node(n) for n in all_nodes
+            if query_lower in n.name.lower() or query_lower in n.type.lower() or query_lower in str(n.metadata_json).lower()
+        ][:req.top_k]
+
+        # Search matching chunks
+        chunks_q = await session.exec(select(Chunk).limit(req.top_k))
+        all_chunks = chunks_q.all()
+        matching_chunks = [
+            {
+                "id": str(c.id),
+                "content": c.text_content[:300],
+                "metadata": c.metadata_json
+            }
+            for c in all_chunks
+            if query_lower in c.text_content.lower()
+        ][:req.top_k]
+
+        # Synthesize answer using Claude
+        node_context = json.dumps(matching_nodes, indent=2)
+        chunk_context = json.dumps(matching_chunks, indent=2)
+
+        synth_prompt = (
+            f"Query: {req.query}\n\n"
+            f"Matched Graph Nodes:\n{node_context}\n\n"
+            f"Matched Text Evidence:\n{chunk_context}\n\n"
+            f"Answer the query accurately based on the context above."
+        )
+
+        try:
+            answer = await llm_provider.query_claude(
+                prompt=synth_prompt,
+                system_prompt="You are the Metaphor Context Operating System. Answer concisely.",
+                max_tokens=256
+            )
+        except Exception:
+            answer = f"Found {len(matching_nodes)} matching entities and {len(matching_chunks)} evidence chunks for query: '{req.query}'."
+
+        return ContextQueryResponse(
+            query=req.query,
+            relevant_nodes=matching_nodes,
+            relevant_chunks=matching_chunks,
+            synthesized_answer=answer.strip()
+        )
+    except Exception as e:
+        logger.error(f"[context/query] Error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Context query failed: {str(e)}")
+
