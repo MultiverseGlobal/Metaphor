@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Atlas — See what's next",
-  description: "Atlas turns activity into one map: the constraint slowing you down, the evidence behind it, and the next move.",
+  title: "Metaphor — The Context Operating System",
+  description: "Metaphor is the Context Operating System for intelligent applications — transforming fragmented events into a living structured knowledge graph.",
 };
 
 export default function RootLayout({
@@ -12,25 +12,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  const stored = localStorage.getItem("atlas.theme") || "theme-clean";
-                  document.documentElement.className = stored;
-                  if (stored === "dark") {
-                    document.documentElement.classList.add("dark");
-                  }
-                } catch (_) {}
-              })();
-            `,
-          }}
-        />
-      </head>
-      <body className="antialiased">
+    <html lang="en" className="dark">
+      <body className="antialiased bg-[#07080c] text-slate-100 min-h-screen">
         {children}
       </body>
     </html>

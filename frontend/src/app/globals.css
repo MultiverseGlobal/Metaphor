@@ -1,242 +1,155 @@
-@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
-/* Theme definitions */
 :root {
+  /* Core Theme Tokens - Dark Mode First */
+  --bg-root: #07080c;
+  --bg-surface: rgba(16, 19, 28, 0.72);
+  --bg-surface-solid: #0f121a;
+  --bg-surface-hover: rgba(28, 33, 48, 0.8);
+  --bg-elevated: rgba(24, 29, 44, 0.85);
+  
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  --border-accent: rgba(0, 102, 255, 0.4);
+
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  /* Accent Colors */
+  --accent-blue: #0066ff;
+  --accent-blue-glow: rgba(0, 102, 255, 0.25);
+  --accent-cyan: #06b6d4;
+  --accent-purple: #8b5cf6;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-rose: #ef4444;
+
   /* Fonts */
-  --font-serif: 'Lora', serif;
-  --font-sans: 'Outfit', sans-serif;
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-/* Theme: Clean (Default Light) */
-.theme-clean {
-  --background: #f4f4f6;
-  --foreground: #18181b;
-  --card-bg: #ffffff;
-  --card-border: #e4e4e7;
-  --card-hover-border: #d4d4d8;
-  --accent-gold: #b45309;
-  --accent-gold-bg: #fef3c7;
-  --accent-gold-hover: #92400e;
-  --sidebar-bg: #fafafa;
-  --sidebar-border: #e4e4e7;
-  --muted: #71717a;
-  --muted-bg: #f4f4f5;
-  --timeline-line: #e4e4e7;
-}
-
-/* Theme: Paper (Warm Cream) */
-.theme-paper {
-  --background: #f2ece4;
-  --foreground: #38332a;
-  --card-bg: #faf8f5;
-  --card-border: #e4dac9;
-  --card-hover-border: #d5c8b3;
-  --accent-gold: #705328;
-  --accent-gold-bg: #f4e6d2;
-  --accent-gold-hover: #563f1d;
-  --sidebar-bg: #eae0d3;
-  --sidebar-border: #dcd0be;
-  --muted: #7c7261;
-  --muted-bg: #eae3d5;
-  --timeline-line: #dcd0be;
-}
-
-/* Theme: Dark (Charcoal/Gold) */
-.dark, .theme-dark {
-  --background: #111317;
-  --foreground: #e4e4e7;
-  --card-bg: #1c1d22;
-  --card-border: #2e3039;
-  --card-hover-border: #3f424e;
-  --accent-gold: #f59e0b;
-  --accent-gold-bg: #2c2211;
-  --accent-gold-hover: #fbbf24;
-  --sidebar-bg: #18191d;
-  --sidebar-border: #25272e;
-  --muted: #a1a1aa;
-  --muted-bg: #25262b;
-  --timeline-line: #2e3039;
-}
-
-/* Base Body settings */
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--bg-root);
+  color: var(--text-primary);
   font-family: var(--font-sans);
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-x: hidden;
+  letter-spacing: -0.01em;
+  background-image: 
+    radial-gradient(circle at 15% 15%, rgba(0, 102, 255, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
+  background-attachment: fixed;
 }
 
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--card-border);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--card-hover-border);
+  background: rgba(0, 102, 255, 0.4);
 }
 
-/* Serif headers font utility */
-.font-serif {
-  font-family: var(--font-serif);
-}
-
-.font-sans {
-  font-family: var(--font-sans);
-}
-
-.font-mono {
-  font-family: var(--font-mono);
-}
-
-/* Card panels */
-.atlas-card {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
+/* Glassmorphism Utilities */
+.metaphor-glass {
+  background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
-  padding: 1.5rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
-.atlas-card-hover:hover {
-  border-color: var(--card-hover-border);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+.metaphor-glass:hover {
+  border-color: var(--border-strong);
 }
 
-/* Layout lines and timeline nodes */
-.timeline-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid var(--accent-gold);
-  background: var(--background);
-  z-index: 10;
-  position: relative;
+.metaphor-glass-active {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-accent);
+  box-shadow: 0 0 20px var(--accent-blue-glow);
 }
 
-.timeline-dot-filled {
-  background: var(--accent-gold);
+.metaphor-glow {
+  box-shadow: 0 0 25px rgba(0, 102, 255, 0.15);
 }
 
-.timeline-dot-active {
-  box-shadow: 0 0 0 4px var(--accent-gold-bg);
-}
-
-/* Form inputs styling */
-.atlas-input {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  color: var(--foreground);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 0.875rem;
-  outline: none;
-  transition: border-color 0.15s ease;
-}
-
-.atlas-input:focus {
-  border-color: var(--accent-gold);
-}
-
-/* Primary Button */
-.atlas-btn-primary {
-  background-color: var(--accent-gold);
-  color: #ffffff;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
-  padding: 8px 16px;
-  transition: background-color 0.15s ease, opacity 0.15s ease;
-}
-
-.theme-clean .atlas-btn-primary {
-  color: #ffffff;
-}
-
-.theme-paper .atlas-btn-primary {
-  color: #faf8f5;
-}
-
-.dark .atlas-btn-primary {
-  color: #111317;
-  font-weight: 600;
-}
-
-.atlas-btn-primary:hover {
-  opacity: 0.95;
-}
-
-.atlas-btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Secondary Button */
-.atlas-btn-secondary {
-  background-color: var(--muted-bg);
-  border: 1px solid var(--card-border);
-  color: var(--foreground);
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
-  padding: 8px 16px;
-  transition: background-color 0.15s ease;
-}
-
-.atlas-btn-secondary:hover {
-  background-color: var(--card-border);
-}
-
-/* Monospace small badges */
-.atlas-badge {
+/* Monospace Badges */
+.metaphor-badge {
   font-family: var(--font-mono);
-  font-size: 0.675rem;
-  font-weight: 600;
-  text-transform: uppercase;
+  font-size: 0.68rem;
+  font-weight: 500;
   letter-spacing: 0.05em;
-  padding: 2px 6px;
+  text-transform: uppercase;
+  padding: 3px 8px;
   border-radius: 4px;
-  background: var(--muted-bg);
-  border: 1px solid var(--card-border);
-  color: var(--muted);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
 }
 
-/* Custom Table for Gap Analysis */
-.gap-analysis-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
+/* Pulse animation for active node indicator */
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.08);
+  }
 }
 
-.gap-analysis-table th {
-  text-align: left;
-  font-family: var(--font-mono);
-  font-size: 0.675rem;
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--card-border);
+.animate-pulse-glow {
+  animation: pulseGlow 3s infinite ease-in-out;
 }
 
-.gap-analysis-table td {
-  padding: 12px;
-  border-bottom: 1px solid var(--card-border);
-  color: var(--foreground);
+/* Slide in animation for context inspector */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
-.gap-analysis-table tr:last-child td {
-  border-bottom: none;
+.animate-slide-in {
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom React Flow Node Styling */
+.react-flow__node {
+  border-radius: 10px !important;
+  font-family: var(--font-sans) !important;
+}
+
+.react-flow__controls {
+  background: var(--bg-surface-solid) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+}
+
+.react-flow__controls-button {
+  border-bottom: 1px solid var(--border-subtle) !important;
+  fill: var(--text-secondary) !important;
+}
+.react-flow__controls-button:hover {
+  background: var(--bg-surface-hover) !important;
+  fill: var(--text-primary) !important;
 }
