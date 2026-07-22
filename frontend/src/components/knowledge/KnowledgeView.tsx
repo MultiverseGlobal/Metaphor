@@ -11,14 +11,16 @@ import {
   Node, 
   Edge,
   MarkerType,
-  BackgroundVariant
+  BackgroundVariant,
+  Handle,
+  Position
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useMetaphor, MetaphorEntity } from '../../context/MetaphorContext';
 import { METAPHOR_ONTOLOGY } from '../../lib/ontology/OntologySchema';
 import { Network, Sparkles, Filter, Layers } from 'lucide-react';
 
-// Custom Ontology Node Component Renderer
+// Custom Ontology Node Component Renderer with ReactFlow Handles
 const OntologyNodeRenderer = ({ data }: { data: { entity: MetaphorEntity } }) => {
   const { inspectEntity } = useMetaphor();
   const entity = data.entity;
@@ -27,9 +29,10 @@ const OntologyNodeRenderer = ({ data }: { data: { entity: MetaphorEntity } }) =>
   return (
     <div 
       onClick={() => inspectEntity(entity)}
-      className="metaphor-glass p-3 min-w-[170px] border border-[var(--border-strong)] hover:border-[var(--accent-blue)] rounded-xl cursor-pointer shadow-lg transition-all hover:scale-105 group bg-[var(--bg-surface-solid)]"
+      className="metaphor-glass p-3 min-w-[170px] border border-[var(--border-strong)] hover:border-[var(--accent-blue)] rounded-xl cursor-pointer shadow-lg transition-all hover:scale-105 group bg-[var(--bg-surface-solid)] relative"
       style={{ borderLeft: `4px solid ${ontologyDef.color}` }}
     >
+      <Handle type="target" position={Position.Top} className="!bg-[var(--accent-blue)] !w-2 !h-2 border-0" />
       <div className="flex items-center justify-between mb-1">
         <span className="metaphor-badge text-[8px]" style={{ color: ontologyDef.color }}>
           {entity.type}
@@ -42,6 +45,7 @@ const OntologyNodeRenderer = ({ data }: { data: { entity: MetaphorEntity } }) =>
       <div className="text-[10px] font-mono text-[var(--text-muted)] mt-1">
         {entity.ownerName || 'System'}
       </div>
+      <Handle type="source" position={Position.Bottom} className="!bg-[var(--accent-blue)] !w-2 !h-2 border-0" />
     </div>
   );
 };
