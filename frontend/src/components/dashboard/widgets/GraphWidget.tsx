@@ -1,9 +1,9 @@
 import React from "react";
 import { Network } from "lucide-react";
+import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import SpatialCanvas from "@/components/dashboard/SpatialCanvas";
 
 export default function GraphWidget() {
-  // A wrapper around the SpatialCanvas to fit inside a Bento Box cell
   const snapshot = {
     mission: "Develop the Metaphor universal context operating system to align all connected AI agents.",
     active_projects: [
@@ -16,16 +16,17 @@ export default function GraphWidget() {
   };
 
   return (
-    <div className="w-full h-full bg-surface/50 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl relative overflow-hidden">
-      <div className="absolute top-4 left-4 z-50 flex items-center gap-2 bg-surface/80 backdrop-blur px-3 py-1.5 rounded-full border border-white/10">
-        <Network className="w-4 h-4 text-primary" />
-        <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Knowledge Graph</span>
+    <Card className="h-full relative overflow-hidden" noPadding>
+      <div className="absolute top-6 left-6 z-50">
+        <CardHeader className="border-none mb-0 bg-surface-2/80 backdrop-blur rounded-lg px-4 py-2 border border-border-subtle shadow-glass">
+          <Network className="w-4 h-4 text-primary" />
+          <CardTitle className="mb-0">Knowledge Graph</CardTitle>
+        </CardHeader>
       </div>
       
       {/* Container to scale down the absolute positioned graph */}
       <div className="absolute inset-0 flex items-center justify-center scale-75 transform-origin-center pointer-events-auto">
          <div className="relative w-[800px] h-[800px]">
-            {/* We override the fixed positioning from the original SpatialCanvas by wrapping it in relative */}
             <div className="[&>div.fixed]:absolute [&>div.fixed]:top-1/2 [&>div.fixed]:left-1/2">
                 <SpatialCanvas 
                   snapshot={snapshot} 
@@ -35,6 +36,6 @@ export default function GraphWidget() {
             </div>
          </div>
       </div>
-    </div>
+    </Card>
   );
 }

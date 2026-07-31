@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Terminal } from "lucide-react";
+import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 
 export default function TerminalWidget() {
   const [logs, setLogs] = useState<string[]>([]);
@@ -26,20 +27,20 @@ export default function TerminalWidget() {
   }, []);
 
   return (
-    <div className="w-full h-full bg-surface/50 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col font-mono shadow-2xl relative overflow-hidden">
-      <div className="flex items-center gap-2 mb-4 border-b border-white/10 pb-2 sticky top-0 bg-surface/50 backdrop-blur-md">
+    <Card className="h-full flex flex-col font-mono">
+      <CardHeader className="sticky top-0 bg-surface-1/90 backdrop-blur pb-2 mb-0 border-b-border-subtle z-10">
         <Terminal className="w-4 h-4 text-primary" />
-        <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold">System Log</span>
-      </div>
-      <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col justify-end">
-        <div className="space-y-1">
+        <CardTitle>System Log</CardTitle>
+      </CardHeader>
+      <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col justify-end pt-4">
+        <div className="space-y-1.5">
           {logs.map((log, i) => (
-            <div key={i} className={`text-xs ${log.includes("[WARN]") ? "text-amber-400" : log.includes("[SYSTEM]") ? "text-primary" : "text-muted-foreground/80"}`}>
+            <div key={i} className={`text-[11px] leading-relaxed ${log.includes("[WARN]") ? "text-warning" : log.includes("[SYSTEM]") ? "text-primary" : "text-muted"}`}>
               {log}
             </div>
           ))}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

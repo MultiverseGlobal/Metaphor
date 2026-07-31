@@ -1,5 +1,7 @@
 import React from "react";
 import { Activity, Users, Database, Zap } from "lucide-react";
+import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 
 const metrics = [
   { name: "Active Agents", value: "24", change: "+4.75%", icon: Users },
@@ -10,28 +12,28 @@ const metrics = [
 
 export default function KPIWidget() {
   return (
-    <div className="w-full h-full bg-surface/50 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col overflow-y-auto custom-scrollbar">
-      <div className="flex items-center gap-2 mb-6">
+    <Card className="h-full flex flex-col">
+      <CardHeader>
         <Activity className="w-4 h-4 text-primary" />
-        <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Global Health</span>
-      </div>
+        <CardTitle>Global Health</CardTitle>
+      </CardHeader>
       <div className="grid grid-cols-2 gap-4 flex-1">
         {metrics.map((metric) => {
           const Icon = metric.icon;
           return (
-            <div key={metric.name} className="bg-background/40 rounded-xl border border-white/5 p-4 flex flex-col justify-between hover:border-primary/30 transition-colors">
-              <div className="flex justify-between items-start mb-2">
-                <Icon className="w-4 h-4 text-primary/70" />
-                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">{metric.change}</span>
+            <div key={metric.name} className="bg-surface-2 rounded-lg border border-border-subtle p-4 flex flex-col justify-between hover:border-border-strong transition-colors">
+              <div className="flex justify-between items-start mb-4">
+                <Icon className="w-4 h-4 text-primary opacity-80" />
+                <Badge variant="success">{metric.change}</Badge>
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-foreground tracking-tight">{metric.value}</h3>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">{metric.name}</p>
+                <h3 className="text-2xl font-bold text-bright tracking-tight">{metric.value}</h3>
+                <p className="text-[10px] uppercase tracking-wider text-muted mt-1">{metric.name}</p>
               </div>
             </div>
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }
