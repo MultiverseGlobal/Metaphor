@@ -34,7 +34,7 @@ export const TimelineView: React.FC = () => {
             <div 
               className="metaphor-glass p-5 border border-border bg-card/60 rounded-xl hover:border-primary/40 transition-all cursor-pointer"
               onClick={() => {
-                if (evt.extractedEntities.length > 0) {
+                if (evt.extractedEntities && evt.extractedEntities.length > 0) {
                   inspectEntity(evt.extractedEntities[0]);
                 }
               }}
@@ -42,16 +42,16 @@ export const TimelineView: React.FC = () => {
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
                   <h4 className="font-serif text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                    {evt.payload.title || evt.payload.description || 'Context Event Ingested'}
+                    {evt.payload?.title || evt.payload?.description || 'Context Event Ingested'}
                   </h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    {evt.payload.details || evt.payload.text || 'Processed raw digital exhaust.'}
+                    {evt.payload?.details || evt.payload?.text || 'Processed raw digital exhaust.'}
                   </p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 mt-0.5" />
               </div>
 
-              {evt.extractedEntities.length > 0 && (
+              {evt.extractedEntities && evt.extractedEntities.length > 0 && (
                 <div className="pt-3 border-t border-border/50 mt-3 flex items-center gap-2">
                   <span className="text-[10px] font-mono text-muted-foreground">Extracted Entities:</span>
                   <div className="flex flex-wrap gap-1.5">

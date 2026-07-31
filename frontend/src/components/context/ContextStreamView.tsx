@@ -112,7 +112,7 @@ export const ContextStreamView: React.FC = () => {
                 key={evt.id}
                 className="metaphor-glass p-4 border border-border bg-card/60 rounded-xl flex items-start justify-between space-x-4 hover:border-primary/40 transition-all cursor-pointer group"
                 onClick={() => {
-                  if (evt.extractedEntities.length > 0) {
+                  if (evt.extractedEntities && evt.extractedEntities.length > 0) {
                     inspectEntity(evt.extractedEntities[0]);
                   }
                 }}
@@ -126,13 +126,13 @@ export const ContextStreamView: React.FC = () => {
                       <span className="metaphor-badge">{evt.source}</span>
                       <span className="text-[10px] font-mono text-muted-foreground">{new Date(evt.timestamp).toLocaleTimeString()}</span>
                     </div>
-                    <h4 className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">{evt.payload.title || evt.payload.description || 'Context Event'}</h4>
-                    <p className="text-xs text-muted-foreground line-clamp-1">{evt.payload.details || evt.payload.text || 'No payload details provided.'}</p>
+                    <h4 className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">{evt.payload?.title || evt.payload?.description || 'Context Event'}</h4>
+                    <p className="text-xs text-muted-foreground line-clamp-1">{evt.payload?.details || evt.payload?.text || 'No payload details provided.'}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-2 shrink-0">
-                  {evt.extractedEntities.length > 0 && (
+                  {evt.extractedEntities && evt.extractedEntities.length > 0 && (
                     <span className="text-[10px] font-mono text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded">
                       {evt.extractedEntities.length} entities
                     </span>
