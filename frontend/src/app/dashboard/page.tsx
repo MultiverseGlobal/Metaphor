@@ -10,6 +10,7 @@ export default function Dashboard() {
   
   // Navigation State
   const [activeTab, setActiveTab] = useState<"maps" | "timeline" | "notifications" | "reports" | "datasources" | "settings">("maps");
+  const [theme, setTheme] = useState("minimalist");
   
   // Loaded Context Data States
   const [snapshot, setSnapshot] = useState<any>(null);
@@ -23,9 +24,18 @@ export default function Dashboard() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       setApiKey(localStorage.getItem("metaphor_api_key") || "metaphor_dev_secret_key_123");
+      const savedTheme = localStorage.getItem("metaphor_theme") || "minimalist";
+      setTheme(savedTheme);
+      document.documentElement.setAttribute('data-theme', savedTheme);
       loadAllData();
     }
   }, [router]);
+
+  const handleThemeChange = (newTheme: string) => {
+    setTheme(newTheme);
+    localStorage.setItem("metaphor_theme", newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+  };
 
   const loadAllData = async () => {
     setLoading(true);
@@ -289,8 +299,42 @@ export default function Dashboard() {
               </div>
             )}
 
+            {/* TAB 3: SETTINGS (Theme Engine) */}
+            {activeTab === "settings" && (
+              <div className="animate-fade-in-up">
+                <header className="mb-12 border-b-4 border-foreground pb-6">
+                  <h1 className="font-serif text-5xl font-bold mb-4">Configuration</h1>
+                  <p className="mono text-sm text-muted-foreground uppercase tracking-wider">
+                    System preferences and visual identity.
+                  </p>
+                </header>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[
+                    { id: "minimalist", name: "Minimalist", desc: "Dieter Rams / Brutalist physical tool." },
+                    { id: "editorial", name: "Editorial", desc: "Kinfolk / High-end print publication." },
+                    { id: "scifi", name: "Sci-Fi", desc: "Blade Runner / Terminal interface." },
+                    { id: "spatial", name: "Spatial", desc: "VisionOS / High contrast glass." },
+                    { id: "obsidian", name: "Obsidian", desc: "Deep navy, frosted glass, cyan accents." }
+                  ].map((t) => (
+                    <div 
+                      key={t.id} 
+                      onClick={() => handleThemeChange(t.id)}
+                      className={`panel p-6 cursor-pointer transition-all hover:-translate-y-1 ${theme === t.id ? 'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}`}
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <h3 className="font-serif text-2xl font-bold">{t.name}</h3>
+                        {theme === t.id && <span className="tag filled">Active</span>}
+                      </div>
+                      <p className="mono text-xs text-muted-foreground">{t.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* OTHER TABS */}
-            {["notifications", "reports", "datasources", "settings"].includes(activeTab) && (
+            {["notifications", "reports", "datasources"].includes(activeTab) && (
               <div className="animate-fade-in-up flex flex-col items-center justify-center pt-32 text-center max-w-lg mx-auto">
                 <div className="panel p-8 w-full border-t-8 border-t-foreground">
                    <h2 className="mono text-2xl font-bold uppercase mb-4 text-accent-red">System Notice</h2>

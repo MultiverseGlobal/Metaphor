@@ -1,5 +1,5 @@
 /* ─── FONTS ────────────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme inline {
@@ -18,53 +18,161 @@
   --color-accent-red: var(--accent-red);
   --color-accent-blue: var(--accent-blue);
   
-  --radius-lg: 0px;
-  --radius-md: 0px;
-  --radius-sm: 0px;
-  --radius: 0px;
+  --radius-lg: var(--radius);
+  --radius-md: var(--radius);
+  --radius-sm: var(--radius);
+  --radius: var(--radius);
 
-  --font-serif: 'Newsreader', Georgia, serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono);
+  --font-sans: var(--font-sans);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   BRUTALIST / TACTILE THEME TOKENS 
+   THEME DICTIONARY
 ───────────────────────────────────────────────────────────────────────────── */
 
 @layer base {
-  :root {
-    /* Paper / Utilitarian Canvas */
-    --background:        #F4F4F0;    /* Warm off-white paper */
-    --foreground:        #111111;    /* Stark black */
-    
-    /* Surfaces */
+
+  /* 1. MINIMALIST (Dieter Rams / Brutalist) - Default */
+  :root, [data-theme="minimalist"] {
+    --background:        #F4F4F0;
+    --foreground:        #111111;
     --card:              #FFFFFF;
     --card-foreground:   #111111;
     --surface:           #EAEAEA;   
-    
-    /* Vibrant / Harsh Accents */
-    --primary:           #111111;    /* Primary actions are black */
+    --primary:           #111111;
     --primary-foreground: #FFFFFF;
-    
-    --accent-red:        #FF3300;    /* Safety / Warning / Accent */
-    --accent-blue:       #0000FF;    /* Blueprint / Link Blue */
-    
-    /* Supporting */
     --secondary:         #E5E5E0;
     --secondary-foreground: #111111;
     --muted:             #E5E5E0;
-    --muted-foreground:  #555555;    /* Dark gray for secondary text */
+    --muted-foreground:  #555555;
+    --border:            #111111;
+    --accent-red:        #FF3300;
+    --accent-blue:       #0000FF;
     
-    /* Chrome & Borders */
-    --border:            #111111;    /* Pure black borders */
+    --radius:            0px;
+    --font-serif:        'Newsreader', Georgia, serif;
+    --font-mono:         'JetBrains Mono', monospace;
+    --font-sans:         'JetBrains Mono', monospace; /* Force mono for sans in minimalist */
     
-    --radius:            0px;        /* Zero border radius everywhere */
+    --shadow-hard:       4px 4px 0px 0px var(--border);
+    --shadow-panel:      6px 6px 0px 0px var(--border);
+    --bg-texture:        linear-gradient(to right, rgba(17, 17, 17, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(17, 17, 17, 0.05) 1px, transparent 1px);
+    --bg-texture-size:   40px 40px;
   }
 
-  /* Force light mode behavior */
-  .dark {
-    color-scheme: light;
+  /* 2. EDITORIAL (Kinfolk / High-End Print) */
+  [data-theme="editorial"] {
+    --background:        #FAF9F6;
+    --foreground:        #2C2825;
+    --card:              #FFFFFF;
+    --card-foreground:   #2C2825;
+    --surface:           #F0EBE1;   
+    --primary:           #8B4513; /* Saddle Brown */
+    --primary-foreground: #FFFFFF;
+    --secondary:         #E8E3DA;
+    --secondary-foreground: #2C2825;
+    --muted:             #E8E3DA;
+    --muted-foreground:  #7C756B;
+    --border:            #D4CFC6;
+    --accent-red:        #C25953;
+    --accent-blue:       #4A6B7C;
+    
+    --radius:            0px;
+    --font-serif:        'Newsreader', Georgia, serif;
+    --font-mono:         'JetBrains Mono', monospace;
+    --font-sans:         'Newsreader', Georgia, serif; /* Heavy serif usage */
+    
+    --shadow-hard:       none;
+    --shadow-panel:      0 10px 40px -10px rgba(44,40,37,0.05);
+    --bg-texture:        none;
   }
+
+  /* 3. SCI-FI (Blade Runner / Terminal) */
+  [data-theme="scifi"] {
+    --background:        #050505;
+    --foreground:        #00FF41; /* Terminal Green */
+    --card:              #0A0A0A;
+    --card-foreground:   #00FF41;
+    --surface:           #111111;   
+    --primary:           #00FF41;
+    --primary-foreground: #000000;
+    --secondary:         #111111;
+    --secondary-foreground: #00FF41;
+    --muted:             #111111;
+    --muted-foreground:  #008F11;
+    --border:            #003B00;
+    --accent-red:        #FF003C; /* Cyberpunk Red */
+    --accent-blue:       #00FFFF; /* Cyan */
+    
+    --radius:            0px;
+    --font-serif:        'JetBrains Mono', monospace;
+    --font-mono:         'JetBrains Mono', monospace;
+    --font-sans:         'JetBrains Mono', monospace;
+    
+    --shadow-hard:       0 0 10px rgba(0, 255, 65, 0.2);
+    --shadow-panel:      0 0 20px rgba(0, 255, 65, 0.1);
+    --bg-texture:        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,65,0.02) 2px, rgba(0,255,65,0.02) 4px);
+    --bg-texture-size:   100% 4px;
+  }
+
+  /* 4. SPATIAL (VisionOS / Glass) */
+  [data-theme="spatial"] {
+    --background:        #E2E8F0; /* Slate 200 */
+    --foreground:        #0F172A;
+    --card:              rgba(255, 255, 255, 0.5);
+    --card-foreground:   #0F172A;
+    --surface:           rgba(255, 255, 255, 0.3);   
+    --primary:           #3B82F6; /* Blue 500 */
+    --primary-foreground: #FFFFFF;
+    --secondary:         rgba(255, 255, 255, 0.4);
+    --secondary-foreground: #0F172A;
+    --muted:             rgba(255, 255, 255, 0.2);
+    --muted-foreground:  #64748B;
+    --border:            rgba(255, 255, 255, 0.4);
+    --accent-red:        #EF4444;
+    --accent-blue:       #3B82F6;
+    
+    --radius:            16px; /* Heavy rounding */
+    --font-serif:        'Inter', sans-serif;
+    --font-mono:         'JetBrains Mono', monospace;
+    --font-sans:         'Inter', sans-serif;
+    
+    --shadow-hard:       0 8px 32px 0 rgba(31, 38, 135, 0.1);
+    --shadow-panel:      0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --bg-texture:        radial-gradient(circle at 50% 0%, rgba(255,255,255,0.8), transparent 70%);
+    --bg-texture-size:   100% 100vh;
+  }
+
+  /* 5. OBSIDIAN (Better Slop) */
+  [data-theme="obsidian"] {
+    --background:        #090B13;
+    --foreground:        #FFFFFF;
+    --card:              rgba(15, 18, 30, 0.6);
+    --card-foreground:   #FFFFFF;
+    --surface:           rgba(25, 30, 50, 0.4);   
+    --primary:           #1998E8;
+    --primary-foreground: #FFFFFF;
+    --secondary:         rgba(30, 40, 70, 0.5);
+    --secondary-foreground: #FFFFFF;
+    --muted:             rgba(30, 40, 70, 0.3);
+    --muted-foreground:  #8B9DBC;
+    --border:            rgba(40, 55, 100, 0.5);
+    --accent-red:        #F43F5E;
+    --accent-blue:       #06B6D4; /* Cyan */
+    
+    --radius:            8px;
+    --font-serif:        'Inter', sans-serif;
+    --font-mono:         'JetBrains Mono', monospace;
+    --font-sans:         'Inter', sans-serif;
+    
+    --shadow-hard:       0 4px 20px rgba(6, 182, 212, 0.15);
+    --shadow-panel:      0 8px 30px rgba(0, 0, 0, 0.4);
+    --bg-texture:        radial-gradient(circle at 100% 0%, rgba(6, 182, 212, 0.1) 0%, transparent 40%), radial-gradient(circle at 0% 100%, rgba(25, 152, 232, 0.1) 0%, transparent 40%);
+    --bg-texture-size:   100% 100%;
+  }
+
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -75,7 +183,7 @@
   * { 
     @apply border-border; 
     border-color: var(--border);
-    border-radius: 0 !important; /* Enforce hard corners globally */
+    border-radius: var(--radius);
   }
   
   html, body, #root { 
@@ -84,23 +192,29 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: var(--font-serif);
+    font-family: var(--font-sans);
     margin: 0;
     padding: 0;
     min-height: 100vh;
     overflow-x: hidden;
-    color-scheme: light;
+    transition: background-color 0.5s ease, color 0.5s ease;
     
-    /* Subtle grid paper background */
-    background-image: 
-      linear-gradient(to right, rgba(17, 17, 17, 0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(17, 17, 17, 0.05) 1px, transparent 1px);
-    background-size: 40px 40px;
+    background-image: var(--bg-texture);
+    background-size: var(--bg-texture-size);
     background-attachment: fixed;
   }
+  
+  /* Apply backdrop blur for spatial/obsidian themes globally on certain elements if needed */
+  [data-theme="spatial"] body::before, [data-theme="obsidian"] body::before {
+     content: "";
+     position: fixed;
+     inset: 0;
+     z-index: -1;
+     background: inherit;
+  }
 
-  /* Typography Scale (Editorial) */
-  h1, h2, h3, h4, h5, h6 {
+  /* Typography Scale */
+  h1, h2, h3, h4, h5, h6, .font-serif {
     font-family: var(--font-serif);
     font-weight: 500;
     letter-spacing: -0.02em;
@@ -108,37 +222,27 @@
     line-height: 1.1;
   }
 
-  p {
-    font-family: var(--font-serif);
-    font-size: 1.125rem; /* 18px */
-    line-height: 1.6;
-    color: var(--foreground);
-  }
-
-  code, pre, .mono, button, input {
+  code, pre, .mono, .font-mono {
     font-family: var(--font-mono);
+  }
+  
+  .font-sans {
+    font-family: var(--font-sans);
   }
 
   ::selection { 
-    background: var(--accent-blue); 
-    color: white;
-  }
-
-  /* Container */
-  .container {
-    padding-inline: clamp(1rem, 4vw, 2rem);
-    max-width: min(100%, 1440px);
-    margin-inline: auto;
+    background: var(--primary); 
+    color: var(--primary-foreground);
   }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   BRUTALIST COMPONENTS (The Core Vibe)
+   ADAPTIVE COMPONENTS
 ───────────────────────────────────────────────────────────────────────────── */
 
 @layer components {
 
-  /* ── Tactile Button (Teenage Engineering style) ── */
+  /* Tactile Button (Adapts to theme) */
   .btn-tactile {
     font-family: var(--font-mono);
     text-transform: uppercase;
@@ -149,8 +253,9 @@
     background: var(--card);
     color: var(--foreground);
     border: 2px solid var(--border);
-    box-shadow: 4px 4px 0px 0px var(--border);
-    transition: all 0.1s ease;
+    box-shadow: var(--shadow-hard);
+    border-radius: var(--radius);
+    transition: all 0.2s ease;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -158,36 +263,44 @@
     gap: 0.5rem;
   }
   
+  [data-theme="spatial"] .btn-tactile, [data-theme="obsidian"] .btn-tactile {
+    backdrop-filter: blur(12px);
+    border-width: 1px;
+    font-family: var(--font-sans);
+    text-transform: none;
+    font-size: 0.875rem;
+  }
+
   .btn-tactile:hover {
     background: var(--surface);
   }
 
   .btn-tactile:active {
     transform: translate(2px, 2px);
-    box-shadow: 2px 2px 0px 0px var(--border);
+    box-shadow: none;
   }
 
   .btn-tactile.primary {
-    background: var(--foreground);
-    color: var(--background);
+    background: var(--primary);
+    color: var(--primary-foreground);
+    border-color: var(--primary);
   }
-  .btn-tactile.primary:hover {
-    background: var(--muted-foreground);
-  }
-
-  .btn-tactile.accent {
-    background: var(--accent-red);
-    color: white;
-  }
-
-  /* ── Structural Panel ── */
+  
+  /* Structural Panel */
   .panel {
     background: var(--card);
     border: 2px solid var(--border);
-    box-shadow: 6px 6px 0px 0px var(--border);
+    box-shadow: var(--shadow-panel);
+    border-radius: var(--radius);
+    transition: all 0.3s ease;
+  }
+  
+  [data-theme="spatial"] .panel, [data-theme="obsidian"] .panel {
+    backdrop-filter: blur(24px) saturate(1.5);
+    border-width: 1px;
   }
 
-  /* ── Flat Data Tag ── */
+  /* Data Tag */
   .tag {
     font-family: var(--font-mono);
     font-size: 0.7rem;
@@ -198,37 +311,29 @@
     border: 1px solid var(--border);
     color: var(--foreground);
     display: inline-block;
+    border-radius: var(--radius);
   }
   
-  .tag.blue {
-    color: var(--accent-blue);
-    border-color: var(--accent-blue);
-  }
-  
-  .tag.red {
-    color: var(--accent-red);
-    border-color: var(--accent-red);
-  }
-  
-  .tag.filled {
-    background: var(--foreground);
-    color: var(--background);
-  }
+  .tag.blue { color: var(--accent-blue); border-color: var(--accent-blue); }
+  .tag.red { color: var(--accent-red); border-color: var(--accent-red); }
+  .tag.filled { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
 
-  /* ── Structural Grid Section ── */
+  /* Grid Section (Theme dependent borders) */
   .grid-section {
     border-top: 2px solid var(--border);
     border-bottom: 2px solid var(--border);
   }
+  .col-border { border-right: 2px solid var(--border); }
+  
+  [data-theme="spatial"] .grid-section, [data-theme="obsidian"] .grid-section { border-width: 1px; }
+  [data-theme="spatial"] .col-border, [data-theme="obsidian"] .col-border { border-width: 1px; }
+  [data-theme="editorial"] .grid-section { border-width: 1px; }
+  [data-theme="editorial"] .col-border { border-width: 1px; }
 
-  .col-border {
-    border-right: 2px solid var(--border);
-  }
-
-  /* ── Nav Links ── */
+  /* Nav Links */
   .nav-link {
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
     font-weight: 600;
     text-transform: uppercase;
     color: var(--foreground);
@@ -237,69 +342,28 @@
     padding: 0.25rem 0;
   }
   
-  .nav-link::after {
-    content: '';
-    position: absolute;
-    width: 100%;
-    height: 2px;
-    bottom: 0;
-    left: 0;
-    background-color: var(--accent-blue);
-    transform: scaleX(0);
-    transform-origin: bottom right;
-    transition: transform 0.25s ease-out;
-  }
-  
-  .nav-link:hover::after {
-    transform: scaleX(1);
-    transform-origin: bottom left;
-  }
+  [data-theme="minimalist"] .nav-link, [data-theme="scifi"] .nav-link { font-family: var(--font-mono); }
+  [data-theme="spatial"] .nav-link, [data-theme="obsidian"] .nav-link { text-transform: none; }
   
   .nav-link.active {
-    background: var(--foreground);
-    color: var(--background);
-    padding: 0.25rem 0.5rem;
-  }
-  .nav-link.active::after {
-    display: none;
+    color: var(--primary);
   }
 
-  /* ── Scroll Reveal ── */
   .reveal {
     opacity: 0;
     transform: translateY(10px);
     transition: opacity 0.5s ease, transform 0.5s ease;
   }
-  .reveal.is-visible { 
-    opacity: 1; 
-    transform: translateY(0); 
-  }
+  .reveal.is-visible { opacity: 1; transform: translateY(0); }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   CUSTOM SCROLLBARS (Brutalist blocky scrollbar)
+   SCROLLBARS
 ───────────────────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 10px; height: 10px; background: var(--background); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius); }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
-::-webkit-scrollbar { 
-  width: 12px; 
-  height: 12px; 
-  background: var(--background);
-  border-left: 2px solid var(--border);
-}
-::-webkit-scrollbar-track { 
-  background: var(--background); 
-}
-::-webkit-scrollbar-thumb {
-  background: var(--foreground);
-  border: 2px solid var(--background);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-blue);
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   ANIMATIONS
-───────────────────────────────────────────────────────────────────────────── */
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
