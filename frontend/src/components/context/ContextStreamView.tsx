@@ -18,7 +18,8 @@ import {
   Video, 
   Mail, 
   ChevronRight,
-  TrendingUp
+  TrendingUp,
+  CircleDot
 } from 'lucide-react';
 
 export const ContextStreamView: React.FC = () => {
@@ -26,11 +27,11 @@ export const ContextStreamView: React.FC = () => {
 
   // Living Snapshot Chain Items
   const snapshotSequence = [
-    { label: 'You', detail: 'Active in Core Enterprise', color: 'text-white', bg: 'bg-[var(--accent-blue)]' },
-    { label: 'Primary Context', detail: 'Project Metaphor Core Engine', color: 'text-[var(--accent-blue)]', bg: 'bg-[var(--accent-blue-glow)]' },
-    { label: 'Upcoming', detail: 'Architecture Sync with David in 40m', color: 'text-[var(--accent-purple)]', bg: 'bg-purple-500/10' },
-    { label: 'Recent Code', detail: 'Layer 0 Event Bus merged', color: 'text-[var(--accent-emerald)]', bg: 'bg-emerald-500/10' },
-    { label: 'Communication', detail: 'David R. replied to Spec', color: 'text-[var(--accent-cyan)]', bg: 'bg-cyan-500/10' }
+    { label: 'You', detail: 'Active in Core Enterprise', color: 'text-foreground', bg: 'bg-primary/10 border-primary/20' },
+    { label: 'Primary Context', detail: 'Project Metaphor Core Engine', color: 'text-primary', bg: 'bg-primary/10 border-primary/30' },
+    { label: 'Upcoming', detail: 'Architecture Sync with David in 40m', color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
+    { label: 'Recent Code', detail: 'Layer 0 Event Bus merged', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+    { label: 'Communication', detail: 'David R. replied to Spec', color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20' }
   ];
 
   const getSourceIcon = (source: string) => {
@@ -45,134 +46,102 @@ export const ContextStreamView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto animate-fade-in">
+    <div className="space-y-6 max-w-5xl mx-auto page-fade">
       
       {/* 1. LIVING AWARENESS SEQUENCE BAR */}
-      <div className="metaphor-glass p-4 border border-[var(--border-strong)] bg-[var(--bg-surface)]">
-        <div className="text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-3 flex items-center justify-between">
+      <div className="metaphor-glass p-5 border border-border bg-card/60 rounded-xl space-y-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Activity className="w-3.5 h-3.5 text-[var(--accent-blue)] animate-pulse" />
-            <span>Living System Snapshot</span>
+            <CircleDot className="w-4 h-4 text-primary animate-pulse" />
+            <h2 className="font-serif font-bold text-base text-foreground tracking-tight">Living System Snapshot</h2>
           </div>
-          <span className="text-[var(--accent-emerald)] font-mono">Real-time Awareness</span>
+          <span className="eyebrow text-emerald-400">Real-time Awareness</span>
         </div>
 
         {/* Fluid Awareness Sequence Chain */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
           {snapshotSequence.map((item, idx) => (
             <div 
               key={idx} 
-              className={`p-3 rounded-xl border border-[var(--border-subtle)] ${item.bg} flex flex-col justify-between space-y-1 transition-all hover:scale-[1.02]`}
+              className={`p-3.5 rounded-xl border ${item.bg} flex flex-col justify-between space-y-1.5 transition-all hover:scale-[1.02] cursor-pointer`}
             >
-              <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-tight">{item.label}</div>
-              <div className={`text-xs font-semibold ${item.color} leading-tight line-clamp-2`}>{item.detail}</div>
+              <div className="eyebrow text-[9px]">{item.label}</div>
+              <div className={`text-xs font-semibold ${item.color} leading-snug line-clamp-2`}>{item.detail}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* 2. QUIET EMBEDDED AI CONTEXT OBSERVATIONS */}
+      {/* 2. EMBEDDED AI CONTEXT OBSERVATIONS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {insights.map((insight) => (
           <div 
             key={insight.id} 
-            className="metaphor-glass p-4 border border-[var(--border-accent)] bg-gradient-to-r from-[rgba(0,102,255,0.08)] to-[rgba(6,182,212,0.08)] rounded-xl flex items-start space-x-3"
+            className="metaphor-glass p-5 border border-primary/30 bg-primary/5 rounded-xl flex items-start space-x-3.5 hover:border-primary/50 transition-all"
           >
-            <div className="w-8 h-8 rounded-lg bg-[var(--accent-blue-glow)] flex items-center justify-center text-[var(--accent-cyan)] shrink-0 mt-0.5">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0 mt-0.5">
               <Sparkles className="w-4 h-4" />
             </div>
-            <div>
+            <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-semibold text-white">{insight.title}</h4>
-                <span className="text-[10px] font-mono text-[var(--accent-emerald)]">{(insight.confidence * 100).toFixed(0)}% Confidence</span>
+                <h4 className="font-serif text-xs font-semibold text-foreground">{insight.title}</h4>
+                <span className="text-[10px] font-mono font-bold text-emerald-400">{(insight.confidence * 100).toFixed(0)}% Confidence</span>
               </div>
-              <p className="text-xs text-[var(--text-secondary)] leading-relaxed mt-1">{insight.body}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{insight.body}</p>
             </div>
           </div>
         ))}
       </div>
 
       {/* 3. RECENT CONTEXT STREAM */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Clock className="w-4 h-4 text-[var(--accent-blue)]" />
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Ingested Context Stream</h3>
+            <Clock className="w-4 h-4 text-primary" />
+            <h3 className="font-serif text-lg font-semibold text-foreground">Ingested Context Stream</h3>
           </div>
-          <button 
-            onClick={() => setActiveView('timeline')}
-            className="text-xs text-[var(--accent-blue)] hover:underline flex items-center"
-          >
-            View Full Timeline <ArrowRight className="w-3 h-3 ml-1" />
-          </button>
+          <span className="eyebrow text-muted-foreground">{events.length} Events Ingested</span>
         </div>
 
-        <div className="space-y-2">
+        {/* Live Stream Event List */}
+        <div className="space-y-3">
           {events.map((evt) => {
-            const SourceIcon = getSourceIcon(evt.source);
+            const IconComponent = getSourceIcon(evt.source);
             return (
               <div 
-                key={evt.id} 
-                onClick={() => inspectEntity(evt)}
-                className="metaphor-glass p-4 border border-[var(--border-subtle)] hover:border-[var(--border-strong)] rounded-xl flex items-start justify-between cursor-pointer transition-all hover:bg-[var(--bg-surface-hover)] group"
+                key={evt.id}
+                className="metaphor-glass p-4 border border-border bg-card/60 rounded-xl flex items-start justify-between space-x-4 hover:border-primary/40 transition-all cursor-pointer group"
+                onClick={() => {
+                  if (evt.extractedEntities.length > 0) {
+                    inspectEntity(evt.extractedEntities[0]);
+                  }
+                }}
               >
-                <div className="flex items-start space-x-3.5 pr-4">
-                  <div className="w-9 h-9 rounded-lg bg-white/5 border border-[var(--border-subtle)] flex items-center justify-center text-[var(--accent-cyan)] shrink-0 mt-0.5 group-hover:border-[var(--accent-blue)] transition-colors">
-                    <SourceIcon className="w-4 h-4" />
+                <div className="flex items-start space-x-3.5">
+                  <div className="w-9 h-9 rounded-lg bg-surface-2 border border-border flex items-center justify-center text-primary shrink-0 group-hover:scale-105 transition-transform">
+                    <IconComponent className="w-4 h-4" />
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
-                      <span className="text-xs font-semibold text-white group-hover:text-[var(--accent-blue)] transition-colors">{evt.title}</span>
-                      <span className="metaphor-badge text-[9px]">{evt.source}</span>
+                      <span className="metaphor-badge">{evt.source}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground">{new Date(evt.timestamp).toLocaleTimeString()}</span>
                     </div>
-                    <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{evt.summary}</p>
-                    
-                    {evt.aiContextObservation && (
-                      <div className="text-[11px] text-[var(--accent-cyan)] flex items-center space-x-1 pt-1">
-                        <Sparkles className="w-3 h-3 shrink-0" />
-                        <span>{evt.aiContextObservation}</span>
-                      </div>
-                    )}
+                    <h4 className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">{evt.payload.title || evt.payload.description || 'Context Event'}</h4>
+                    <p className="text-xs text-muted-foreground line-clamp-1">{evt.payload.details || evt.payload.text || 'No payload details provided.'}</p>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end space-y-2 shrink-0">
-                  <span className="text-[10px] font-mono text-[var(--text-muted)]">{evt.timestamp}</span>
-                  <ChevronRight className="w-4 h-4 text-[var(--text-muted)] group-hover:translate-x-1 transition-transform" />
+                <div className="flex items-center space-x-2 shrink-0">
+                  {evt.extractedEntities.length > 0 && (
+                    <span className="text-[10px] font-mono text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded">
+                      {evt.extractedEntities.length} entities
+                    </span>
+                  )}
+                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                 </div>
               </div>
             );
           })}
-        </div>
-      </div>
-
-      {/* 4. ACTIVE KNOWLEDGE NODES MATRIX */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Living Knowledge Network Snapshot</h3>
-          <button 
-            onClick={() => setActiveView('knowledge')}
-            className="text-xs text-[var(--accent-blue)] hover:underline flex items-center"
-          >
-            Explore Graph Network <ArrowRight className="w-3 h-3 ml-1" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-          {entities.slice(0, 4).map(ent => (
-            <div 
-              key={ent.id}
-              onClick={() => inspectEntity(ent)}
-              className="metaphor-glass p-3.5 border border-[var(--border-subtle)] hover:border-[var(--border-accent)] rounded-xl cursor-pointer transition-all space-y-2 group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="metaphor-badge text-[9px]">{ent.type}</span>
-                <span className="text-[10px] font-mono text-[var(--accent-emerald)]">{ent.impactScore} Score</span>
-              </div>
-              <h4 className="text-xs font-semibold text-white group-hover:text-[var(--accent-blue)] transition-colors line-clamp-1">{ent.name}</h4>
-              <p className="text-[11px] text-[var(--text-muted)] line-clamp-2">{ent.description}</p>
-            </div>
-          ))}
         </div>
       </div>
 

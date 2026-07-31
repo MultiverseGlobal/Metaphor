@@ -13,15 +13,25 @@ import {
   Plug, 
   Search, 
   ChevronDown, 
-  Sparkles, 
   ShieldCheck,
-  User,
   Zap,
-  Globe
+  Globe,
+  Compass
 } from 'lucide-react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
+}
+
+// Atlas Waypoint Logo Mark Component
+export function AtlasWaypointLogo({ size = 26 }: { size?: number }) {
+  return (
+    <svg width={size} height={size * 1.25} viewBox="0 0 24 30" fill="none" className="shrink-0" aria-hidden="true">
+      <circle cx="12" cy="10" r="7" stroke="currentColor" strokeWidth="2.5" className="text-foreground" />
+      <circle cx="12" cy="10" r="3" className="fill-primary" />
+      <line x1="12" y1="18" x2="12" y2="28" stroke="currentColor" strokeWidth="2" strokeDasharray="2 3" className="text-primary" />
+    </svg>
+  );
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
@@ -37,45 +47,48 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const workspaces = ['Core Enterprise', 'Personal Workspace', 'Research Lab', 'Client Alpha'];
 
   const navItems: { id: MetaphorView; label: string; icon: React.FC<{ className?: string }> }[] = [
-    { id: 'context', label: 'Context', icon: Activity },
-    { id: 'timeline', label: 'Timeline', icon: Clock },
-    { id: 'knowledge', label: 'Knowledge', icon: Network },
-    { id: 'explore', label: 'Explore', icon: Layers },
+    { id: 'context', label: 'Context Stream', icon: Activity },
+    { id: 'timeline', label: 'Progression Log', icon: Clock },
+    { id: 'knowledge', label: 'Ontology Graph', icon: Network },
+    { id: 'explore', label: 'Layer Explorer', icon: Layers },
     { id: 'connectors', label: 'Connectors', icon: Plug }
   ];
 
   return (
-    <div className="min-h-screen bg-[var(--bg-root)] text-[var(--text-primary)] flex flex-col font-sans selection:bg-[var(--accent-blue)] selection:text-white">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary/20 selection:text-foreground">
       
       {/* TOP MISSION CONTROL HEADER */}
-      <header className="h-14 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] backdrop-blur-md sticky top-0 z-30 px-4 flex items-center justify-between">
+      <header className="h-14 border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-30 px-5 flex items-center justify-between">
         
-        {/* Left Branding & Workspace Selector */}
+        {/* Left Atlas Waypoint Branding & Workspace Switcher */}
         <div className="flex items-center space-x-6">
-          <div className="flex items-center space-x-2.5 cursor-pointer" onClick={() => setActiveView('context')}>
-            <div className="w-8 h-8 rounded-lg bg-[var(--accent-blue)] text-white flex items-center justify-center font-extrabold tracking-tighter text-base shadow-lg shadow-[var(--accent-blue-glow)]">
-              M
-            </div>
-            <div>
-              <span className="font-bold text-sm tracking-tight text-white block leading-none">METAPHOR</span>
-              <span className="text-[9px] font-mono text-[var(--text-muted)] tracking-widest uppercase">Context OS</span>
+          <div 
+            className="flex items-center space-x-3 cursor-pointer group" 
+            onClick={() => setActiveView('context')}
+          >
+            <AtlasWaypointLogo size={24} />
+            <div className="text-left">
+              <span className="font-serif font-bold text-sm tracking-tight text-foreground block leading-none group-hover:text-primary transition-colors">
+                METAPHOR
+              </span>
+              <span className="eyebrow block text-[9px]">Context OS</span>
             </div>
           </div>
 
           {/* Workspace Switcher */}
           <div className="relative group">
-            <button className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-white/3 hover:bg-white/10 text-xs font-medium text-[var(--text-secondary)] hover:text-white transition-colors">
-              <Globe className="w-3.5 h-3.5 text-[var(--accent-cyan)]" />
+            <button className="flex items-center space-x-2 px-3 py-1.5 rounded-lg border border-border bg-surface-2/60 hover:bg-surface-2 text-xs font-medium text-foreground transition-all cursor-pointer">
+              <Globe className="w-3.5 h-3.5 text-primary" />
               <span>{activeWorkspace}</span>
-              <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
             </button>
-            <div className="absolute top-full left-0 mt-1 w-48 metaphor-glass bg-[var(--bg-surface-solid)] border border-[var(--border-strong)] rounded-lg shadow-xl py-1 hidden group-hover:block z-50">
+            <div className="absolute top-full left-0 mt-1 w-48 metaphor-glass bg-card border border-border rounded-xl shadow-xl py-1 hidden group-hover:block z-50">
               {workspaces.map(ws => (
                 <button
                   key={ws}
                   onClick={() => setActiveWorkspace(ws)}
-                  className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
-                    activeWorkspace === ws ? 'text-[var(--accent-blue)] font-semibold bg-white/5' : 'text-[var(--text-secondary)] hover:text-white hover:bg-white/5'
+                  className={`w-full text-left px-3 py-2 text-xs transition-colors cursor-pointer ${
+                    activeWorkspace === ws ? 'text-primary font-semibold bg-primary/10' : 'text-muted-foreground hover:text-foreground hover:bg-surface-2'
                   }`}
                 >
                   {ws}
@@ -89,13 +102,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <div className="flex-1 max-w-md mx-6">
           <button
             onClick={toggleCommandPalette}
-            className="w-full flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-white/4 hover:bg-white/8 text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-all shadow-inner group"
+            className="w-full flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-border bg-surface/50 hover:bg-surface-2/80 text-xs text-muted-foreground hover:text-foreground transition-all shadow-inner group cursor-pointer"
           >
             <div className="flex items-center space-x-2">
-              <Search className="w-3.5 h-3.5 text-[var(--accent-blue)] group-hover:scale-110 transition-transform" />
-              <span>Type a command or search entities...</span>
+              <Search className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform" />
+              <span>Map entities or search live context...</span>
             </div>
-            <kbd className="metaphor-badge text-[9px] font-mono">⌘K</kbd>
+            <kbd className="metaphor-badge text-[9px]">⌘K</kbd>
           </button>
         </div>
 
@@ -105,20 +118,20 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {/* Real-time Event Simulator Trigger */}
           <button
             onClick={() => addSimulatedEvent('github')}
-            className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border border-[var(--border-subtle)] bg-white/3 hover:bg-[var(--accent-blue-glow)] hover:border-[var(--accent-blue)] text-[11px] font-mono text-[var(--text-secondary)] hover:text-white transition-colors"
+            className="hidden sm:flex items-center space-x-1.5 px-3 py-1 rounded-lg border border-border bg-surface-2/60 hover:bg-primary/10 hover:border-primary/40 text-xs font-mono text-muted-foreground hover:text-primary transition-all cursor-pointer"
             title="Inject real-time living event into Layer 0 stream"
           >
-            <Zap className="w-3 h-3 text-[var(--accent-amber)] animate-pulse" />
+            <Zap className="w-3 h-3 text-amber-400 animate-pulse" />
             <span>Simulate Stream</span>
           </button>
 
           {/* Living Ingestion Status */}
-          <div className="flex items-center space-x-2 text-[11px] font-mono text-[var(--text-secondary)] px-2.5 py-1 rounded-lg bg-white/3 border border-[var(--border-subtle)]">
-            <span className="w-2 h-2 rounded-full bg-[var(--accent-emerald)] animate-pulse" />
-            <span className="hidden md:inline">SYSTEM ACTIVE</span>
+          <div className="flex items-center space-x-2 text-[11px] font-mono text-muted-foreground px-3 py-1 rounded-lg bg-surface-2/60 border border-border">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="hidden md:inline font-semibold">SYSTEM ACTIVE</span>
           </div>
 
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[var(--accent-blue)] to-[var(--accent-purple)] flex items-center justify-center text-xs font-bold text-white shadow-md">
+          <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shadow-md">
             K
           </div>
         </div>
@@ -129,11 +142,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <div className="flex-1 flex overflow-hidden">
         
         {/* LEFT COMPACT SIDEBAR */}
-        <aside className="w-16 md:w-52 border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] backdrop-blur-md flex flex-col justify-between p-2 shrink-0">
+        <aside className="w-16 md:w-56 border-r border-border bg-sidebar-background flex flex-col justify-between p-3 shrink-0">
           
           {/* Navigation Links */}
           <nav className="space-y-1">
-            <div className="hidden md:block px-3 py-2 text-[10px] font-mono text-[var(--text-muted)] tracking-wider uppercase">
+            <div className="hidden md:block px-3 py-2 eyebrow">
               Navigation Hub
             </div>
 
@@ -144,13 +157,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <button
                   key={item.id}
                   onClick={() => setActiveView(item.id)}
-                  className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                  className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                     isActive 
-                      ? 'bg-[var(--accent-blue-glow)] text-[var(--accent-blue)] border border-[var(--border-accent)] font-semibold' 
-                      : 'text-[var(--text-secondary)] hover:text-white hover:bg-white/5 border border-transparent'
+                      ? 'bg-surface-2 text-foreground border-l-2 border-primary font-semibold shadow-sm' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-surface-2/50 border border-transparent'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[var(--accent-blue)]' : 'text-[var(--text-muted)]'}`} />
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
                   <span className="hidden md:inline">{item.label}</span>
                 </button>
               );
@@ -158,18 +171,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </nav>
 
           {/* System Footer Note */}
-          <div className="hidden md:block p-3 metaphor-glass bg-white/2 border border-[var(--border-subtle)] rounded-xl text-[10px] text-[var(--text-muted)] space-y-1">
-            <div className="flex items-center space-x-1 text-[var(--accent-cyan)] font-mono">
+          <div className="hidden md:block p-3.5 metaphor-glass bg-card/60 border border-border rounded-xl text-[10px] text-muted-foreground space-y-1.5">
+            <div className="flex items-center space-x-1.5 text-primary font-mono font-bold">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Living Nervous System</span>
+              <span>Living Context OS</span>
             </div>
-            <p className="leading-tight">Continuously indexing connected services.</p>
+            <p className="leading-relaxed">Continuously indexing connected services and mapping strategic timelines.</p>
           </div>
 
         </aside>
 
         {/* CENTER VIEWPORT AREA */}
-        <main className="flex-1 overflow-y-auto relative p-4 md:p-6">
+        <main className="flex-1 overflow-y-auto relative p-4 md:p-6 bg-background">
           {children}
         </main>
 

@@ -1,119 +1,53 @@
-// Layer 6: UI - Knowledge-First Connectors View - ConnectorsView.tsx
+// Layer 6: UI - Integrations & Data Sources - ConnectorsView.tsx
 'use client';
 
 import React from 'react';
-import { useMetaphor } from '../../context/MetaphorContext';
-import { 
-  Plug, 
-  CheckCircle2, 
-  RefreshCw, 
-  Activity, 
-  GitCommit, 
-  CreditCard, 
-  FileText, 
-  Video, 
-  Mail,
-  Zap,
-  ShieldCheck,
-  Radio
-} from 'lucide-react';
+import { Plug, GitCommit, FileText, Calendar, CreditCard, Mail, CheckCircle2, RefreshCw } from 'lucide-react';
 
 export const ConnectorsView: React.FC = () => {
-  const { connectors } = useMetaphor();
-
-  const getSourceIcon = (source: string) => {
-    switch (source) {
-      case 'github': return GitCommit;
-      case 'stripe': return CreditCard;
-      case 'notion': return FileText;
-      case 'calendar': return Video;
-      case 'gmail': return Mail;
-      default: return Zap;
-    }
-  };
+  const connectors = [
+    { name: 'GitHub Repositories', icon: GitCommit, type: 'Code & Commits', status: 'Active', desc: 'Syncs commit history, pull requests, and code branches into living context.' },
+    { name: 'Notion Workspaces', icon: FileText, type: 'Documents & Spec', status: 'Active', desc: 'Indexes strategy docs, interview notes, and pricing decisions.' },
+    { name: 'Google Calendar', icon: Calendar, type: 'Meetings & Schedule', status: 'Active', desc: 'Tracks upcoming sync meetings, client calls, and schedule availability.' },
+    { name: 'Stripe Billing', icon: CreditCard, type: 'Subscriptions & MRR', status: 'Active', desc: 'Monitors paid invoices, customer churn, and pricing tier changes.' },
+    { name: 'Gmail Exhaust', icon: Mail, type: 'Email & Inbound', status: 'Active', desc: 'Extracts client feedback and outbound sales communication.' }
+  ];
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto animate-fade-in">
+    <div className="max-w-4xl mx-auto space-y-6 page-fade text-left">
       
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
-        <div>
-          <div className="flex items-center space-x-2">
-            <Plug className="w-5 h-5 text-[var(--accent-blue)]" />
-            <h2 className="text-lg font-bold text-white tracking-tight">Ingestion & Knowledge Connectors</h2>
-          </div>
-          <p className="text-xs text-[var(--text-muted)] mt-0.5">
-            Metaphor continuously ingests raw events and transforms them into structured ontology & knowledge nodes.
-          </p>
-        </div>
-
-        <div className="flex items-center space-x-2 text-xs font-mono text-[var(--accent-emerald)] bg-white/3 border border-[var(--border-subtle)] px-3 py-1.5 rounded-lg">
-          <Radio className="w-3.5 h-3.5 animate-pulse" />
-          <span>Ingestion Engine Operational</span>
-        </div>
+      <div className="space-y-1">
+        <div className="eyebrow text-primary font-mono">Data Pipeline</div>
+        <h2 className="font-serif text-2xl font-bold text-foreground">Active Integration Connectors</h2>
+        <p className="text-xs text-muted-foreground">Manage live external credentials feeding raw digital exhaust into the Metaphor Context OS.</p>
       </div>
 
-      {/* Connectors Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {connectors.map(conn => {
-          const SourceIcon = getSourceIcon(conn.source);
-
+        {connectors.map((conn) => {
+          const Icon = conn.icon;
           return (
             <div 
-              key={conn.id}
-              className="metaphor-glass p-5 border border-[var(--border-subtle)] hover:border-[var(--border-strong)] rounded-xl space-y-4 transition-all bg-[var(--bg-surface)]"
+              key={conn.name}
+              className="metaphor-glass p-5 border border-border bg-card/60 rounded-xl space-y-3 hover:border-primary/40 transition-all cursor-pointer group"
             >
-              {/* Connector Top Bar */}
-              <div className="flex items-start justify-between">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-[var(--border-subtle)] flex items-center justify-center text-[var(--accent-cyan)] shrink-0">
-                    <SourceIcon className="w-5 h-5" />
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                    <Icon className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white">{conn.name}</h3>
-                    <div className="flex items-center space-x-2 text-[11px] text-[var(--text-muted)] font-mono">
-                      <span>Last sync: {conn.lastSync}</span>
-                      <span>•</span>
-                      <span className="text-[var(--accent-emerald)] flex items-center">
-                        <CheckCircle2 className="w-3 h-3 mr-1 inline" /> Active
-                      </span>
-                    </div>
+                    <h4 className="font-serif text-sm font-semibold text-foreground group-hover:text-primary transition-colors">{conn.name}</h4>
+                    <span className="eyebrow text-[9px]">{conn.type}</span>
                   </div>
                 </div>
 
-                <span className="metaphor-badge text-[10px] text-[var(--accent-emerald)] border-emerald-500/30">
-                  {conn.healthScore}% Health
+                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded font-semibold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  {conn.status}
                 </span>
               </div>
 
-              {/* KNOWLEDGE PRODUCED HIGHLIGHTS (PRIMARY FEATURE) */}
-              <div className="p-3 rounded-lg bg-black/30 border border-[var(--border-subtle)] space-y-2">
-                <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-wider flex items-center justify-between">
-                  <span>Knowledge Produced Today</span>
-                  <span className="text-[var(--accent-cyan)]">{conn.eventsProcessedToday} Events Ingested</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {conn.knowledgeProduced.map((kp, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-xs p-1.5 rounded bg-white/3">
-                      <span className="text-[var(--text-secondary)]">{kp.label}</span>
-                      <span className="font-mono font-bold text-[var(--accent-blue)]">{kp.count}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Metadata Footer */}
-              <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)] pt-1">
-                <span>Mode: {conn.pollingFrequency}</span>
-                <div className="flex items-center space-x-2">
-                  <button className="text-[var(--text-secondary)] hover:text-white transition-colors">View Ingestion Logs</button>
-                  <span>•</span>
-                  <button className="text-[var(--accent-blue)] hover:underline flex items-center">
-                    <RefreshCw className="w-3 h-3 mr-1" /> Re-sync
-                  </button>
-                </div>
-              </div>
-
+              <p className="text-xs text-muted-foreground leading-relaxed">{conn.desc}</p>
             </div>
           );
         })}

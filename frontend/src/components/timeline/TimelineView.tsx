@@ -1,131 +1,72 @@
-// Layer 6: UI - Living Reality Timeline - TimelineView.tsx
+// Layer 6: UI - Progression Log & Timeline - TimelineView.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useMetaphor } from '../../context/MetaphorContext';
-import { SourceSystem } from '../../lib/events/EventTypes';
-import { 
-  Clock, 
-  Filter, 
-  GitCommit, 
-  CreditCard, 
-  FileText, 
-  Video, 
-  Mail, 
-  Zap, 
-  User, 
-  ChevronRight,
-  Sparkles
-} from 'lucide-react';
+import { Clock, Filter, GitCommit, FileText, CheckCircle2, ChevronRight } from 'lucide-react';
 
 export const TimelineView: React.FC = () => {
-  const { events, inspectEntity, entities } = useMetaphor();
-  const [selectedSource, setSelectedSource] = useState<string>('all');
-
-  const sources = ['all', 'github', 'notion', 'stripe', 'calendar', 'gmail'];
-
-  const filteredEvents = selectedSource === 'all' 
-    ? events 
-    : events.filter(e => e.source === selectedSource);
-
-  const getSourceIcon = (source: string) => {
-    switch (source) {
-      case 'github': return GitCommit;
-      case 'stripe': return CreditCard;
-      case 'notion': return FileText;
-      case 'calendar': return Video;
-      case 'gmail': return Mail;
-      default: return Zap;
-    }
-  };
+  const { events, inspectEntity } = useMetaphor();
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto animate-fade-in">
+    <div className="max-w-3xl mx-auto space-y-6 page-fade">
       
-      {/* Header & Filter Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-subtle)]">
-        <div>
-          <div className="flex items-center space-x-2">
-            <Clock className="w-5 h-5 text-[var(--accent-blue)]" />
-            <h2 className="text-lg font-bold text-white tracking-tight">Living Reality Timeline</h2>
-          </div>
-          <p className="text-xs text-[var(--text-muted)] mt-0.5">
-            How system reality, decisions, code, and revenue evolved chronologically over time.
-          </p>
-        </div>
-
-        {/* Source System Filter Pills */}
-        <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 sm:pb-0">
-          {sources.map(src => (
-            <button
-              key={src}
-              onClick={() => setSelectedSource(src)}
-              className={`px-3 py-1 rounded-lg text-xs font-mono capitalize transition-all ${
-                selectedSource === src
-                  ? 'bg-[var(--accent-blue)] text-white font-medium shadow-md shadow-[var(--accent-blue-glow)]'
-                  : 'bg-white/4 text-[var(--text-muted)] hover:text-white hover:bg-white/10'
-              }`}
-            >
-              {src}
-            </button>
-          ))}
-        </div>
+      {/* Header Title */}
+      <div className="space-y-1 text-left">
+        <div className="eyebrow text-primary">Progression Log</div>
+        <h2 className="font-serif text-2xl font-bold text-foreground">Timeline Ledger</h2>
+        <p className="text-xs text-muted-foreground">Chronological sequence of structural context mappings, decisions, and system events.</p>
       </div>
 
-      {/* Chronological Vertical Timeline Flow */}
-      <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-gradient-to-b before:from-[var(--accent-blue)] before:via-[var(--accent-purple)] before:to-transparent">
-        {filteredEvents.map((evt, idx) => {
-          const SourceIcon = getSourceIcon(evt.source);
-          
-          return (
-            <div key={evt.id} className="relative group">
-              
-              {/* Timeline Dot Indicator */}
-              <div className="absolute -left-6 top-1.5 w-5 h-5 rounded-full bg-[var(--bg-root)] border-2 border-[var(--accent-blue)] group-hover:border-[var(--accent-cyan)] group-hover:scale-125 transition-all flex items-center justify-center">
-                <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-blue)]" />
-              </div>
+      {/* Dotted Trail Line Container */}
+      <div className="relative border-l border-border ml-4 pl-6 py-2 space-y-8">
+        {events.map((evt, idx) => (
+          <div key={evt.id} className="relative space-y-2 group">
+            
+            {/* Waypoint Dot */}
+            <div className="absolute -left-[31px] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-primary bg-background group-hover:scale-125 transition-transform" />
 
-              {/* Event Container Card */}
-              <div 
-                onClick={() => inspectEntity(evt)}
-                className="metaphor-glass p-4 border border-[var(--border-subtle)] hover:border-[var(--border-accent)] rounded-xl cursor-pointer transition-all hover:bg-[var(--bg-surface-hover)] space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2.5">
-                    <div className="p-1.5 rounded-md bg-white/5 text-[var(--accent-cyan)]">
-                      <SourceIcon className="w-4 h-4" />
-                    </div>
-                    <span className="text-xs font-bold text-white group-hover:text-[var(--accent-blue)] transition-colors">
-                      {evt.title}
-                    </span>
-                    <span className="metaphor-badge text-[9px]">{evt.source}</span>
-                  </div>
-
-                  <span className="text-[11px] font-mono text-[var(--text-muted)]">{evt.timestamp}</span>
-                </div>
-
-                <p className="text-xs text-[var(--text-secondary)] leading-relaxed pl-8">
-                  {evt.summary}
-                </p>
-
-                {evt.authorName && (
-                  <div className="flex items-center space-x-2 pl-8 pt-1 text-[11px] text-[var(--text-muted)] font-mono">
-                    <User className="w-3 h-3 text-[var(--accent-blue)]" />
-                    <span>Actor: {evt.authorName}</span>
-                  </div>
-                )}
-
-                {evt.aiContextObservation && (
-                  <div className="ml-8 p-2 rounded-lg bg-[var(--accent-blue-glow)] border border-[var(--border-accent)] text-[11px] text-[var(--accent-cyan)] flex items-center space-x-2">
-                    <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                    <span>{evt.aiContextObservation}</span>
-                  </div>
-                )}
-              </div>
-
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="text-muted-foreground">{new Date(evt.timestamp).toLocaleString()}</span>
+              <span className="metaphor-badge">{evt.source}</span>
             </div>
-          );
-        })}
+
+            <div 
+              className="metaphor-glass p-5 border border-border bg-card/60 rounded-xl hover:border-primary/40 transition-all cursor-pointer"
+              onClick={() => {
+                if (evt.extractedEntities.length > 0) {
+                  inspectEntity(evt.extractedEntities[0]);
+                }
+              }}
+            >
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                  <h4 className="font-serif text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                    {evt.payload.title || evt.payload.description || 'Context Event Ingested'}
+                  </h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {evt.payload.details || evt.payload.text || 'Processed raw digital exhaust.'}
+                  </p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 mt-0.5" />
+              </div>
+
+              {evt.extractedEntities.length > 0 && (
+                <div className="pt-3 border-t border-border/50 mt-3 flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-muted-foreground">Extracted Entities:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {evt.extractedEntities.map(ent => (
+                      <span key={ent} className="text-[10px] font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                        {ent}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </div>
+        ))}
       </div>
 
     </div>
