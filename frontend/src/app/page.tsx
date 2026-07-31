@@ -1,130 +1,151 @@
-'use client';
+"use client";
 
 import React from 'react';
 import Link from 'next/link';
-import { Network, Activity, ArrowRight, Zap, Database, Lock } from 'lucide-react';
+import { ArrowRight, Database, Brain, Sparkles, Check } from 'lucide-react';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-background flex flex-col font-sans selection:bg-primary-dim selection:text-foreground">
       
-      {/* ── Ambient Glows (Themes like Obsidian and Spatial use these, Minimalist hides them via CSS overrides) ── */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-accent-blue/20 blur-[120px] pointer-events-none" />
-
       {/* ── Top Navigation Bar ── */}
-      <nav className="flex items-center justify-between px-8 py-6 relative z-10">
+      <nav className="flex items-center justify-between px-8 py-6 max-w-7xl mx-auto w-full z-50">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-foreground text-background flex items-center justify-center shadow-[0_0_15px_-3px_rgba(255,255,255,0.3)]">
-            <Network className="w-4 h-4" />
-          </div>
-          <span className="font-serif text-xl font-bold tracking-tight">Metaphor</span>
+          <div className="w-4 h-4 rounded-full bg-foreground shadow-[0_0_12px_rgba(var(--foreground-rgb),0.5)]" />
+          <span className="text-sm font-semibold tracking-tight text-foreground">Metaphor OS</span>
         </div>
         
-        <div className="hidden md:flex items-center gap-8">
-          <Link href="#architecture" className="nav-link">Architecture</Link>
-          <Link href="#ontology" className="nav-link">Ontology</Link>
-          <Link href="#manifesto" className="nav-link">Manifesto</Link>
+        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted">
+          <Link href="#architecture" className="hover:text-foreground transition-colors duration-200">Architecture</Link>
+          <Link href="#ontology" className="hover:text-foreground transition-colors duration-200">The Node Model</Link>
+          <Link href="#manifesto" className="hover:text-foreground transition-colors duration-200">Manifesto</Link>
         </div>
         
         <div>
-          <Link href="/dashboard" className="btn-tactile primary">
-            Enter Workspace <ArrowRight className="w-4 h-4 ml-1" />
+          <Link href="/onboarding" className="group flex items-center gap-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity">
+            Initialize
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
       </nav>
 
-      {/* ── Main Hero Section ── */}
-      <main className="flex-1 flex flex-col items-center justify-center text-center px-6 relative z-10 mt-12 mb-20">
+      <main className="flex-1 flex flex-col items-center justify-start text-center pt-32 px-6">
         
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-surface/50 backdrop-blur-md mb-8 animate-fade-in-up">
-          <span className="w-2 h-2 rounded-full bg-accent-blue animate-pulse" />
-          <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Metaphor OS v1.0 Live</span>
-        </div>
+        {/* ── Typography-Driven Hero ── */}
+        <div className="max-w-4xl mx-auto flex flex-col items-center animate-in fade-in slide-in-from-bottom-8 duration-1000">
+          <p className="text-sm font-mono tracking-widest text-muted uppercase mb-8 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+            Universal Context Engine
+          </p>
 
-        <h1 className="text-5xl md:text-7xl lg:text-8xl tracking-tight max-w-5xl mx-auto mb-8 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-          Context is <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-blue">Everything.</span>
-        </h1>
-        
-        <p className="text-lg md:text-xl max-w-2xl text-muted-foreground leading-relaxed mb-12 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-          Metaphor transforms fragmented digital exhaust from your tools into a living, queryable knowledge graph. The single source of truth for intelligent agents.
-        </p>
-
-        <div className="flex flex-col sm:flex-row gap-4 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-          <Link href="/dashboard" className="btn-tactile primary text-base px-8 py-4">
-            Initialize OS
-          </Link>
-          <button className="btn-tactile text-base px-8 py-4 bg-surface backdrop-blur-md">
-            Read Documentation
-          </button>
-        </div>
-
-        {/* ── Interactive Prism Teaser ── */}
-        <div className="mt-24 w-full max-w-4xl panel p-2 bg-surface/30 backdrop-blur-xl animate-fade-in-up relative" style={{ animationDelay: '0.4s' }}>
-          <div className="absolute -top-3 -right-3 w-24 h-24 bg-accent-red/20 blur-3xl rounded-full" />
-          <div className="absolute -bottom-3 -left-3 w-32 h-32 bg-primary/20 blur-3xl rounded-full" />
+          <h1 className="text-6xl md:text-8xl font-semibold tracking-tighter text-foreground leading-[1.1] mb-8">
+            Every AI starts from zero. <br />
+            <span className="text-muted">Except yours.</span>
+          </h1>
           
-          <div className="bg-background/80 rounded-[calc(var(--radius)-4px)] p-8 border border-border/50 relative overflow-hidden flex flex-col items-center">
+          <p className="text-lg md:text-xl max-w-2xl text-muted leading-relaxed mb-16">
+            Metaphor is the context layer between you and every AI. It passively learns your decisions, constraints, and identity, injecting them into ChatGPT and Claude before they even answer.
+          </p>
+
+          <div className="flex items-center gap-6">
+            <Link 
+              href="/onboarding" 
+              className="px-8 py-4 bg-foreground text-background text-sm font-medium rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_40px_rgba(var(--foreground-rgb),0.2)]"
+            >
+              Build Your World Model
+            </Link>
+          </div>
+        </div>
+
+        {/* ── CSS-Based "How it Works" Visualizer ── */}
+        <div className="w-full max-w-5xl mt-40 mb-32 animate-in fade-in duration-1000 delay-500">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-12 relative">
             
-            <div className="flex items-center justify-between w-full mb-12 relative z-10">
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-12 h-12 rounded-xl bg-surface border border-border flex items-center justify-center shadow-lg"><Activity className="text-accent-red" /></div>
-                <span className="text-xs font-mono text-muted-foreground">GitHub</span>
-              </div>
-              <div className="h-[2px] flex-1 mx-4 bg-gradient-to-r from-border via-primary/50 to-border relative overflow-hidden">
-                <div className="absolute top-0 left-0 h-full w-1/3 bg-primary blur-[2px] animate-[slide_2s_ease-in-out_infinite]" />
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-16 h-16 rounded-2xl bg-foreground text-background flex items-center justify-center shadow-[0_0_30px_rgba(var(--primary),0.3)] z-10">
-                  <Network className="w-8 h-8" />
+            {/* Input Prompt */}
+            <div className="w-64 p-6 bg-surface-1 border border-border-subtle rounded-2xl shadow-sm z-10 flex flex-col text-left">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted mb-3">Raw Prompt</span>
+              <p className="text-sm text-foreground">"Write the Atlas pricing page."</p>
+            </div>
+
+            {/* Connection Line */}
+            <div className="hidden md:block w-16 h-[1px] bg-border-subtle relative">
+              <div className="absolute top-1/2 left-0 w-2 h-2 rounded-full bg-primary -translate-y-1/2 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" />
+            </div>
+
+            {/* Metaphor Graph Box */}
+            <div className="w-80 p-8 bg-surface-1 border border-border-strong rounded-3xl shadow-lg relative overflow-hidden z-20">
+              <div className="absolute inset-0 bg-primary/5 blur-3xl rounded-full" />
+              <div className="relative z-10 flex flex-col items-center text-center">
+                <Brain className="w-8 h-8 text-foreground mb-4" />
+                <h3 className="text-base font-semibold text-foreground mb-1">Metaphor Graph</h3>
+                <p className="text-xs text-muted mb-6">Assembling Context Package</p>
+                
+                {/* Simulated Node Retrieval */}
+                <div className="w-full space-y-2 text-left">
+                  <div className="flex items-center gap-2 text-xs text-muted bg-surface-2 px-3 py-2 rounded-md">
+                    <Check className="w-3 h-3 text-success" /> + Identity: William
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted bg-surface-2 px-3 py-2 rounded-md">
+                    <Check className="w-3 h-3 text-success" /> + Project: Atlas
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted bg-surface-2 px-3 py-2 rounded-md">
+                    <Check className="w-3 h-3 text-success" /> + Constraint: Token pricing
+                  </div>
                 </div>
-                <span className="text-sm font-bold mt-2">Metaphor Graph</span>
-              </div>
-              <div className="h-[2px] flex-1 mx-4 bg-gradient-to-r from-border via-accent-blue/50 to-border relative overflow-hidden">
-                <div className="absolute top-0 right-0 h-full w-1/3 bg-accent-blue blur-[2px] animate-[slide_2s_ease-in-out_infinite_reverse]" />
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-12 h-12 rounded-xl bg-surface border border-border flex items-center justify-center shadow-lg"><Database className="text-accent-blue" /></div>
-                <span className="text-xs font-mono text-muted-foreground">Notion</span>
               </div>
             </div>
 
-            <p className="text-sm text-muted-foreground text-center max-w-lg relative z-10">
-              Live ingestion pipeline translating unstructured commits and documents into relational entities instantly.
-            </p>
+            {/* Connection Line */}
+            <div className="hidden md:block w-16 h-[1px] bg-border-subtle relative">
+              <div className="absolute top-1/2 left-0 w-2 h-2 rounded-full bg-primary -translate-y-1/2 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" style={{ animationDelay: "1s" }} />
+            </div>
+
+            {/* Output Prompt */}
+            <div className="w-80 p-6 bg-surface-1 border border-border-subtle rounded-2xl shadow-sm z-10 flex flex-col text-left">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-muted mb-3 flex justify-between">
+                <span>Injected Prompt</span>
+                <span className="text-primary font-mono">169:1 Compression</span>
+              </span>
+              <p className="text-sm text-foreground leading-relaxed">
+                <span className="text-muted">System: User is William building Atlas. Tone is direct. Constraint: Use logarithmic vector pricing.</span> <br/><br/>
+                "Write the Atlas pricing page."
+              </p>
+            </div>
+            
           </div>
         </div>
+
+        {/* ── Feature Stack (Typography Driven) ── */}
+        <section className="w-full max-w-6xl mx-auto py-24 text-left grid grid-cols-1 md:grid-cols-3 gap-16 md:gap-8 px-8 border-t border-border-subtle">
+          <div>
+            <h3 className="text-2xl font-semibold text-foreground mb-4">Passive Ingestion.</h3>
+            <p className="text-base text-muted leading-relaxed">
+              Metaphor connects to GitHub, Notion, and Google Drive. It reads webhooks in the background, summarizing commits and documents into relational entities instantly.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-2xl font-semibold text-foreground mb-4">Autonomous Writing.</h3>
+            <p className="text-base text-muted leading-relaxed">
+              Through the Model Context Protocol (MCP), external AIs like Claude can actively write new decisions back to your knowledge graph during a conversation.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-2xl font-semibold text-foreground mb-4">Conflict Resolution.</h3>
+            <p className="text-base text-muted leading-relaxed">
+              People change their minds. Metaphor uses time-decaying confidence scores and 'supersedes' relationships to ensure AIs only access your current reality, not 3-year-old opinions.
+            </p>
+          </div>
+        </section>
 
       </main>
 
-      {/* ── Feature Grid ── */}
-      <section className="py-24 px-8 bg-surface/50 border-t border-border/50 relative z-10">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="panel p-8 bg-background/50 hover:bg-background transition-colors">
-            <Database className="w-8 h-8 text-primary mb-6" />
-            <h3 className="font-serif text-2xl font-bold mb-3">Deterministic State</h3>
-            <p className="text-muted-foreground leading-relaxed">Entities are strictly typed and version controlled. Hallucinations are impossible at the data layer.</p>
-          </div>
-          <div className="panel p-8 bg-background/50 hover:bg-background transition-colors">
-            <Zap className="w-8 h-8 text-accent-blue mb-6" />
-            <h3 className="font-serif text-2xl font-bold mb-3">Universal Adapters</h3>
-            <p className="text-muted-foreground leading-relaxed">Mount any data source. Our normalizer standardizes exhaust from GitHub, Slack, Notion, and custom APIs.</p>
-          </div>
-          <div className="panel p-8 bg-background/50 hover:bg-background transition-colors">
-            <Lock className="w-8 h-8 text-accent-red mb-6" />
-            <h3 className="font-serif text-2xl font-bold mb-3">Local Control</h3>
-            <p className="text-muted-foreground leading-relaxed">Your context OS runs in your own infrastructure. Total privacy for your organization's intellectual property.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Footer ── */}
-      <footer className="py-8 px-8 border-t border-border flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground relative z-10 bg-background">
-        <span>© 2026 MultiverseGlobal // Metaphor OS</span>
-        <div className="flex gap-6 mt-4 md:mt-0 font-medium">
-          <a href="#" className="hover:text-foreground transition-colors">Documentation</a>
-          <a href="#" className="hover:text-foreground transition-colors">GitHub</a>
-          <a href="#" className="hover:text-foreground transition-colors">Security</a>
+      {/* ── Minimal Footer ── */}
+      <footer className="w-full py-8 border-t border-border-subtle flex flex-col md:flex-row justify-between items-center px-8 text-xs text-muted font-medium">
+        <span>© 2026 Multiverse Global. All rights reserved.</span>
+        <div className="flex gap-8 mt-4 md:mt-0">
+          <Link href="#" className="hover:text-foreground transition-colors">Documentation</Link>
+          <Link href="#" className="hover:text-foreground transition-colors">Security</Link>
+          <Link href="#" className="hover:text-foreground transition-colors">Privacy</Link>
         </div>
       </footer>
       

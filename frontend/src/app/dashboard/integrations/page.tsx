@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { Github, FileText, Calendar, Box, Database, HardDrive, CheckCircle2, XCircle } from "lucide-react";
-import Card from "@/components/ui/Card";
+import { GitBranch as Github, FileText, Calendar, Box, Database, HardDrive, CheckCircle2, XCircle } from "lucide-react";
+import { Card } from "@/components/ui/Card";
 
 export default function IntegrationsPage() {
   const integrations = [

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Brain, Code, PenTool, Hash, Plus } from "lucide-react";
-import Card from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 
 export default function ContextModelsPage() {
   const models = [
