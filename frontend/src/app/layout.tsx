@@ -18,7 +18,8 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                document.documentElement.setAttribute('data-theme', 'obsidian');
+                let theme = localStorage.getItem('metaphor_theme') || 'light';
+                document.documentElement.setAttribute('data-theme', theme);
               } catch (e) {}
             `,
           }}
