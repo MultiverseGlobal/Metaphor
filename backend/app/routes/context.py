@@ -194,7 +194,7 @@ async def get_context_snapshot(
         recommended_focus = "Focus on implementing the Context Inbox and mock conversation ingestion flow."
         
         try:
-            llm_response = await llm_provider.query_claude(
+            llm_response = await llm_provider.query_llm(
                 system_prompt=system_prompt,
                 prompt=user_prompt,
                 max_tokens=512,
@@ -286,7 +286,7 @@ async def query_context(
         )
 
         try:
-            answer = await llm_provider.query_claude(
+            answer = await llm_provider.query_llm(
                 prompt=synth_prompt,
                 system_prompt="You are the Metaphor Context Operating System. Answer concisely.",
                 max_tokens=256

@@ -163,7 +163,7 @@ async def explain_relationship(
             f"3. What this connection actually means for the founder."
         )
 
-        explanation = await llm_provider.query_claude(prompt=prompt, system_prompt=system_prompt)
+        explanation = await llm_provider.query_llm(prompt=prompt, system_prompt=system_prompt)
         
         return {
             "node_a": node_a.name,

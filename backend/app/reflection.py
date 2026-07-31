@@ -93,7 +93,7 @@ class ReflectionEngine:
 
         # 3. Call Claude
         logger.info("Calling Claude for reflection extraction...")
-        response_text = await llm_provider.query_claude(
+        response_text = await llm_provider.query_llm(
             prompt=prompt,
             system_prompt=system_prompt,
             temperature=0.0
@@ -124,7 +124,8 @@ class ReflectionEngine:
         chunk_map = {} # Maps log_id to Chunk object
         for log in raw_logs:
             # Check if chunk exists
-            existing_chunk_q = await session.exec(select(Chunk).where(Chunk.metadata_json["log_id"] == log["id"]))
+            from sqlalchemy import text
+            existing_chunk_q = await session.exec(select(Chunk).where(text("metadata_json->>'log_id' = :log_id")).params(log_id=str(log["id"])))
             chunk = existing_chunk_q.first()
             if not chunk:
                 # Create embedding

@@ -23,7 +23,7 @@ async def run_simulation():
         ]
     }
     
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=60.0) as client:
         try:
             webhook_resp = await client.post(
                 WEBHOOK_URL,
@@ -40,22 +40,21 @@ async def run_simulation():
     await asyncio.sleep(2)
     
     print("\n[3] Firing MCP Request (AI Consumer -> Metaphor)...")
-    # Simulate an AI model requesting context
+    # Simulate an AI model requesting context via REST API
     mcp_payload = {
-        "name": "get_context",
-        "arguments": {
-            "query": "What is the latest on Atlas pricing?"
-        }
+        "query": "What is the latest on Atlas pricing?",
+        "top_k": 5
     }
     
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=60.0) as client:
         try:
             mcp_resp = await client.post(
-                MCP_URL,
-                json=mcp_payload
+                "http://localhost:8000/api/v1/context/query",
+                json=mcp_payload,
+                headers={"X-API-Key": "metaphor_dev_secret_key_123"}
             )
-            print(f"    MCP Status: {mcp_resp.status_code}")
-            print("    MCP Context Package Retrieved:")
+            print(f"    API Status: {mcp_resp.status_code}")
+            print("    API Context Package Retrieved:")
             print("--------------------------------------------------")
             print(json.dumps(mcp_resp.json(), indent=2))
             print("--------------------------------------------------")

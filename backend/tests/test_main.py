@@ -40,7 +40,7 @@ async def test_mock_reflection_schema():
 @pytest.mark.asyncio
 @patch("app.routes.context.llm_provider")
 async def test_context_snapshot(mock_llm_provider):
-    mock_llm_provider.query_claude = AsyncMock(
+    mock_llm_provider.query_llm = AsyncMock(
         return_value='{"mission": "Mocked Mission", "constraints": ["Constraint 1"], "recommended_focus": "Mocked Focus"}'
     )
     # Mock database session

@@ -8,7 +8,7 @@ from app.routes.context import query_context, ContextQueryRequest
 @pytest.mark.asyncio
 @patch("app.routes.context.llm_provider")
 async def test_context_query(mock_llm_provider):
-    mock_llm_provider.query_claude = AsyncMock(
+    mock_llm_provider.query_llm = AsyncMock(
         return_value="Metaphor is the Context Operating System."
     )
 

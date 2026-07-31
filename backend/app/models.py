@@ -59,8 +59,8 @@ class Edge(SQLModel, table=True):
 class Chunk(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     text_content: str = Field(sa_column=Column(Text, nullable=False))
-    # 1536 dimensions for OpenAI text-embedding-3-small/text-embedding-ada-002
-    embedding: Optional[List[float]] = Field(default=None, sa_column=Column(Vector(1536), nullable=True))
+    # 768 dimensions for Gemini text-embedding-004
+    embedding: Optional[List[float]] = Field(default=None, sa_column=Column(Vector(768), nullable=True))
     metadata_json: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
 

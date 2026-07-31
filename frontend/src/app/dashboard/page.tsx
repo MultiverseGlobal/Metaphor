@@ -1,13 +1,34 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { CheckCircle2, Plug, Database, Sparkles, Server, Folder, FileText, Calendar, Activity, Command } from "lucide-react";
 import { Kbd } from "@/components/ui/Kbd";
 
 export default function SynchronizationDashboard() {
+  const [stats, setStats] = useState({
+    node_count: 0,
+    edge_count: 0,
+    active_sessions: 0,
+    total_events: 0
+  });
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+        const res = await fetch(`${apiUrl}/graph/stats`);
+        const data = await res.json();
+        setStats(data);
+      } catch (e) {
+        console.error("Failed to fetch stats:", e);
+      }
+    }
+    fetchStats();
+  }, []);
+
   return (
     <div className="relative w-full min-h-full">
-      {/* Ambient Identity: Subtle SVG glowing lines/nodes representing the active context mesh */}
+      {/* Ambient Identity: Subtle SVG glowing lines/nodes */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-[0.03]">
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -26,49 +47,45 @@ export default function SynchronizationDashboard() {
         <div className="mb-16 animate-fade-in-up w-full border-b border-border-subtle/50 pb-10">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
-            <h1 className="text-sm font-semibold text-muted uppercase tracking-widest">Good evening, William</h1>
+            <h1 className="text-sm font-semibold text-muted uppercase tracking-widest">System Online</h1>
           </div>
           <p className="text-3xl text-foreground font-medium tracking-tight leading-snug mb-4">
             Your knowledge model is synchronized.
           </p>
           <p className="text-muted text-sm font-medium tracking-tight">
-            Metaphor is the universal context engine that gives every AI and application the knowledge it needs to understand you, your work, and your goals.
+            Metaphor is currently maintaining {stats.node_count} nodes across {stats.edge_count} relational dimensions.
           </p>
         </div>
 
         {/* The Dashboard Grid */}
         <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-16 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
           
-          {/* Active Context Buffer (What is currently loaded) */}
+          {/* Active Context Buffer */}
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xs font-semibold text-muted uppercase tracking-widest flex items-center gap-2">
                 <Database className="w-3.5 h-3.5" />
-                Active Context Buffer
+                Context Architecture
               </h2>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono text-muted uppercase">Clear Buffer</span>
-                <Kbd>⌘⌫</Kbd>
-              </div>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <ContextCard 
-                label="Primary Objective" 
-                value="Design the Universal Context Engine" 
+                label="Graph Nodes" 
+                value={`${stats.node_count} Extracted Concepts`} 
                 icon={<Activity />} 
                 highlight 
               />
               <ContextCard 
-                label="Active Project" 
-                value="Atlas Architecture" 
+                label="Graph Edges" 
+                value={`${stats.edge_count} Relational Links`} 
                 icon={<Folder />} 
               />
               <ContextCard 
-                label="Loaded Constraint" 
-                value="Do not store raw strings in Redis" 
+                label="Context Sessions" 
+                value={`${stats.active_sessions} Active AI Conversations`} 
                 icon={<Server />} 
-                alert 
+                alert={stats.active_sessions > 0} 
               />
             </div>
           </div>
@@ -80,29 +97,31 @@ export default function SynchronizationDashboard() {
               Connected Sources
             </h2>
             <div className="bg-surface-1 border border-border-subtle rounded-xl p-2 space-y-1">
-              <IntegrationItem name="ChatGPT Plus" status="Synchronized" />
-              <IntegrationItem name="Claude Pro" status="Synchronized" />
-              <IntegrationItem name="Cursor IDE" status="Synchronized" />
-              <IntegrationItem name="GitHub" status="Indexing (94%)" loading />
-              <IntegrationItem name="Notion" status="Synchronized" />
+              <IntegrationItem name="Notion" status={`${stats.total_events} Documents Processed`} loading={false} />
+              <IntegrationItem name="Google Drive" status="Awaiting connection" inactive />
+              <IntegrationItem name="GitHub" status="Awaiting connection" inactive />
             </div>
           </div>
 
-          {/* Recent Syntheses (What the engine just did) */}
+          {/* Recent Syntheses */}
           <div>
             <h2 className="text-xs font-semibold text-muted uppercase tracking-widest mb-6 flex items-center gap-2">
               <Sparkles className="w-3.5 h-3.5" />
-              Recent Syntheses
+              Recent System Activity
             </h2>
             <div className="space-y-6 ml-2">
-              <TimelineItem text="Mapped VectorPipelineV2 to Atlas pricing constraints." time="12 mins ago" />
-              <TimelineItem text="Extracted 'Context Engine' pivot from Claude session." time="2 hours ago" />
-              <TimelineItem text="Synced 14 new Notion architecture documents." time="5 hours ago" />
+              {stats.node_count > 0 ? (
+                <>
+                  <TimelineItem text={`Ingested and parsed ${stats.total_events} new Webhook events.`} time="Recently" />
+                  <TimelineItem text={`Reflected and generated ${stats.node_count} new concept nodes.`} time="Recently" />
+                </>
+              ) : (
+                <TimelineItem text="System initialized. Waiting for first ingestion event." time="Just now" />
+              )}
             </div>
           </div>
 
         </div>
-
       </div>
     </div>
   );
@@ -133,12 +152,12 @@ function ContextCard({ label, value, icon, highlight = false, alert = false }: {
   );
 }
 
-function IntegrationItem({ name, status, loading = false }: { name: string, status: string, loading?: boolean }) {
+function IntegrationItem({ name, status, loading = false, inactive = false }: { name: string, status: string, loading?: boolean, inactive?: boolean }) {
   return (
-    <div className="flex items-center justify-between p-3 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer group">
+    <div className={`flex items-center justify-between p-3 rounded-lg transition-colors cursor-pointer group ${inactive ? 'opacity-50 hover:bg-surface-2 hover:opacity-100' : 'hover:bg-surface-2'}`}>
       <div className="flex items-center gap-3">
-        <div className={`w-2 h-2 rounded-full ${loading ? 'bg-warning animate-pulse' : 'bg-success'}`}></div>
-        <span className="text-sm font-medium text-foreground tracking-tight group-hover:text-primary transition-colors">{name}</span>
+        <div className={`w-2 h-2 rounded-full ${loading ? 'bg-warning animate-pulse' : inactive ? 'bg-muted' : 'bg-success'}`}></div>
+        <span className={`text-sm font-medium tracking-tight transition-colors ${inactive ? 'text-muted' : 'text-foreground group-hover:text-primary'}`}>{name}</span>
       </div>
       <span className="text-xs font-medium text-muted">{status}</span>
     </div>

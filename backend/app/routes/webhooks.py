@@ -1,6 +1,7 @@
 import logging
 from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+import uuid
 from typing import Dict, Any
 
 from app.database import get_session
@@ -47,6 +48,7 @@ async def github_webhook(
         
         # Wrap raw payload in a structure the Normalizer understands for GitHub
         raw_doc = {
+            "id": str(uuid.uuid4()),
             "source": "github",
             "metadata": {
                 "type": "commit" if event_type == "push" else "issue" if "issue" in event_type else "generic",
@@ -58,10 +60,8 @@ async def github_webhook(
             "content": str(payload)  # In production, we extract commits/body specifically
         }
         
-        universal_event = normalizer.normalize(raw_doc)
-        
         # Pass to Reflection Engine to build the World Model
-        report = await reflection_engine.reflect_and_evolve(session, [universal_event])
+        report = await reflection_engine.reflect_and_evolve(session, [raw_doc])
         await session.commit()
         
         return {"status": "success", "event": event_type, "report": report}
@@ -86,6 +86,7 @@ async def notion_webhook(
         logger.info("Received Notion webhook event")
         
         raw_doc = {
+            "id": str(uuid.uuid4()),
             "source": "notion",
             "metadata": {
                 "type": "page",
@@ -96,9 +97,7 @@ async def notion_webhook(
             "content": str(payload)
         }
         
-        universal_event = normalizer.normalize(raw_doc)
-        
-        report = await reflection_engine.reflect_and_evolve(session, [universal_event])
+        report = await reflection_engine.reflect_and_evolve(session, [raw_doc])
         await session.commit()
         
         return {"status": "success", "source": "notion", "report": report}
@@ -126,6 +125,7 @@ async def google_webhook(
         logger.info(f"Received Google webhook for channel {channel_id}, state: {resource_state}")
         
         raw_doc = {
+            "id": str(uuid.uuid4()),
             "source": "google_calendar",
             "metadata": {
                 "type": "event",
@@ -135,9 +135,7 @@ async def google_webhook(
             "content": str(payload)
         }
         
-        universal_event = normalizer.normalize(raw_doc)
-        
-        report = await reflection_engine.reflect_and_evolve(session, [universal_event])
+        report = await reflection_engine.reflect_and_evolve(session, [raw_doc])
         await session.commit()
         
         return {"status": "success", "source": "google", "report": report}

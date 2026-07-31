@@ -1,11 +1,11 @@
 from typing import AsyncGenerator
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
-from app.config import settings
+from sqlmodel.ext.asyncio.session import AsyncSession
+from app.core.config import settings
 
 # Create database engine
-# If postgres is run locally, it maps to postgresql+asyncpg://postgres:postgrespassword@localhost:5432/metaphor
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,
@@ -18,11 +18,17 @@ async_session_maker = sessionmaker(
 )
 
 async def init_db() -> None:
-    # We will use alembic for production migrations, 
-    # but let's have a helper to create tables locally.
     async with engine.begin() as conn:
+        from sqlalchemy import text
         # Create pgvector extension if not exists
-        await conn.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+        # Import all models here so SQLModel metadata captures them
+        from app.models import (
+            User, Organization, OrganizationMember,
+            Node, NodeMetadata, Edge, Evidence, Embedding, SearchDocument,
+            ContextPackage, ContextSession,
+            Integration, WebhookEvent, Activity, APIKey, MCPSession
+        )
         await conn.run_sync(SQLModel.metadata.create_all)
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:

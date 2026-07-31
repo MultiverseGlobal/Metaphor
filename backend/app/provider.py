@@ -24,59 +24,63 @@ class LLMProvider:
 
     @property
     def anthropic_client(self) -> AsyncAnthropic:
-        if not self._anthropic_client:
-            key = settings.ANTHROPIC_API_KEY
-            if not key:
-                logger.warning("ANTHROPIC_API_KEY is not set. Claude reasoning calls will fail.")
-            self._anthropic_client = AsyncAnthropic(api_key=key)
-        return self._anthropic_client
+        pass
 
     async def generate_embedding(self, text: str) -> List[float]:
         """
-        Generate 1536-dimension embeddings using OpenAI's text-embedding-3-small.
-        If API key is missing, returns a mock vector (all zeros) for local testing.
+        Generate 768-dimension embeddings using Gemini text-embedding-004.
         """
-        if not settings.OPENAI_API_KEY:
-            logger.warning("Mocking embedding generation because OPENAI_API_KEY is not set.")
-            return [0.0] * 1536
+        if not settings.GEMINI_API_KEY:
+            logger.warning("Mocking embedding generation because GEMINI_API_KEY is not set.")
+            return [0.0] * 768
 
         try:
-            response = await self.openai_client.embeddings.create(
-                model="text-embedding-3-small",
-                input=[text.replace("\n", " ")]
-            )
-            return response.data[0].embedding
+            import httpx
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={settings.GEMINI_API_KEY}"
+            payload = {
+                "model": "models/text-embedding-004",
+                "content": {
+                    "parts": [{"text": text.replace("\n", " ")}]
+                }
+            }
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(url, json=payload, timeout=30.0)
+                resp.raise_for_status()
+                data = resp.json()
+                return data["embedding"]["values"]
         except Exception as e:
-            logger.error(f"Error generating OpenAI embedding: {e}")
+            logger.error(f"Error generating Gemini embedding: {e}")
             raise e
 
-    async def query_claude(self, prompt: str, system_prompt: str = "You are Metaphor, a context engine.", max_tokens: int = 4000, temperature: float = 0.0) -> str:
+    async def query_llm(self, prompt: str, system_prompt: str = "You are Metaphor, a context engine.", max_tokens: int = 4000, temperature: float = 0.0) -> str:
         """
-        Query Claude (claude-3-5-sonnet) for reasoning, parsing, and reflection tasks.
-        If API key is missing, returns a mock response.
+        Query Gemini 2.5 Flash for reasoning, parsing, and reflection tasks.
         """
-        if not settings.ANTHROPIC_API_KEY:
-            logger.warning("Mocking Claude reasoning response because ANTHROPIC_API_KEY is not set.")
-            return "{\"mock\": \"Please set ANTHROPIC_API_KEY in backend/.env\"}"
+        if not settings.GEMINI_API_KEY:
+            logger.warning("Mocking reasoning response because GEMINI_API_KEY is not set.")
+            return "{\"mock\": \"Please set GEMINI_API_KEY in backend/.env\"}"
 
         try:
-            message = await self.anthropic_client.messages.create(
-                model="claude-3-5-sonnet-20241022",
-                max_tokens=max_tokens,
-                temperature=temperature,
-                system=system_prompt,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            # The response content could be a list of blocks, extract text
-            text = ""
-            for block in message.content:
-                if hasattr(block, 'text'):
-                    text += block.text
-            return text
+            import httpx
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
+            payload = {
+                "system_instruction": {
+                    "parts": [{"text": system_prompt}]
+                },
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": temperature,
+                    "maxOutputTokens": max_tokens,
+                }
+            }
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(url, json=payload, timeout=60.0)
+                resp.raise_for_status()
+                data = resp.json()
+                text = data["candidates"][0]["content"]["parts"][0]["text"]
+                return text
         except Exception as e:
-            logger.error(f"Error querying Anthropic Claude: {e}")
+            logger.error(f"Error querying Gemini: {e}")
             raise e
 
 llm_provider = LLMProvider()

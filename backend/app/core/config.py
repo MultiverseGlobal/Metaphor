@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     # LLM Providers
     OPENAI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
     
     # Integration Developer Tokens
     NOTION_INTEGRATION_TOKEN: str = ""
@@ -25,7 +26,7 @@ class Settings(BaseSettings):
     GOOGLE_SERVICE_ACCOUNT_JSON_PATH: str = ""
 
     model_config = SettingsConfigDict(
-        env_file=os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),
+        env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"),
         env_file_encoding="utf-8",
         extra="ignore"
     )
