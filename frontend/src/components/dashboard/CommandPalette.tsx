@@ -6,7 +6,7 @@ export default function CommandPalette() {
   const [isFocused, setIsFocused] = useState(false);
 
   return (
-    <div className="fixed top-10 left-[40%] -translate-x-1/2 w-full max-w-2xl z-50 animate-fade-in-down">
+    <div className="fixed top-10 left-1/2 -translate-x-1/2 w-full max-w-2xl z-50 animate-fade-in-down">
       <div className={`transition-all duration-300 rounded-2xl ${isFocused ? "shadow-[0_0_40px_rgba(6,182,212,0.2)]" : "shadow-[0_15px_50px_rgba(0,0,0,0.6)]"}`}>
         <div className={`p-1 bg-surface/80 backdrop-blur-3xl rounded-2xl border transition-colors duration-300 ${isFocused ? "border-primary/50" : "border-border/60"}`}>
           <div className="flex items-center gap-4 px-5 py-4">

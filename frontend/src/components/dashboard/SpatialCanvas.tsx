@@ -7,19 +7,19 @@ interface SpatialCanvasProps {
 }
 
 export default function SpatialCanvas({ snapshot, selectedNode, onSelectNode }: SpatialCanvasProps) {
-  const radius = 220;
+  const radius = 170; // Reduced from 220 to prevent collision with side panels
   const numNodes = snapshot?.active_projects?.length || 0;
 
   return (
     <>
       {/* Ambient glow */}
-      <div className="fixed top-[55%] left-[40%] -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] bg-primary/10 rounded-full blur-[120px] pointer-events-none z-0" />
+      <div className="fixed top-[55%] left-[45%] -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] bg-primary/10 rounded-full blur-[120px] pointer-events-none z-0" />
       
       {/* Dot Grid */}
       <div className="fixed inset-0 bg-[radial-gradient(var(--border)_1px,transparent_1px)] [background-size:40px_40px] opacity-20 pointer-events-none z-0" />
 
       {/* Main Graph Canvas */}
-      <div className="fixed top-[55%] left-[40%] -translate-x-1/2 -translate-y-1/2 z-10 w-[600px] h-[600px]">
+      <div className="fixed top-[55%] left-[45%] -translate-x-1/2 -translate-y-1/2 z-10 w-[600px] h-[600px]">
         
         {/* SVG Connection Lines */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
