@@ -18,7 +18,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                document.documentElement.setAttribute('data-theme', 'obsidian');
+                document.documentElement.setAttribute('data-theme', 'light');
               } catch (e) {}
             `,
           }}

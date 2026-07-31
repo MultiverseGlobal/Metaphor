@@ -2,37 +2,37 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* THE ATLAS / TIMBAL BRAND PALETTE */
-  /* Primitives: HSL scaled carefully for dark mode */
+  /* THE ATLAS / TIMBAL BRAND PALETTE (LIGHT MODE STANDARD) */
+  /* Primitives: HSL scaled carefully for light mode */
   
-  /* Deep void background */
-  --color-background: #02040A; 
+  /* Crisp clean background */
+  --color-background: #F8FAFC; 
   /* Pure text */
-  --color-foreground: #FFFFFF;
-  --color-muted: #8F9BB3;
-  --color-bright: #F8FAFC;
+  --color-foreground: #0F172A;
+  --color-muted: #64748B;
+  --color-bright: #020617;
   
   /* Semantic Elevations */
-  --color-surface-1: #0A0D14; /* First level above void */
-  --color-surface-2: #121620; /* Second level (active cards) */
-  --color-surface-hover: #1A1F2E;
+  --color-surface-1: #FFFFFF; /* First level (cards and panels) */
+  --color-surface-2: #F1F5F9; /* Second level (inner elements, active states) */
+  --color-surface-hover: #E2E8F0;
   
   /* Semantic Borders */
-  --color-border-subtle: rgba(255, 255, 255, 0.06);
-  --color-border-strong: rgba(255, 255, 255, 0.12);
+  --color-border-subtle: rgba(0, 0, 0, 0.06);
+  --color-border-strong: rgba(0, 0, 0, 0.12);
   
   /* Brand Accents */
-  --color-primary: #38BDF8; /* Electric Blue */
-  --color-primary-dim: rgba(56, 189, 248, 0.15);
+  --color-primary: #0EA5E9; /* Electric Blue (Light Mode safe) */
+  --color-primary-dim: rgba(14, 165, 233, 0.15);
   
-  --color-success: #34D399; /* Emerald */
-  --color-success-dim: rgba(52, 211, 153, 0.15);
+  --color-success: #10B981; /* Emerald */
+  --color-success-dim: rgba(16, 185, 129, 0.15);
   
-  --color-warning: #FBBF24; /* Amber */
-  --color-warning-dim: rgba(251, 191, 36, 0.15);
+  --color-warning: #F59E0B; /* Amber */
+  --color-warning-dim: rgba(245, 158, 11, 0.15);
   
-  --color-danger: #F87171; /* Red */
-  --color-danger-dim: rgba(248, 113, 113, 0.15);
+  --color-danger: #EF4444; /* Red */
+  --color-danger-dim: rgba(239, 68, 68, 0.15);
 
   /* Shared Properties */
   --radius-lg: 12px;
@@ -42,8 +42,8 @@
   --font-sans: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   
-  /* Mathematical Box Shadows for Glassmorphism */
-  --shadow-glass: 0 4px 24px -4px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  /* Mathematical Box Shadows for Glassmorphism in Light Mode */
+  --shadow-glass: 0 4px 24px -4px rgba(0, 0, 0, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
   --shadow-glow: 0 0 40px -10px var(--color-primary-dim);
 }
 
@@ -66,21 +66,21 @@
     overflow-x: hidden;
     antialiased: true;
     
-    /* A very subtle tech grid */
+    /* A very subtle tech grid (Light mode) */
     background-image: 
-      linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
     background-size: 64px 64px;
     background-attachment: fixed;
   }
 
   ::selection { 
     background: var(--color-primary); 
-    color: #000;
+    color: #FFF;
   }
 }
 
 /* Custom Webkit Scrollbar */
 ::-webkit-scrollbar { width: 8px; height: 8px; background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--color-surface-2); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: var(--color-surface-hover); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-border-strong); }
