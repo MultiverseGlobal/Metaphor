@@ -22,7 +22,7 @@ export default function Dashboard() {
   // Navigation State
   const [activeTab, setActiveTab] = useState<"maps" | "timeline" | "notifications" | "reports" | "datasources" | "settings">("maps");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [theme, setTheme] = useState("minimalist");
+  const [theme, setTheme] = useState("spatial");
   
   // Loaded Context Data States
   const [snapshot, setSnapshot] = useState<any>(null);
@@ -36,7 +36,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       setApiKey(localStorage.getItem("metaphor_api_key") || "metaphor_dev_secret_key_123");
-      const savedTheme = localStorage.getItem("metaphor_theme") || "minimalist";
+      const savedTheme = localStorage.getItem("metaphor_theme") || "spatial";
       setTheme(savedTheme);
       document.documentElement.setAttribute('data-theme', savedTheme);
       loadAllData();

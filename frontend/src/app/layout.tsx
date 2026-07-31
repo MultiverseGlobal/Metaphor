@@ -18,7 +18,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                let theme = localStorage.getItem('metaphor_theme') || 'minimalist';
+                let theme = localStorage.getItem('metaphor_theme') || 'spatial';
                 document.documentElement.setAttribute('data-theme', theme);
               } catch (e) {}
             `,
