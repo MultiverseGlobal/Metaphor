@@ -1,14 +1,13 @@
 "use client";
 
 import React from "react";
-import { OmniSearch } from "@/components/search/OmniSearch";
-import { HeroActionCard, ActionCard } from "@/components/ui/Card";
-import { Network, Activity, Link2, Sparkles, Brain } from "lucide-react";
+import { CheckCircle2, Plug, Database, Sparkles, Server, Folder, FileText, Calendar, Activity, Command } from "lucide-react";
+import { Kbd } from "@/components/ui/Kbd";
 
-export default function CognitiveHome() {
+export default function SynchronizationDashboard() {
   return (
     <div className="relative w-full min-h-full">
-      {/* Ambient Identity: Subtle SVG glowing lines/nodes representing the knowledge graph */}
+      {/* Ambient Identity: Subtle SVG glowing lines/nodes representing the active context mesh */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-[0.03]">
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -21,56 +20,84 @@ export default function CognitiveHome() {
         </svg>
       </div>
 
-      <div className="relative z-10 w-full max-w-3xl mx-auto px-8 pt-24 pb-32 flex flex-col items-start">
+      <div className="relative z-10 w-full max-w-4xl mx-auto px-8 pt-24 pb-32 flex flex-col items-start">
         
-        {/* The Greeting */}
-        <div className="mb-16 animate-fade-in-up">
-          <h1 className="text-sm font-semibold text-muted uppercase tracking-widest mb-3">Good morning, William</h1>
-          <p className="text-2xl text-foreground font-medium tracking-tight leading-snug">
-            You've been exploring AI architecture. <br />
-            I found two ideas you may have overlooked.
+        {/* Core Positioning & Greeting */}
+        <div className="mb-16 animate-fade-in-up w-full border-b border-border-subtle/50 pb-10">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
+            <h1 className="text-sm font-semibold text-muted uppercase tracking-widest">Good evening, William</h1>
+          </div>
+          <p className="text-3xl text-foreground font-medium tracking-tight leading-snug mb-4">
+            Your knowledge model is synchronized.
+          </p>
+          <p className="text-muted text-sm font-medium tracking-tight">
+            Metaphor is the universal context engine that gives every AI and application the knowledge it needs to understand you, your work, and your goals.
           </p>
         </div>
 
-        {/* The Core Interface (Omni-Search) */}
-        <div className="w-full mb-16 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
-          <OmniSearch />
-        </div>
-
-        {/* Where was I? (The Hero Card) */}
-        <div className="w-full mb-20 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
-          <HeroActionCard 
-            metadata="Active Workflow • 2 hours ago"
-            title="Continue Atlas Architecture"
-            subtitle="Resume drafting the data ingestion pipeline and context chunking strategy."
-          />
-        </div>
-
-        {/* What changed? & What should I do? */}
-        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-16 animate-fade-in-up" style={{ animationDelay: "300ms" }}>
+        {/* The Dashboard Grid */}
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-16 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
           
-          <div>
-            <h2 className="text-xs font-semibold text-muted uppercase tracking-widest mb-6">Today's Discoveries</h2>
-            <div className="space-y-6">
-              <MemoryItem icon={<Brain />} text="You connected Atlas with Brief." time="2 hours ago" />
-              <MemoryItem icon={<Sparkles />} text="Found a contradiction in the pricing model." time="Yesterday" />
-              <MemoryItem icon={<Link2 />} text="Linked 'React' to 'Bento Grid' structural patterns." time="Monday" />
+          {/* Active Context Buffer (What is currently loaded) */}
+          <div className="col-span-1 md:col-span-2">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xs font-semibold text-muted uppercase tracking-widest flex items-center gap-2">
+                <Database className="w-3.5 h-3.5" />
+                Active Context Buffer
+              </h2>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-muted uppercase">Clear Buffer</span>
+                <Kbd>⌘⌫</Kbd>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <ContextCard 
+                label="Primary Objective" 
+                value="Design the Universal Context Engine" 
+                icon={<Activity />} 
+                highlight 
+              />
+              <ContextCard 
+                label="Active Project" 
+                value="Atlas Architecture" 
+                icon={<Folder />} 
+              />
+              <ContextCard 
+                label="Loaded Constraint" 
+                value="Do not store raw strings in Redis" 
+                icon={<Server />} 
+                alert 
+              />
             </div>
           </div>
 
+          {/* Connected Intelligence (Integrations) */}
           <div>
-            <h2 className="text-xs font-semibold text-muted uppercase tracking-widest mb-6">Suggested Actions</h2>
-            <div className="grid grid-cols-1 gap-2 -ml-5">
-              <ActionCard 
-                icon={<Network className="w-4 h-4" />}
-                title="Review Knowledge Graph"
-                description="12 new unlinked nodes created."
-              />
-              <ActionCard 
-                icon={<Activity className="w-4 h-4" />}
-                title="Check Timeline"
-                description="Review the chronological stream of events."
-              />
+            <h2 className="text-xs font-semibold text-muted uppercase tracking-widest mb-6 flex items-center gap-2">
+              <Plug className="w-3.5 h-3.5" />
+              Connected Sources
+            </h2>
+            <div className="bg-surface-1 border border-border-subtle rounded-xl p-2 space-y-1">
+              <IntegrationItem name="ChatGPT Plus" status="Synchronized" />
+              <IntegrationItem name="Claude Pro" status="Synchronized" />
+              <IntegrationItem name="Cursor IDE" status="Synchronized" />
+              <IntegrationItem name="GitHub" status="Indexing (94%)" loading />
+              <IntegrationItem name="Notion" status="Synchronized" />
+            </div>
+          </div>
+
+          {/* Recent Syntheses (What the engine just did) */}
+          <div>
+            <h2 className="text-xs font-semibold text-muted uppercase tracking-widest mb-6 flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5" />
+              Recent Syntheses
+            </h2>
+            <div className="space-y-6 ml-2">
+              <TimelineItem text="Mapped VectorPipelineV2 to Atlas pricing constraints." time="12 mins ago" />
+              <TimelineItem text="Extracted 'Context Engine' pivot from Claude session." time="2 hours ago" />
+              <TimelineItem text="Synced 14 new Notion architecture documents." time="5 hours ago" />
             </div>
           </div>
 
@@ -81,28 +108,48 @@ export default function CognitiveHome() {
   );
 }
 
-// Memory Item built on pure typography, no boxes
-function MemoryItem({ icon, text, time }: { icon: React.ReactNode, text: string, time: string }) {
+// UI Primitives for the Dashboard
+
+function ContextCard({ label, value, icon, highlight = false, alert = false }: { label: string, value: string, icon: React.ReactNode, highlight?: boolean, alert?: boolean }) {
   return (
     <div 
-      className="group flex items-start gap-4 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded"
+      className={`group p-5 rounded-xl border transition-all duration-300 hover:-translate-y-[2px] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+        highlight ? 'bg-primary/5 border-primary/20' : 
+        alert ? 'bg-orange-500/5 border-orange-500/20' : 
+        'bg-surface-1 border-border-subtle/50 hover:border-border-strong'
+      }`}
       tabIndex={0}
     >
-      <div 
-        className="mt-0.5 text-primary opacity-80 group-hover:opacity-100 group-hover:scale-110 group-focus:scale-110 group-focus:opacity-100"
-        style={{ transition: 'all var(--transition-fast)' }}
-      >
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-4 ${
+        highlight ? 'bg-primary/10 text-primary' : 
+        alert ? 'bg-orange-500/10 text-orange-500' : 
+        'bg-surface-2 text-muted group-hover:text-foreground'
+      } transition-colors`}>
         {React.cloneElement(icon as React.ReactElement, { className: "w-4 h-4" })}
       </div>
-      <div>
-        <p 
-          className="text-sm font-medium text-foreground group-hover:text-primary group-focus:text-primary tracking-tight leading-relaxed"
-          style={{ transition: 'color var(--transition-fast)' }}
-        >
-          {text}
-        </p>
-        <p className="text-[11px] text-muted mt-1">{time}</p>
+      <p className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1.5">{label}</p>
+      <p className="text-sm font-medium text-foreground tracking-tight leading-snug">{value}</p>
+    </div>
+  );
+}
+
+function IntegrationItem({ name, status, loading = false }: { name: string, status: string, loading?: boolean }) {
+  return (
+    <div className="flex items-center justify-between p-3 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer group">
+      <div className="flex items-center gap-3">
+        <div className={`w-2 h-2 rounded-full ${loading ? 'bg-warning animate-pulse' : 'bg-success'}`}></div>
+        <span className="text-sm font-medium text-foreground tracking-tight group-hover:text-primary transition-colors">{name}</span>
       </div>
+      <span className="text-xs font-medium text-muted">{status}</span>
+    </div>
+  );
+}
+
+function TimelineItem({ text, time }: { text: string, time: string }) {
+  return (
+    <div className="relative pl-6 before:absolute before:left-0 before:top-1.5 before:w-2 before:h-2 before:rounded-full before:border-2 before:border-primary/50 before:bg-background">
+      <p className="text-sm font-medium text-foreground tracking-tight leading-relaxed">{text}</p>
+      <p className="text-[11px] text-muted mt-1">{time}</p>
     </div>
   );
 }

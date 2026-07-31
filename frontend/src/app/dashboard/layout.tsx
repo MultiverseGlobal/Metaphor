@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Network, Box, Clock, Link2, Settings, Sidebar, User, ChevronDown } from "lucide-react";
+import { Network, Database, Key, Plug, Settings, Sidebar, User, ChevronDown, Layers } from "lucide-react";
 import { Kbd } from "@/components/ui/Kbd";
 
 export default function LinearLayout({
@@ -31,24 +31,24 @@ export default function LinearLayout({
 
         <div className="flex-1 overflow-y-auto custom-scrollbar py-2 px-3 space-y-6">
           
-          {/* Main Actions */}
+          {/* Infrastructure Actions */}
           <div className="space-y-0.5">
-            <NavItem icon={<Search />} label="Search" shortcut="⌘K" active />
-            <NavItem icon={<Clock />} label="Timeline" shortcut="⌘T" />
+            <NavItem icon={<Database />} label="Context Dashboard" shortcut="⌘D" active />
+            <NavItem icon={<Network />} label="Knowledge Graph" shortcut="⌘G" />
           </div>
 
-          {/* Collapsible Section: Workspace */}
+          {/* Collapsible Section: Configuration */}
           <div className="space-y-1">
             <div className="px-3 py-1 flex items-center justify-between text-[11px] font-medium text-muted uppercase tracking-wider group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded" tabIndex={0}>
-              Workspace
+              Intelligence Routing
               <ChevronDown 
                 className="w-3 h-3 opacity-0 group-hover:opacity-100 group-focus:opacity-100" 
                 style={{ transition: 'opacity var(--transition-fast)' }} 
               />
             </div>
-            <NavItem icon={<Network />} label="Knowledge Graph" shortcut="⌘G" />
-            <NavItem icon={<Box />} label="Projects" shortcut="⌘P" />
-            <NavItem icon={<Link2 />} label="Connections" />
+            <NavItem icon={<Layers />} label="Context Models" shortcut="⌘M" />
+            <NavItem icon={<Plug />} label="Integrations" shortcut="⌘I" />
+            <NavItem icon={<Key />} label="API Access" />
           </div>
 
         </div>
