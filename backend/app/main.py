@@ -55,3 +55,9 @@ async def root():
         "status": "healthy",
         "description": "Metaphor builds a continuously evolving model of your world, enabling AI systems to reason over relationships, history, and context."
     }
+
+# ── Mount MCP Server (Server-Sent Events) ──────────────────────────────────
+# This allows AI clients to connect to Metaphor's tools via HTTP
+from app.mcp_server import mcp
+
+app.mount("/mcp", mcp.asgi_app)
