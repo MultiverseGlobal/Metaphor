@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { Network, Database, Key, Plug, Settings, Sidebar, User, ChevronDown, Layers } from "lucide-react";
 import { Kbd } from "@/components/ui/Kbd";
 
@@ -33,8 +34,8 @@ export default function LinearLayout({
           
           {/* Infrastructure Actions */}
           <div className="space-y-0.5">
-            <NavItem icon={<Database />} label="Context Dashboard" shortcut="⌘D" active />
-            <NavItem icon={<Network />} label="Knowledge Graph" shortcut="⌘G" />
+            <NavItem href="/dashboard" icon={<Database />} label="Context Dashboard" shortcut="⌘D" active />
+            <NavItem href="/dashboard/graph" icon={<Network />} label="Knowledge Graph" shortcut="⌘G" />
           </div>
 
           {/* Collapsible Section: Configuration */}
@@ -46,17 +47,17 @@ export default function LinearLayout({
                 style={{ transition: 'opacity var(--transition-fast)' }} 
               />
             </div>
-            <NavItem icon={<Layers />} label="Context Models" shortcut="⌘M" />
-            <NavItem icon={<Plug />} label="Integrations" shortcut="⌘I" />
-            <NavItem icon={<Key />} label="API Access" />
+            <NavItem href="/dashboard/models" icon={<Layers />} label="Context Models" shortcut="⌘M" />
+            <NavItem href="/dashboard/integrations" icon={<Plug />} label="Integrations" shortcut="⌘I" />
+            <NavItem href="/dashboard/api" icon={<Key />} label="API Access" />
           </div>
 
         </div>
 
         {/* Footer Navigation */}
         <div className="p-3 space-y-0.5 mb-2 border-t border-border-subtle/50 pt-4">
-          <NavItem icon={<Settings />} label="Settings" shortcut="⌘," />
-          <NavItem icon={<User />} label="William" />
+          <NavItem href="/dashboard/settings" icon={<Settings />} label="Settings" shortcut="⌘," />
+          <NavItem href="/dashboard/profile" icon={<User />} label="William" />
         </div>
       </div>
 
@@ -84,16 +85,16 @@ export default function LinearLayout({
   );
 }
 
-function NavItem({ icon, label, shortcut, active }: { icon: React.ReactNode, label: string, shortcut?: string, active?: boolean }) {
+function NavItem({ icon, label, shortcut, active, href = "#" }: { icon: React.ReactNode, label: string, shortcut?: string, active?: boolean, href?: string }) {
   return (
-    <div 
+    <Link 
+      href={href}
       className={`group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
         active 
           ? "bg-surface-1 shadow-sm text-foreground ring-1 ring-border-subtle" 
           : "text-muted hover:bg-surface-2 hover:text-foreground"
       }`}
       style={{ transition: 'all var(--transition-fast)' }}
-      tabIndex={0}
     >
       <div className="flex items-center gap-3">
         {React.cloneElement(icon as React.ReactElement, { 
@@ -106,6 +107,6 @@ function NavItem({ icon, label, shortcut, active }: { icon: React.ReactNode, lab
           <Kbd>{shortcut}</Kbd>
         </div>
       )}
-    </div>
+    </Link>
   );
 }
