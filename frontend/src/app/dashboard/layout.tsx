@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Network, Database, Key, Plug, Settings, Sidebar, User, ChevronDown, Layers } from "lucide-react";
+import { Network, Database, Key, Plug, Settings, Sidebar, User, ChevronDown, Layers, Sparkles } from "lucide-react";
 import { Kbd } from "@/components/ui/Kbd";
 
 export default function LinearLayout({
@@ -32,9 +32,14 @@ export default function LinearLayout({
 
         <div className="flex-1 overflow-y-auto custom-scrollbar py-2 px-3 space-y-6">
           
+          {/* Action Layer */}
+          <div className="space-y-0.5 mb-6">
+            <NavItem href="/dashboard/playground" icon={<Sparkles />} label="The Magic Layer" shortcut="⌘P" active />
+          </div>
+
           {/* Infrastructure Actions */}
           <div className="space-y-0.5">
-            <NavItem href="/dashboard" icon={<Database />} label="Context Dashboard" shortcut="⌘D" active />
+            <NavItem href="/dashboard" icon={<Database />} label="Context Dashboard" shortcut="⌘D" />
             <NavItem href="/dashboard/graph" icon={<Network />} label="Knowledge Graph" shortcut="⌘G" />
           </div>
 
