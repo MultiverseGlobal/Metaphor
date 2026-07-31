@@ -25,8 +25,11 @@ export default function CognitiveHome() {
         
         {/* The Greeting */}
         <div className="mb-16 animate-fade-in-up">
-          <h1 className="text-sm font-semibold text-muted uppercase tracking-widest mb-2">Good morning, William</h1>
-          <p className="text-xl text-foreground font-medium">You've been exploring AI architecture. I found two ideas you may have overlooked.</p>
+          <h1 className="text-sm font-semibold text-muted uppercase tracking-widest mb-3">Good morning, William</h1>
+          <p className="text-2xl text-foreground font-medium tracking-tight leading-snug">
+            You've been exploring AI architecture. <br />
+            I found two ideas you may have overlooked.
+          </p>
         </div>
 
         {/* The Core Interface (Omni-Search) */}
@@ -35,7 +38,7 @@ export default function CognitiveHome() {
         </div>
 
         {/* Where was I? (The Hero Card) */}
-        <div className="w-full mb-16 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
+        <div className="w-full mb-20 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
           <HeroActionCard 
             metadata="Active Workflow • 2 hours ago"
             title="Continue Atlas Architecture"
@@ -81,12 +84,23 @@ export default function CognitiveHome() {
 // Memory Item built on pure typography, no boxes
 function MemoryItem({ icon, text, time }: { icon: React.ReactNode, text: string, time: string }) {
   return (
-    <div className="group flex items-start gap-4 cursor-pointer">
-      <div className="mt-0.5 text-primary opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all">
+    <div 
+      className="group flex items-start gap-4 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded"
+      tabIndex={0}
+    >
+      <div 
+        className="mt-0.5 text-primary opacity-80 group-hover:opacity-100 group-hover:scale-110 group-focus:scale-110 group-focus:opacity-100"
+        style={{ transition: 'all var(--transition-fast)' }}
+      >
         {React.cloneElement(icon as React.ReactElement, { className: "w-4 h-4" })}
       </div>
       <div>
-        <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{text}</p>
+        <p 
+          className="text-sm font-medium text-foreground group-hover:text-primary group-focus:text-primary tracking-tight leading-relaxed"
+          style={{ transition: 'color var(--transition-fast)' }}
+        >
+          {text}
+        </p>
         <p className="text-[11px] text-muted mt-1">{time}</p>
       </div>
     </div>
