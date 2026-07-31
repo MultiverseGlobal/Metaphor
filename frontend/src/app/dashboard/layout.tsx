@@ -1,61 +1,80 @@
 "use client";
 
 import React, { useState } from "react";
-import { Command, LayoutDashboard, BrainCircuit, Activity, Settings, User } from "lucide-react";
+import { Search, Network, Box, Clock, Link2, Settings, Sidebar, User } from "lucide-react";
+import Link from "next/link";
 
-export default function DashboardLayout({
+export default function LinearLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [activeNav, setActiveNav] = useState("dashboard");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   return (
-    <div className="flex h-screen w-screen bg-background overflow-hidden relative">
+    <div className="flex h-screen w-screen bg-background overflow-hidden text-sm">
       
-      {/* Detached Floating Dock */}
-      <div className="absolute top-1/2 left-4 -translate-y-1/2 z-[100] flex flex-col items-center gap-4 bg-surface-1/60 backdrop-blur-2xl border border-border-strong rounded-2xl p-2 shadow-glass">
-        
-        <div className="w-10 h-10 flex items-center justify-center bg-primary-dim rounded-xl border border-primary/20 mb-4 cursor-pointer hover:bg-primary/30 transition-colors">
-          <Command className="w-5 h-5 text-primary" />
+      {/* Linear-Style Minimal Sidebar */}
+      <div 
+        className={`flex flex-col bg-surface-2 border-r border-border-subtle transition-all duration-300 ease-in-out ${
+          isSidebarOpen ? "w-64" : "w-0 opacity-0 overflow-hidden"
+        }`}
+      >
+        {/* Workspace Header */}
+        <div className="h-14 flex items-center px-4 border-b border-border-subtle font-medium text-foreground">
+          <div className="w-5 h-5 rounded bg-primary text-white flex items-center justify-center mr-2 text-[10px] font-bold">
+            M
+          </div>
+          Metaphor OS
         </div>
 
-        <nav className="flex flex-col gap-2">
-          <NavItem icon={<LayoutDashboard />} id="dashboard" active={activeNav === "dashboard"} onClick={() => setActiveNav("dashboard")} />
-          <NavItem icon={<BrainCircuit />} id="knowledge" active={activeNav === "knowledge"} onClick={() => setActiveNav("knowledge")} />
-          <NavItem icon={<Activity />} id="agents" active={activeNav === "agents"} onClick={() => setActiveNav("agents")} />
-        </nav>
+        {/* Primary Navigation */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar py-4 px-2 space-y-1">
+          <NavItem icon={<Search />} label="Search" shortcut="⌘K" active />
+          <NavItem icon={<Network />} label="Knowledge Graph" />
+          <NavItem icon={<Box />} label="Projects" />
+          <NavItem icon={<Clock />} label="Timeline" />
+          <NavItem icon={<Link2 />} label="Connections" />
+        </div>
 
-        <div className="h-4"></div>
-        <NavItem icon={<Settings />} id="settings" active={activeNav === "settings"} onClick={() => setActiveNav("settings")} />
-        <div className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-2 transition-colors cursor-pointer mt-2 border border-border-subtle bg-surface-2 overflow-hidden">
-          <User className="w-5 h-5 text-muted" />
+        {/* Footer Navigation */}
+        <div className="p-2 space-y-1 border-t border-border-subtle">
+          <NavItem icon={<Settings />} label="Settings" />
+          <NavItem icon={<User />} label="Profile" />
         </div>
       </div>
 
-      {/* The main workspace void where panels will slide in */}
-      <div className="flex-1 relative">
-        {/* We pass the active nav down so the page can manage panels */}
-        {React.Children.map(children, child => {
-          if (React.isValidElement(child)) {
-            return React.cloneElement(child, { activeNav } as any);
-          }
-          return child;
-        })}
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col relative min-w-0">
+        
+        {/* Topbar with Sidebar Toggle */}
+        <div className="h-14 flex items-center px-4 border-b border-transparent">
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-1.5 rounded-md text-muted hover:bg-surface-2 hover:text-foreground transition-colors"
+          >
+            <Sidebar className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Workspace Void */}
+        <div className="flex-1 overflow-y-auto">
+          {children}
+        </div>
       </div>
       
     </div>
   );
 }
 
-function NavItem({ icon, id, active, onClick }: { icon: React.ReactNode, id: string, active: boolean, onClick: () => void }) {
+function NavItem({ icon, label, shortcut, active }: { icon: React.ReactNode, label: string, shortcut?: string, active?: boolean }) {
   return (
-    <div 
-      onClick={onClick}
-      className={`w-10 h-10 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-300 ${active ? "bg-surface-2 text-primary shadow-inner border border-border-strong" : "text-muted hover:text-foreground hover:bg-surface-2/50"}`}
-      title={id}
-    >
-      {React.cloneElement(icon as React.ReactElement, { className: "w-5 h-5" })}
+    <div className={`flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors ${active ? "bg-surface-1 shadow-sm text-foreground" : "text-muted hover:bg-surface-hover hover:text-foreground"}`}>
+      <div className="flex items-center gap-2">
+        {React.cloneElement(icon as React.ReactElement, { className: "w-4 h-4" })}
+        <span className="font-medium">{label}</span>
+      </div>
+      {shortcut && <span className="text-[10px] font-mono text-muted/60">{shortcut}</span>}
     </div>
   );
 }

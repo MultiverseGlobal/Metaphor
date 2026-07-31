@@ -2,29 +2,27 @@
 
 ## UI/UX Design System Enforcement
 
-You (the AI agent) must STRICTLY adhere to the following UI/UX rules when generating or modifying React components in this workspace. These rules exist to prevent "AI Slop" (muddy contrast, inconsistent padding, and harsh borders).
+You (the AI agent) must STRICTLY adhere to the following UI/UX rules. You are building a Cognitive Operating System (like Linear, Arc, Perplexity), NOT a SaaS Dashboard.
 
-### 1. Component-Driven Architecture
-- **Rule:** DO NOT manually wire basic HTML elements with massive arbitrary Tailwind strings for cards, panels, or tags.
-- **Action:** You must ALWAYS compose UI using the established primitives in `src/components/ui/` (e.g., `<Card>`, `<Badge>`).
+### 1. Typography over Boxes
+- **Rule:** Do not rely on heavy borders or background colors to separate content.
+- **Action:** Use whitespace (massive margins, strict 8pt gutters) and strong typographical hierarchy (size, weight, color) to guide the eye.
 
 ### 2. Design Token Lockdown (No Arbitrary Values)
-- **Rule:** You are FORBIDDEN from using arbitrary Tailwind background, border, or text opacities (e.g., NEVER use `bg-white/10`, `border-white/5`, `bg-gray-800`).
+- **Rule:** You are FORBIDDEN from using arbitrary Tailwind colors (e.g., `bg-white`, `border-gray-200`).
 - **Action:** You must ONLY use the semantic tokens defined in the `globals.css` `@theme` block.
   - Backgrounds: Use `bg-background`, `bg-surface-1`, `bg-surface-2`.
   - Borders: Use `border-subtle`, `border-strong`.
-  - Text: Use `text-foreground`, `text-muted`, `text-bright`.
+  - Text: Use `text-foreground`, `text-muted`.
 
 ### 3. The 8pt Baseline Grid
 - **Rule:** All padding and margins must follow an 8pt (0.5rem) scale.
-- **Action:** Only use Tailwind spacing utilities that align with this (e.g., `p-2` (8px), `p-4` (16px), `p-6` (24px)). Do not use `p-3` or `p-5` for structural container padding.
+- **Action:** Only use Tailwind spacing utilities that align with this (e.g., `p-2`, `p-4`, `p-6`, `p-8`, `p-12`).
 
-### 4. Typography Hierarchy
-- **Rule:** Do not rely on default browser typography sizing.
-- **Action:** 
-  - Section headers must be `text-xs uppercase tracking-widest font-bold text-muted`.
-  - Primary data points (like KPI numbers) must use `tracking-tight`.
+### 4. No Fake Metrics
+- **Rule:** This is not an analytics app.
+- **Action:** NEVER use arbitrary numbers, progress bars, or "system health" indicators on the home screen. Use actionable cards ("Resume thinking", "Explore connection").
 
-### 5. Glassmorphism Discipline
-- **Rule:** Never use a solid 1px border for glass panels. It looks cheap.
-- **Action:** Glass panels (handled by the `<Card>` primitive) must use multi-layered box-shadows (inset shadows) for edges, rather than raw CSS borders.
+### 5. Interaction
+- **Rule:** Interactions should feel intelligent and fluid.
+- **Action:** Use subtle scaling, soft fades, and meaningful hover states. No flashy gradients or heavy shadows.

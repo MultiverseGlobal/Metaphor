@@ -1,105 +1,71 @@
 "use client";
 
-import React, { useState } from "react";
-import { Panel } from "@/components/ui/Panel";
-import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
-import { ChevronRight, Database, Search, User } from "lucide-react";
-import KPIWidget from "@/components/dashboard/widgets/KPIWidget";
-import GraphWidget from "@/components/dashboard/widgets/GraphWidget";
-import TerminalWidget from "@/components/dashboard/widgets/TerminalWidget";
+import React from "react";
+import { OmniSearch } from "@/components/search/OmniSearch";
+import { ActionCard } from "@/components/ui/Card";
+import { Network, BrainCircuit, Activity, Link2 } from "lucide-react";
 
-export default function DashboardPage({ activeNav = "dashboard" }: { activeNav?: string }) {
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
-
-  // Level 0 Base Panel
-  const renderBasePanel = () => {
-    switch (activeNav) {
-      case "dashboard":
-        return (
-          <Panel level={selectedAgentId ? 0 : 0} className="p-8 gap-6 overflow-y-auto custom-scrollbar">
-            <div className="flex items-center justify-between mb-2">
-              <h1 className="text-2xl font-bold tracking-tight">System Dashboard</h1>
-              <div className="text-xs text-muted font-mono">metaphor_os // v2.0.0</div>
-            </div>
-            
-            {/* The Premium Bento Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 h-[400px]">
-                <GraphWidget />
-              </div>
-              <div className="lg:col-span-1 h-[400px]">
-                <KPIWidget />
-              </div>
-            </div>
-            <div className="h-[300px]">
-              <TerminalWidget />
-            </div>
-          </Panel>
-        );
-      case "agents":
-        return (
-          <Panel level={selectedAgentId ? 0 : 0} className="p-0 flex flex-col">
-            <div className="p-6 border-b border-border-subtle bg-surface-1/50">
-              <h1 className="text-2xl font-bold tracking-tight">Agent Topologies</h1>
-            </div>
-            
-            {/* The Dense List */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-2">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div 
-                  key={i} 
-                  onClick={() => setSelectedAgentId(`agent-${i}`)}
-                  className="flex items-center justify-between p-4 bg-surface-2/50 border border-border-subtle rounded-lg hover:border-primary/50 cursor-pointer transition-colors group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded bg-background border border-border-strong flex items-center justify-center">
-                      <Database className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-bright">Atlas Oracle {i}</h3>
-                      <p className="text-[11px] text-muted font-mono mt-0.5">id: atlas-oracle-{i} • status: syncing</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted group-hover:text-primary transition-colors transform group-hover:translate-x-1" />
-                </div>
-              ))}
-            </div>
-          </Panel>
-        );
-      default:
-        return (
-          <Panel level={0} className="p-8 flex items-center justify-center">
-            <p className="text-muted font-mono">Module '{activeNav}' is offline.</p>
-          </Panel>
-        );
-    }
-  };
-
+export default function CognitiveHome() {
   return (
-    <div className="relative w-full h-full">
-      {/* Base Layer */}
-      {renderBasePanel()}
+    <div className="w-full max-w-4xl mx-auto px-8 py-20 flex flex-col items-center">
+      
+      {/* The Greeting */}
+      <div className="text-center mb-10 animate-fade-in-up">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground mb-2">Good morning.</h1>
+        <p className="text-muted">Metaphor OS is ready. What are we exploring today?</p>
+      </div>
 
-      {/* Stacked Level 1 (e.g. Agent Deep Dive) */}
-      {selectedAgentId && (
-        <>
-          <div className="absolute inset-0 bg-background/20 backdrop-blur-sm z-10 transition-opacity" onClick={() => setSelectedAgentId(null)}></div>
-          <Panel level={1} className="ml-[10%] p-0 flex flex-col border-l border-border-strong shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-            <div className="p-6 border-b border-border-subtle bg-surface-2/50 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-bright">Deep Dive: {selectedAgentId}</h2>
-                <p className="text-xs text-muted font-mono mt-1">Live telemetry stream active</p>
-              </div>
-              <button onClick={() => setSelectedAgentId(null)} className="px-4 py-2 bg-surface-1 border border-border-subtle rounded text-xs hover:text-bright transition-colors">
-                Close Panel
-              </button>
-            </div>
-            <div className="flex-1 p-6 bg-surface-1/90">
-              <TerminalWidget />
-            </div>
-          </Panel>
-        </>
-      )}
+      {/* The Core Interface (Omni-Search) */}
+      <div className="w-full mb-16 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
+        <OmniSearch />
+      </div>
+
+      {/* Action-Oriented Cards (Not fake metrics) */}
+      <div className="w-full animate-fade-in-up" style={{ animationDelay: "200ms" }}>
+        <h2 className="text-sm font-semibold text-foreground mb-4 pl-1">Suggested Actions</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ActionCard 
+            icon={<BrainCircuit className="w-4 h-4" />}
+            title="Resume Thinking"
+            description="Continue your conversation with Atlas Oracle regarding the data ingestion pipeline."
+          />
+          <ActionCard 
+            icon={<Network className="w-4 h-4" />}
+            title="Explore Knowledge Graph"
+            description="You have 12 new unlinked nodes created since your last session. Review them."
+          />
+          <ActionCard 
+            icon={<Activity className="w-4 h-4" />}
+            title="Check Timeline"
+            description="Review the chronological stream of system events and agent decisions."
+          />
+          <ActionCard 
+            icon={<Link2 className="w-4 h-4" />}
+            title="Discover Connections"
+            description="Metaphor has found a potential contradiction in your recent project notes."
+          />
+        </div>
+      </div>
+
+      <div className="mt-20 w-full animate-fade-in-up" style={{ animationDelay: "300ms" }}>
+        <h2 className="text-sm font-semibold text-foreground mb-4 pl-1">Recent Memory</h2>
+        <div className="w-full border border-border-subtle rounded-xl overflow-hidden bg-surface-1">
+          <div className="p-4 border-b border-border-subtle hover:bg-surface-hover cursor-pointer flex justify-between items-center transition-colors">
+            <span className="text-sm font-medium text-foreground">Drafted system architecture</span>
+            <span className="text-xs text-muted">2 hours ago</span>
+          </div>
+          <div className="p-4 border-b border-border-subtle hover:bg-surface-hover cursor-pointer flex justify-between items-center transition-colors">
+            <span className="text-sm font-medium text-foreground">Discussed Postgres integration</span>
+            <span className="text-xs text-muted">Yesterday</span>
+          </div>
+          <div className="p-4 hover:bg-surface-hover cursor-pointer flex justify-between items-center transition-colors">
+            <span className="text-sm font-medium text-foreground">Linked "React" to "Bento Grid"</span>
+            <span className="text-xs text-muted">Monday</span>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }

@@ -2,49 +2,42 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* THE ATLAS / TIMBAL BRAND PALETTE (LIGHT MODE STANDARD) */
-  /* Primitives: HSL scaled carefully for light mode */
+  /* THE COGNITIVE OS PALETTE (LINEAR/NOTION/APPLE) */
   
-  /* Crisp clean background */
-  --color-background: #F8FAFC; 
-  /* Pure text */
-  --color-foreground: #0F172A;
-  --color-muted: #64748B;
-  --color-bright: #020617;
+  /* Foundation */
+  --color-background: #FFFFFF; 
+  --color-foreground: #111827; /* Near Black */
+  --color-muted: #6B7280;      /* Soft Gray */
   
-  /* Semantic Elevations */
-  --color-surface-1: #FFFFFF; /* First level (cards and panels) */
-  --color-surface-2: #F1F5F9; /* Second level (inner elements, active states) */
-  --color-surface-hover: #E2E8F0;
+  /* Surfaces */
+  --color-surface-1: #FFFFFF;
+  --color-surface-2: #F9FAFB; /* Warm Gray */
+  --color-surface-hover: #F3F4F6;
   
-  /* Semantic Borders */
-  --color-border-subtle: rgba(0, 0, 0, 0.06);
-  --color-border-strong: rgba(0, 0, 0, 0.12);
+  /* Borders */
+  --color-border-subtle: #E5E7EB;
+  --color-border-strong: #D1D5DB;
   
-  /* Brand Accents */
-  --color-primary: #0EA5E9; /* Electric Blue (Light Mode safe) */
-  --color-primary-dim: rgba(14, 165, 233, 0.15);
+  /* Accents */
+  --color-primary: #4F46E5; /* Indigo */
+  --color-primary-hover: #4338CA;
+  --color-primary-dim: rgba(79, 70, 229, 0.08);
   
-  --color-success: #10B981; /* Emerald */
-  --color-success-dim: rgba(16, 185, 129, 0.15);
+  --color-cyan: #06B6D4;
   
-  --color-warning: #F59E0B; /* Amber */
-  --color-warning-dim: rgba(245, 158, 11, 0.15);
-  
-  --color-danger: #EF4444; /* Red */
-  --color-danger-dim: rgba(239, 68, 68, 0.15);
-
   /* Shared Properties */
   --radius-lg: 12px;
   --radius-md: 8px;
   --radius-sm: 4px;
 
-  --font-sans: 'Inter', sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   
-  /* Mathematical Box Shadows for Glassmorphism in Light Mode */
-  --shadow-glass: 0 4px 24px -4px rgba(0, 0, 0, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
-  --shadow-glow: 0 0 40px -10px var(--color-primary-dim);
+  /* Extremely subtle shadows (Apple/Linear style) */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --shadow-palette: 0 0 0 1px rgba(0,0,0,0.05), 0 12px 32px 0 rgba(0,0,0,0.08);
 }
 
 @layer base {
@@ -65,22 +58,17 @@
     min-height: 100vh;
     overflow-x: hidden;
     antialiased: true;
-    
-    /* A very subtle tech grid (Light mode) */
-    background-image: 
-      linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
-    background-size: 64px 64px;
-    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   ::selection { 
-    background: var(--color-primary); 
-    color: #FFF;
+    background: var(--color-primary-dim); 
+    color: var(--color-primary);
   }
 }
 
 /* Custom Webkit Scrollbar */
-::-webkit-scrollbar { width: 8px; height: 8px; background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--color-surface-hover); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--color-border-strong); }
+::-webkit-scrollbar { width: 6px; height: 6px; background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border-subtle); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-muted); }
