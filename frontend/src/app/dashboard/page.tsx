@@ -2,14 +2,26 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { fetchFromMetaphor } from "../api";
+import { 
+  Network, 
+  Compass, 
+  Clock, 
+  Inbox, 
+  Settings, 
+  Activity, 
+  Database, 
+  RefreshCw,
+  LogOut,
+  ChevronLeft
+} from "lucide-react";
 
 export default function Dashboard() {
   const router = useRouter();
   
   // Navigation State
   const [activeTab, setActiveTab] = useState<"maps" | "timeline" | "notifications" | "reports" | "datasources" | "settings">("maps");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState("minimalist");
   
   // Loaded Context Data States
@@ -52,10 +64,9 @@ export default function Dashboard() {
   };
 
   const loadSnapshot = async () => {
-    // Simulated fetch
     setTimeout(() => {
       setSnapshot({
-        mission: "Develop the Metaphor universal context operating system to align all connected AI agents and build a single source of truth.",
+        mission: "Develop the Metaphor universal context operating system to align all connected AI agents.",
         active_projects: [
           { id: "p1", name: "Metaphor Core", type: "Project" },
           { id: "p2", name: "Atlas Portal", type: "Project" }
@@ -66,7 +77,6 @@ export default function Dashboard() {
   };
 
   const loadInboxData = async () => {
-    // Simulated fetch
     setTimeout(() => {
       setInboxData({
         pending_nodes: [
@@ -82,233 +92,207 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground font-sans selection:bg-accent-blue selection:text-white">
+    <div className="min-h-screen flex relative font-sans selection:bg-primary selection:text-primary-foreground overflow-hidden">
       
-      {/* ── TOP NAV HEADER ── */}
-      <header className="grid-section flex items-center justify-between px-6 py-3 bg-card sticky top-0 z-50">
-        <div className="flex items-center gap-6">
-          <div className="font-serif text-3xl font-bold tracking-tighter leading-none">M</div>
-          <span className="mono text-xs uppercase tracking-widest hidden sm:block font-bold">M—OS // Session Active</span>
-        </div>
-
-        <div className="flex items-center gap-6">
-          <div className="mono text-xs hidden md:flex items-center gap-4 border-r-2 border-border pr-6">
-            <span className="opacity-50">SYSTEM STATUS:</span>
-            <span>[ NOMINAL ]</span>
-            <span className="opacity-50">UPTIME:</span>
-            <span>[ 99.9% ]</span>
-          </div>
-
-          <button 
-            onClick={async () => {
-              setIsSyncing(true);
-              try {
-                await fetchFromMetaphor("/sync", {}, "POST");
-                await loadAllData();
-              } catch (e) {
-                console.error("Sync error:", e);
-              } finally {
-                setIsSyncing(false);
-              }
-            }}
-            disabled={isSyncing}
-            className="btn-tactile text-[10px]"
-          >
-            {isSyncing ? "[ SYNCING... ]" : "[ SYNC ]"}
-          </button>
-        </div>
-      </header>
-
-      {/* ── MAIN LAYOUT (Sidebar + Content) ── */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* ── SIDEBAR (Modern layout, adapts to theme CSS) ── */}
+      <aside className={`flex flex-col bg-surface/50 border-r border-border/50 relative z-20 transition-all duration-300 ${sidebarCollapsed ? "w-16" : "w-64"}`}>
         
-        {/* ── SIDEBAR ── */}
-        <aside className="w-64 border-r-2 border-border bg-background flex flex-col justify-between shrink-0 overflow-y-auto">
-          
-          <nav className="flex flex-col">
-            <div className="p-4 border-b-2 border-border bg-card">
-              <h2 className="mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Directory</h2>
+        {/* Header */}
+        <div className={`p-5 flex items-center border-b border-border/50 ${sidebarCollapsed ? "justify-center" : "gap-3"}`}>
+          <div className="h-8 w-8 rounded-lg bg-foreground text-background flex items-center justify-center shrink-0">
+            <Network className="w-4 h-4" />
+          </div>
+          {!sidebarCollapsed && (
+            <div className="text-left overflow-hidden">
+              <h1 className="text-sm font-bold tracking-tight">Metaphor OS</h1>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-mono mt-0.5">Workspace</p>
             </div>
-            
-            {[
-              { id: "maps", label: "Ontology Control" },
-              { id: "timeline", label: "Progression Log" },
-              { id: "notifications", label: "Inbox Signals" },
-              { id: "reports", label: "System Audits" },
-              { id: "datasources", label: "Data Mounts" },
-              { id: "settings", label: "Configuration" }
-            ].map((item) => {
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id as any)}
-                  className={`text-left px-6 py-4 border-b-2 border-border mono text-sm font-bold uppercase tracking-wide transition-colors ${
-                    isActive ? "bg-foreground text-background" : "hover:bg-surface text-foreground"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              );
-            })}
-          </nav>
+          )}
+        </div>
 
-          <div className="mt-auto border-t-2 border-border">
-            <div className="p-4 border-b-2 border-border">
-              <p className="mono text-xs font-bold">USER: SUDO</p>
-              <p className="mono text-[10px] text-muted-foreground mt-1">ROLE: SYSADMIN</p>
-            </div>
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-6 space-y-1">
+          {[
+            { id: "maps", label: "Ontology Control", icon: Compass },
+            { id: "timeline", label: "Context Feed", icon: Clock },
+            { id: "notifications", label: "Inbox Signals", icon: Inbox },
+            { id: "reports", label: "Context Health", icon: Activity },
+            { id: "datasources", label: "Connectors", icon: Database },
+            { id: "settings", label: "Settings", icon: Settings }
+          ].map((item) => {
+            const IconComp = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id as any)}
+                className={`w-full flex items-center p-3 gap-3 rounded-[calc(var(--radius)-4px)] transition-all ${sidebarCollapsed ? "justify-center" : ""} ${isActive ? "bg-primary text-primary-foreground font-semibold" : "text-foreground hover:bg-background"}`}
+              >
+                <IconComp size={16} className={isActive ? "" : "text-muted-foreground"} />
+                {!sidebarCollapsed && <span className="text-sm tracking-wide">{item.label}</span>}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-border/50 space-y-2 bg-surface/50">
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="w-full text-left flex items-center gap-3 p-2 rounded-[calc(var(--radius)-4px)] hover:bg-background transition-colors text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft size={16} className={`transition-transform duration-300 ${sidebarCollapsed ? "rotate-180" : ""}`} />
+            {!sidebarCollapsed && <span className="text-xs font-semibold">Collapse</span>}
+          </button>
+          
+          <div className={`pt-2 border-t border-border/50 flex items-center ${sidebarCollapsed ? "justify-center" : "justify-between"}`}>
+            {!sidebarCollapsed && (
+              <div className="text-left pl-2">
+                <p className="text-xs font-bold text-foreground">SUDO</p>
+                <p className="text-[10px] text-muted-foreground uppercase font-mono tracking-widest mt-0.5">Admin</p>
+              </div>
+            )}
             <button
               onClick={handleSignOut}
-              className="w-full text-left px-6 py-4 hover:bg-accent-red hover:text-white transition-colors mono text-xs font-bold uppercase tracking-wider"
+              className="p-2 text-muted-foreground hover:text-accent-red transition-colors"
+              title="Sign Out"
             >
-              [ Terminate Session ]
+              <LogOut size={14} />
             </button>
           </div>
-        </aside>
+        </div>
+      </aside>
 
-        {/* ── CONTENT AREA ── */}
-        <main className="flex-1 bg-surface overflow-y-auto relative p-6 md:p-12">
+      {/* ── MAIN CONTENT AREA ── */}
+      <main className="flex-1 flex flex-col relative z-10 overflow-y-auto">
+        
+        {/* Top Header */}
+        <header className="px-8 py-4 flex items-center justify-between border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-50">
+          <div className="flex items-center gap-4">
+            <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Active Streams:</span>
+            <div className="flex gap-2">
+              {["GitHub", "Notion", "Stripe"].map((src) => (
+                <div key={src} className="flex items-center gap-1.5 px-2.5 py-1 rounded-[calc(var(--radius)-4px)] border border-border/50 bg-surface/30 text-[10px] font-mono font-semibold text-muted-foreground">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent-blue shadow-[0_0_8px_var(--accent-blue)]" />
+                  <span>{src}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+             <button 
+              onClick={async () => {
+                setIsSyncing(true);
+                try {
+                  await fetchFromMetaphor("/sync", {}, "POST");
+                  await loadAllData();
+                } catch (e) {
+                  console.error("Sync error:", e);
+                } finally {
+                  setIsSyncing(false);
+                }
+              }}
+              disabled={isSyncing}
+              className="btn-tactile text-xs py-1.5 px-4"
+            >
+              <RefreshCw size={12} className={isSyncing ? "animate-spin" : ""} />
+              {isSyncing ? "Syncing..." : "Sync Workspace"}
+            </button>
+          </div>
+        </header>
+
+        {loading && (
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+            <RefreshCw size={32} className="animate-spin text-primary mb-4" />
+            <span className="text-sm font-mono text-muted-foreground uppercase tracking-widest">Indexing OS...</span>
+          </div>
+        )}
+
+        <div className="flex-1 p-8 md:p-12 max-w-7xl mx-auto w-full">
           
-          {loading && (
-            <div className="absolute inset-0 bg-background/90 z-50 flex items-center justify-center">
-              <div className="panel p-8">
-                <span className="mono text-sm font-bold uppercase blink cursor-blink" />
-                <span className="mono text-sm font-bold uppercase ml-2">INDEXING KNOWLEDGE GRAPH...</span>
+          {/* TAB 1: ONTOLOGY CONTROL */}
+          {activeTab === "maps" && (
+            <div className="animate-fade-in-up space-y-8">
+              
+              <div className="space-y-2">
+                <h2 className="text-4xl font-bold font-serif tracking-tight">Ontology Control</h2>
+                <p className="text-sm text-muted-foreground">The living context graph of your digital footprint.</p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                {/* Entities Cards */}
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="flex justify-between items-center pb-2 border-b border-border/50">
+                    <span className="text-sm font-semibold uppercase tracking-wider">Active Entities</span>
+                    <span className="tag filled">14 Indexed</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[
+                      { type: "Project", name: "Metaphor Core OS", src: "GitHub", status: "VERIFIED" },
+                      { type: "Project", name: "Atlas Strategy Portal", src: "Next.js", status: "VERIFIED" },
+                      { type: "Person", name: "Benjamin", src: "Gmail", status: "VERIFIED" },
+                      { type: "Decision", name: "Deploy Postgres + pgvector", src: "Postgres", status: "VERIFIED" },
+                      { type: "Decision", name: "Increase pricing to $500", src: "Stripe", status: "PENDING" }
+                    ].map((entity, i) => (
+                      <div key={i} className="panel p-5 group cursor-pointer hover:border-primary/50 transition-colors">
+                        <div className="flex justify-between items-start mb-3">
+                          <span className="tag blue">{entity.type}</span>
+                          {entity.status === "PENDING" ? (
+                            <span className="tag red">Pending</span>
+                          ) : null}
+                        </div>
+                        <h4 className="font-semibold text-lg mb-1 group-hover:text-primary transition-colors">{entity.name}</h4>
+                        <div className="flex items-center gap-2 mt-4">
+                          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest bg-background px-2 py-1 rounded-[calc(var(--radius)-4px)] border border-border/50">Source: {entity.src}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Live Stream */}
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center pb-2 border-b border-border/50">
+                    <span className="text-sm font-semibold uppercase tracking-wider">Live Stream</span>
+                    <span className="w-2 h-2 bg-accent-blue animate-pulse rounded-full" />
+                  </div>
+
+                  <div className="panel p-0 overflow-hidden divide-y divide-border/50">
+                    {[
+                      { time: "09:10", src: "GitHub", title: "Commit pushed", log: "Added Docker config." },
+                      { time: "09:30", src: "Calendar", title: "Meeting ended", log: "Atlas Sync." },
+                      { time: "10:05", src: "Stripe", title: "Invoice paid", log: "Operating sprint." },
+                      { time: "11:20", src: "Notion", title: "Page updated", log: "Architecture spec." }
+                    ].map((evt, i) => (
+                      <div key={i} className="p-4 hover:bg-surface/50 transition-colors">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-[10px] font-mono text-muted-foreground uppercase">{evt.time}</span>
+                          <span className="text-[10px] font-mono text-muted-foreground">{evt.src}</span>
+                        </div>
+                        <h5 className="text-sm font-semibold mb-1">{evt.title}</h5>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{evt.log}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
               </div>
             </div>
           )}
 
-          <div className="max-w-6xl mx-auto">
-            
-            {/* TAB 1: ONTOLOGY CONTROL */}
-            {activeTab === "maps" && (
-              <div className="animate-fade-in-up">
-                
-                <header className="mb-12 border-b-4 border-foreground pb-6">
-                  <h1 className="font-serif text-5xl font-bold mb-4">Ontology Control</h1>
-                  <p className="mono text-sm text-muted-foreground uppercase tracking-wider">
-                    Viewing absolute truth state of the Metaphor graph.
-                  </p>
-                </header>
-
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-                  
-                  {/* Left Column: Entities Table */}
-                  <div className="xl:col-span-8 space-y-6">
-                    <div className="flex justify-between items-end border-b-2 border-border pb-2">
-                      <h2 className="mono text-lg font-bold uppercase">Active Entities</h2>
-                      <span className="mono text-xs bg-foreground text-background px-2 py-1 font-bold">COUNT: 14</span>
-                    </div>
-
-                    <div className="panel overflow-hidden">
-                      <table className="w-full text-left mono text-xs">
-                        <thead className="bg-card border-b-2 border-border">
-                          <tr>
-                            <th className="p-4 font-bold uppercase tracking-widest border-r-2 border-border w-24">Type</th>
-                            <th className="p-4 font-bold uppercase tracking-widest border-r-2 border-border">Entity Name</th>
-                            <th className="p-4 font-bold uppercase tracking-widest border-r-2 border-border">Source</th>
-                            <th className="p-4 font-bold uppercase tracking-widest w-28">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[
-                            { type: "Project", name: "Metaphor Core OS", src: "GitHub", status: "VERIFIED" },
-                            { type: "Project", name: "Atlas Strategy Portal", src: "Next.js", status: "VERIFIED" },
-                            { type: "Person", name: "Benjamin", src: "Gmail", status: "VERIFIED" },
-                            { type: "Decision", name: "Deploy Postgres + pgvector", src: "Postgres", status: "VERIFIED" },
-                            { type: "Meeting", name: "Atlas Alignment Sync", src: "Calendar", status: "VERIFIED" },
-                            { type: "Commit", name: "feat: add pgvector table", src: "GitHub", status: "VERIFIED" },
-                            { type: "Decision", name: "Increase pricing to $500", src: "Stripe", status: "PENDING" }
-                          ].map((entity, i) => (
-                            <tr key={i} className="border-b-2 border-border last:border-b-0 hover:bg-background transition-colors cursor-pointer group">
-                              <td className="p-4 border-r-2 border-border text-muted-foreground font-bold">{entity.type}</td>
-                              <td className="p-4 border-r-2 border-border font-bold text-base group-hover:text-accent-blue">{entity.name}</td>
-                              <td className="p-4 border-r-2 border-border">{entity.src}</td>
-                              <td className="p-4">
-                                {entity.status === "PENDING" ? (
-                                  <span className="tag red">[ PENDING ]</span>
-                                ) : (
-                                  <span className="tag blue">[ OK ]</span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Live Stream */}
-                  <div className="xl:col-span-4 space-y-6">
-                    <div className="flex justify-between items-end border-b-2 border-border pb-2">
-                      <h2 className="mono text-lg font-bold uppercase">Live Exhaust</h2>
-                      <span className="w-3 h-3 bg-accent-red animate-pulse block border border-border" />
-                    </div>
-
-                    <div className="panel bg-background divide-y-2 divide-border">
-                      {[
-                        { time: "09:10", src: "GitHub", log: "Commit pushed: Added Docker config." },
-                        { time: "09:30", src: "Calendar", log: "Meeting ended: Atlas Sync." },
-                        { time: "10:05", src: "Stripe", log: "Invoice paid: operating sprint." },
-                        { time: "11:20", src: "Notion", log: "Page updated: Architecture spec." }
-                      ].map((evt, i) => (
-                        <div key={i} className="p-4 space-y-2 hover:bg-surface transition-colors cursor-crosshair">
-                          <div className="flex justify-between mono text-[10px] text-muted-foreground font-bold uppercase">
-                            <span>{evt.time}</span>
-                            <span>{evt.src}</span>
-                          </div>
-                          <p className="mono text-xs leading-relaxed font-semibold">{evt.log}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                </div>
+          {/* TAB 2: SETTINGS (Theme Engine) */}
+          {activeTab === "settings" && (
+            <div className="animate-fade-in-up space-y-8">
+              <div className="space-y-2 border-b border-border/50 pb-6">
+                <h2 className="text-4xl font-bold font-serif tracking-tight">Configuration</h2>
+                <p className="text-sm text-muted-foreground">Manage your Metaphor OS environment and visual identity.</p>
               </div>
-            )}
 
-            {/* TAB 2: TIMELINE */}
-            {activeTab === "timeline" && (
-              <div className="animate-fade-in-up">
-                <header className="mb-12 border-b-4 border-foreground pb-6">
-                  <h1 className="font-serif text-5xl font-bold mb-4">Progression Log</h1>
-                  <p className="mono text-sm text-muted-foreground uppercase tracking-wider">
-                    Chronological ledger of structural mappings and strategic shifts.
-                  </p>
-                </header>
-
-                <div className="panel divide-y-2 divide-border max-w-4xl">
-                  {[
-                    { date: "2026-07-17", time: "08:32", id: "EVT-8921", log: "Ingested Notion Client Interview Notes. Appended to value pricing model." },
-                    { date: "2026-07-16", time: "14:15", id: "EVT-8920", log: "Decision formulated: Deploy Postgres + pgvector inside Docker." },
-                    { date: "2026-07-15", time: "09:10", id: "EVT-8919", log: "Git Commit parsed: fix: decouple tokens validation." }
-                  ].map((evt, i) => (
-                    <div key={i} className="p-6 flex flex-col md:flex-row gap-6 hover:bg-background transition-colors cursor-crosshair">
-                      <div className="shrink-0 flex md:flex-col gap-4 md:gap-1 items-start md:w-32 border-b-2 md:border-b-0 border-border pb-4 md:pb-0">
-                        <span className="mono text-xs font-bold uppercase">{evt.date}</span>
-                        <span className="mono text-[10px] text-muted-foreground">{evt.time}</span>
-                        <span className="tag mt-1">{evt.id}</span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="mono text-sm font-semibold leading-relaxed">{evt.log}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* TAB 3: SETTINGS (Theme Engine) */}
-            {activeTab === "settings" && (
-              <div className="animate-fade-in-up">
-                <header className="mb-12 border-b-4 border-foreground pb-6">
-                  <h1 className="font-serif text-5xl font-bold mb-4">Configuration</h1>
-                  <p className="mono text-sm text-muted-foreground uppercase tracking-wider">
-                    System preferences and visual identity.
-                  </p>
-                </header>
-
+              <div>
+                <h3 className="text-lg font-semibold mb-6">Visual Identity (Theme Engine)</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {[
                     { id: "minimalist", name: "Minimalist", desc: "Dieter Rams / Brutalist physical tool." },
@@ -320,37 +304,38 @@ export default function Dashboard() {
                     <div 
                       key={t.id} 
                       onClick={() => handleThemeChange(t.id)}
-                      className={`panel p-6 cursor-pointer transition-all hover:-translate-y-1 ${theme === t.id ? 'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}`}
+                      className={`panel p-6 cursor-pointer transition-all hover:-translate-y-1 ${theme === t.id ? 'border-primary shadow-[0_0_20px_rgba(var(--primary),0.2)] ring-1 ring-primary' : ''}`}
                     >
                       <div className="flex justify-between items-start mb-4">
-                        <h3 className="font-serif text-2xl font-bold">{t.name}</h3>
+                        <h4 className="font-serif text-2xl font-bold">{t.name}</h4>
                         {theme === t.id && <span className="tag filled">Active</span>}
                       </div>
-                      <p className="mono text-xs text-muted-foreground">{t.desc}</p>
+                      <p className="text-xs font-mono text-muted-foreground">{t.desc}</p>
                     </div>
                   ))}
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* OTHER TABS */}
-            {["notifications", "reports", "datasources"].includes(activeTab) && (
-              <div className="animate-fade-in-up flex flex-col items-center justify-center pt-32 text-center max-w-lg mx-auto">
-                <div className="panel p-8 w-full border-t-8 border-t-foreground">
-                   <h2 className="mono text-2xl font-bold uppercase mb-4 text-accent-red">System Notice</h2>
-                   <p className="font-serif text-lg text-muted-foreground mb-8">
-                     The Metaphor context engine is currently indexing dependencies for the "{activeTab}" directory. Operations restricted.
-                   </p>
-                   <button onClick={() => setActiveTab("maps")} className="btn-tactile w-full">
-                     [ Return to Ontology ]
-                   </button>
-                </div>
+          {/* OTHER TABS */}
+          {["timeline", "notifications", "reports", "datasources"].includes(activeTab) && (
+            <div className="animate-fade-in-up flex flex-col items-center justify-center pt-32 text-center max-w-lg mx-auto">
+              <div className="panel p-10 flex flex-col items-center">
+                 <Network className="w-12 h-12 text-primary opacity-50 mb-6" />
+                 <h2 className="text-2xl font-bold font-serif mb-2">Module Syncing</h2>
+                 <p className="text-muted-foreground mb-8">
+                   The Metaphor engine is currently indexing dependencies for the {activeTab} view.
+                 </p>
+                 <button onClick={() => setActiveTab("maps")} className="btn-tactile primary">
+                   Return to Ontology
+                 </button>
               </div>
-            )}
+            </div>
+          )}
 
-          </div>
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
