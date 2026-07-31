@@ -39,12 +39,12 @@ export default function LandingPage() {
           </p>
 
           <h1 className="text-6xl md:text-8xl font-semibold tracking-tighter text-foreground leading-[1.1] mb-8">
-            Every AI starts from zero. <br />
-            <span className="text-muted">Except yours.</span>
+            Every AI should know you <br />
+            <span className="text-muted">the way you know yourself.</span>
           </h1>
           
           <p className="text-lg md:text-xl max-w-2xl text-muted leading-relaxed mb-16">
-            Metaphor is the context layer between you and every AI. It passively learns your decisions, constraints, and identity, injecting them into ChatGPT and Claude before they even answer.
+            Metaphor is the context layer between you and every AI. It passively learns from your data sources (Notion, Drive, Calendar) and injects that shared understanding into your AI Consumers (Claude, ChatGPT, Cursor).
           </p>
 
           <div className="flex items-center gap-6">

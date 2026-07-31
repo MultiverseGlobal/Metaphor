@@ -8,6 +8,7 @@ from app.database import init_db
 from app.routes.sync import router as sync_router
 from app.routes.graph import router as graph_router
 from app.routes.context import router as context_router
+from app.routes.webhooks import router as webhooks_router
 
 # Setup logger
 logging.basicConfig(level=logging.INFO)
@@ -47,6 +48,7 @@ app.add_middleware(
 app.include_router(sync_router, prefix=settings.API_PREFIX, tags=["sync"])
 app.include_router(graph_router, prefix=settings.API_PREFIX, tags=["graph"])
 app.include_router(context_router, prefix=settings.API_PREFIX, tags=["context"])
+app.include_router(webhooks_router, prefix=f"{settings.API_PREFIX}/webhooks", tags=["webhooks"])
 
 @app.get("/")
 async def root():
