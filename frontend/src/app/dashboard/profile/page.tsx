@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/Card";
 
 export default function ProfilePage() {
   return (
-    <div className="flex flex-col h-full bg-background animate-in fade-in duration-500 max-w-3xl mx-auto p-8">
+    <div className="flex flex-col h-full bg-background animate-in fade-in duration-150 max-w-3xl mx-auto p-8">
       
       <header className="mb-10 flex items-end gap-6">
         <div className="w-24 h-24 rounded-2xl bg-foreground text-background flex items-center justify-center text-4xl font-bold shadow-lg">

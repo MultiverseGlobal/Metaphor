@@ -48,7 +48,7 @@ export default function PlaygroundPage() {
   };
 
   return (
-    <div className="flex w-full h-full bg-background animate-in fade-in duration-500 overflow-hidden">
+    <div className="flex w-full h-full bg-background animate-in fade-in duration-150 overflow-hidden">
       
       {/* ── Left: Chat Interface ── */}
       <div className="flex-1 flex flex-col relative bg-surface-1/30">

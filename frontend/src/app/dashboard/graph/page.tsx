@@ -97,7 +97,7 @@ export default function KnowledgeGraphPage() {
   }, [setNodes, setEdges]);
 
   return (
-    <div className="flex flex-col h-full bg-background animate-in fade-in duration-500">
+    <div className="flex flex-col h-full bg-background animate-in fade-in duration-150">
       
       {/* Header */}
       <header className="px-8 py-6 border-b border-border-subtle flex items-center justify-between bg-surface-1/50">

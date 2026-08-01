@@ -52,7 +52,7 @@ export default function ApiAccessPage() {
   const getMcpCommand = (token: string) => `npx @metaphor/mcp-server --token="${token}"`;
 
   return (
-    <div className="flex flex-col h-full bg-background animate-in fade-in duration-500 max-w-4xl mx-auto p-8 overflow-y-auto">
+    <div className="flex flex-col h-full bg-background animate-in fade-in duration-150 max-w-4xl mx-auto p-8 overflow-y-auto">
       
       <header className="mb-10 flex items-center justify-between">
         <div>

@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/Card";
 
 export default function SettingsPage() {
   return (
-    <div className="flex flex-col h-full bg-background animate-in fade-in duration-500 max-w-3xl mx-auto p-8">
+    <div className="flex flex-col h-full bg-background animate-in fade-in duration-150 max-w-3xl mx-auto p-8">
       
       <header className="mb-10">
         <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-2 flex items-center gap-2">

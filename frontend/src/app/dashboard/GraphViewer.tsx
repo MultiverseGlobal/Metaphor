@@ -48,6 +48,9 @@ export default function GraphViewer() {
           height={dimensions.height}
           graphData={graphData}
           nodeLabel="name"
+          warmupTicks={50}
+          cooldownTicks={30}
+          enablePointerEvents={false}
           nodeColor={(node: any) => {
             switch(node.type) {
               case 'Project': return '#3b82f6';
@@ -63,7 +66,7 @@ export default function GraphViewer() {
           nodeRelSize={4}
           linkDirectionalArrowLength={2}
           linkDirectionalArrowRelPos={1}
-          d3VelocityDecay={0.3}
+          d3VelocityDecay={0.4}
         />
       )}
     </div>

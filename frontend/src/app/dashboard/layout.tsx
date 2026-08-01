@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Network, Database, Key, Plug, Settings, Sidebar, User, ChevronDown, Layers, Sparkles } from "lucide-react";
 import { Kbd } from "@/components/ui/Kbd";
 
@@ -11,6 +12,7 @@ export default function LinearLayout({
   children: React.ReactNode;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const pathname = usePathname();
 
   return (
     <div className="flex h-screen w-screen bg-background overflow-hidden text-sm">
@@ -20,7 +22,7 @@ export default function LinearLayout({
         className={`flex flex-col bg-surface-2/30 border-r border-border-subtle ease-in-out ${
           isSidebarOpen ? "w-64" : "w-0 opacity-0 overflow-hidden"
         }`}
-        style={{ transition: 'all var(--transition-base)' }}
+        style={{ transition: 'all var(--transition-fast)' }}
       >
         {/* Workspace Header */}
         <div className="h-14 flex items-center px-6 mt-2 mb-2 font-semibold text-foreground tracking-tight">
@@ -34,13 +36,13 @@ export default function LinearLayout({
           
           {/* Action Layer */}
           <div className="space-y-0.5 mb-6">
-            <NavItem href="/dashboard/playground" icon={<Sparkles />} label="The Magic Layer" shortcut="⌘P" active />
+            <NavItem href="/dashboard/playground" icon={<Sparkles />} label="The Magic Layer" shortcut="⌘P" pathname={pathname} />
           </div>
 
           {/* Infrastructure Actions */}
           <div className="space-y-0.5">
-            <NavItem href="/dashboard" icon={<Database />} label="Context Dashboard" shortcut="⌘D" />
-            <NavItem href="/dashboard/graph" icon={<Network />} label="Knowledge Graph" shortcut="⌘G" />
+            <NavItem href="/dashboard" icon={<Database />} label="Context Dashboard" shortcut="⌘D" pathname={pathname} exact />
+            <NavItem href="/dashboard/graph" icon={<Network />} label="Knowledge Graph" shortcut="⌘G" pathname={pathname} />
           </div>
 
           {/* Collapsible Section: Configuration */}
@@ -52,17 +54,17 @@ export default function LinearLayout({
                 style={{ transition: 'opacity var(--transition-fast)' }} 
               />
             </div>
-            <NavItem href="/dashboard/models" icon={<Layers />} label="Context Models" shortcut="⌘M" />
-            <NavItem href="/dashboard/integrations" icon={<Plug />} label="Integrations" shortcut="⌘I" />
-            <NavItem href="/dashboard/api" icon={<Key />} label="API Access" />
+            <NavItem href="/dashboard/models" icon={<Layers />} label="Context Models" shortcut="⌘M" pathname={pathname} />
+            <NavItem href="/dashboard/integrations" icon={<Plug />} label="Integrations" shortcut="⌘I" pathname={pathname} />
+            <NavItem href="/dashboard/api" icon={<Key />} label="API Access" pathname={pathname} />
           </div>
 
         </div>
 
         {/* Footer Navigation */}
         <div className="p-3 space-y-0.5 mb-2 border-t border-border-subtle/50 pt-4">
-          <NavItem href="/dashboard/settings" icon={<Settings />} label="Settings" shortcut="⌘," />
-          <NavItem href="/dashboard/profile" icon={<User />} label="William" />
+          <NavItem href="/dashboard/settings" icon={<Settings />} label="Settings" shortcut="⌘," pathname={pathname} />
+          <NavItem href="/dashboard/profile" icon={<User />} label="William" pathname={pathname} />
         </div>
       </div>
 
@@ -90,7 +92,23 @@ export default function LinearLayout({
   );
 }
 
-function NavItem({ icon, label, shortcut, active, href = "#" }: { icon: React.ReactNode, label: string, shortcut?: string, active?: boolean, href?: string }) {
+function NavItem({ 
+  icon, 
+  label, 
+  shortcut, 
+  href = "#", 
+  pathname = "", 
+  exact = false 
+}: { 
+  icon: React.ReactNode, 
+  label: string, 
+  shortcut?: string, 
+  href?: string,
+  pathname?: string,
+  exact?: boolean
+}) {
+  const active = exact ? pathname === href : pathname.startsWith(href) && (href !== "/dashboard" || pathname === "/dashboard");
+
   return (
     <Link 
       href={href}
