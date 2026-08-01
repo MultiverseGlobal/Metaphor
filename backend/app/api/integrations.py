@@ -1,71 +1,103 @@
-import uuid
-from typing import Any
-from fastapi import APIRouter, Depends, HTTPException
+import asyncio
+import logging
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select, func
-
 from app.database.session import get_session
 from app.core.security import get_user_via_api_key
 from app.models.identity import User
-from app.models.operations import Integration, SyncJob, WebhookEvent
-from app.services.identity import IdentityService
-from app.services.sync import SyncEngine
+from app.services.reflection import ReflectionService
+from app.services.integrations.github import fetch_public_repository
+from app.services.integrations.notion import fetch_notion_mockup
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
-@router.get("")
-async def get_integrations(
-    current_user: User = Depends(get_user_via_api_key),
-    db: AsyncSession = Depends(get_session)
-) -> Any:
-    """Returns real status of all connected integrations for the user's organization."""
-    identity = IdentityService(db)
-    org = await identity.get_user_organization(current_user.id) or await identity.get_or_create_default_organization()
-    
-    # Query event counts per provider from WebhookEvent
-    providers = ["notion", "gmail", "gcal", "github", "linear"]
-    res = []
-    
-    for p in providers:
-        stmt = select(func.count(WebhookEvent.id)).where(WebhookEvent.provider == p)
-        event_count_res = await db.execute(stmt)
-        event_count = event_count_res.scalar() or 0
-        
-        # Check last sync job
-        job_stmt = select(SyncJob).where(
-            SyncJob.organization_id == org.id,
-            SyncJob.provider == p
-        ).order_by(SyncJob.started_at.desc())
-        job_res = await db.execute(job_stmt)
-        last_job = job_res.scalars().first()
-        
-        status = "connected" if event_count > 0 or (last_job and last_job.status == "completed") else "disconnected"
-        
-        res.append({
-            "provider": p,
-            "status": status,
-            "events_processed": event_count,
-            "last_sync": last_job.completed_at.isoformat() if last_job and last_job.completed_at else None
-        })
-        
-    return res
+class IntegrationSyncRequest(BaseModel):
+    sources: List[str]
+    github_repo: Optional[str] = "tiangolo/fastapi"  # default for demo
 
-@router.post("/{provider}/sync")
-async def sync_integration(
-    provider: str,
-    current_user: User = Depends(get_user_via_api_key),
-    db: AsyncSession = Depends(get_session)
+async def process_integration_sync(
+    user_id: str,
+    org_id: str,
+    sources: List[str],
+    github_repo: str
 ):
-    valid_providers = ["notion", "gmail", "gcal", "github", "linear"]
-    if provider not in valid_providers:
-        raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
-
-    identity = IdentityService(db)
-    org = await identity.get_user_organization(current_user.id) or await identity.get_or_create_default_organization()
-    
+    """
+    Background task that fetches data from the requested sources and feeds it into the Knowledge Graph.
+    """
     try:
-        sync_engine = SyncEngine(db)
-        await sync_engine.run_pull_sync(provider, org.id, 5)
-        return {"status": "success", "provider": provider}
+        combined_content = f"User {user_id} has connected the following sources: {', '.join(sources)}.\n\n"
+        
+        if "github" in sources:
+            logger.info(f"Fetching GitHub repo: {github_repo}")
+            github_content = await fetch_public_repository(github_repo)
+            combined_content += github_content + "\n\n"
+            
+        if "notion" in sources:
+            logger.info("Fetching Notion mockup")
+            notion_content = await fetch_notion_mockup()
+            combined_content += notion_content + "\n\n"
+            
+        # Initialize an isolated DB session for the background task
+        from app.database.session import get_session_context
+        async for session in get_session_context():
+            reflection_service = ReflectionService(session)
+            # Create a synthetic context session for this background sync
+            from app.models.graph import ContextSession
+            import uuid
+            session_id = uuid.uuid4()
+            ctx = ContextSession(
+                id=session_id,
+                organization_id=uuid.UUID(org_id),
+                user_id=uuid.UUID(user_id),
+                title="Integration Sync",
+            )
+            session.add(ctx)
+            await session.commit()
+            
+            # Feed into graph
+            await reflection_service.reflect_and_evolve(
+                org_id=org_id,
+                session_id=str(session_id),
+                content=combined_content
+            )
+            logger.info(f"Integration sync completed successfully for user {user_id}")
+            
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Integration sync failed: {e}")
+
+@router.post("/sync")
+async def trigger_integration_sync(
+    request: IntegrationSyncRequest,
+    background_tasks: BackgroundTasks,
+    user: User = Depends(get_user_via_api_key),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Triggers an asynchronous synchronization of connected integrations.
+    Returns 202 Accepted immediately while the background task processes the data.
+    """
+    # Find the user's primary organization (for simplicity, just grab the first one)
+    from sqlmodel import select
+    from app.models.identity import OrganizationMember
+    
+    stmt = select(OrganizationMember).where(OrganizationMember.user_id == user.id)
+    result = await session.execute(stmt)
+    org_member = result.scalars().first()
+    
+    if not org_member:
+        raise HTTPException(status_code=400, detail="User does not belong to an organization")
+        
+    org_id = str(org_member.organization_id)
+    
+    background_tasks.add_task(
+        process_integration_sync,
+        user_id=str(user.id),
+        org_id=org_id,
+        sources=request.sources,
+        github_repo=request.github_repo
+    )
+    
+    return {"status": "sync_started", "message": "Integration sync running in the background."}

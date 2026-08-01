@@ -180,26 +180,18 @@ export default function OnboardingPage() {
       const keyData = await fetchFromMetaphor("/auth/apikeys", undefined, "POST");
       localStorage.setItem("metaphor_api_key", keyData.raw_token);
 
-      // 1. Construct the synthetic narrative for the LLM
-      const connectedSources = Object.keys(connections).filter(k => connections[k]).join(", ") || "none";
-      const narrative = `
-        User has connected the following sources: ${connectedSources}.
-        From these sources, we identified the organization 'Multiverse Global' and core projects 'Atlas Platform' and 'Metaphor OS'.
-        
-        We asked the user some disambiguation questions:
-        1. ${AMBIGUITY_QUESTIONS[0]}
-        Answer: ${answers[0] || "Unknown"}
-        
-        2. ${AMBIGUITY_QUESTIONS[1]}
-        Answer: ${answers[1] || "Unknown"}
-        
-        3. ${AMBIGUITY_QUESTIONS[2]}
-        Answer: ${answers[2] || "Unknown"}
-      `.trim();
-
-      // 2. Transmit to backend graph using the newly generated API key
-      // fetchFromMetaphor uses `metaphor_api_key` from localStorage, so it will pick up the new key automatically.
-      await fetchFromMetaphor("/context/lore", { content: narrative });
+      // 1. Trigger the background integration sync
+      const connectedSources = Object.keys(connections).filter(k => connections[k]);
+      
+      if (connectedSources.length > 0) {
+        await fetchFromMetaphor("/integrations/sync", {
+          sources: connectedSources,
+          github_repo: "tiangolo/fastapi" // Example default repo
+        });
+      } else {
+        // Fallback for no sources
+        await fetchFromMetaphor("/context/lore", { content: "User has not connected any sources yet." });
+      }
 
       // 3. Mark complete and redirect
       localStorage.setItem("metaphor_onboarded", "true");

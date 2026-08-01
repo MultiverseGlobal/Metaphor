@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Shield, ArrowRight, Sparkles, Sun, BookOpen, Moon } from "lucide-react";
 import { BACKEND_URL, fetchFromMetaphor } from "@/app/api";
 import { createClient } from "@/utils/supabase/client";
+export default function LoginPage() {
+  const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [theme, setTheme] = useState<"theme-clean" | "theme-paper" | "theme-dark">("theme-clean");

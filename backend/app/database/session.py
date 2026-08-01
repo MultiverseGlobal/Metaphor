@@ -34,6 +34,13 @@ async def init_db() -> None:
         )
         await conn.run_sync(SQLModel.metadata.create_all)
 
+import contextlib
+
+@contextlib.asynccontextmanager
+async def get_session_context() -> AsyncGenerator[AsyncSession, None]:
+    async with async_session_maker() as session:
+        yield session
+
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
         yield session
