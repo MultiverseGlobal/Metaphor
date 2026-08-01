@@ -160,6 +160,31 @@ export default function OnboardingPage() {
   const finalize = async () => {
     setIsSubmitting(true);
     try {
+      // 0. Register user & get token
+      const registerRes = await fetch("http://localhost:8000/api/v1/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: `founder_${Date.now()}@metaphor.os`,
+          password: "password123",
+          name: "Metaphor Founder"
+        })
+      });
+      const registerData = await registerRes.json();
+      const token = registerData.access_token;
+      
+      if (!token) throw new Error("Registration failed.");
+      
+      localStorage.setItem("metaphor_token", token);
+      
+      // Generate permanent API Key for Webhooks
+      const keyRes = await fetch("http://localhost:8000/api/v1/auth/apikeys", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const keyData = await keyRes.json();
+      localStorage.setItem("metaphor_api_key", keyData.raw_token);
+
       // 1. Construct the synthetic narrative for the LLM
       const connectedSources = Object.keys(connections).filter(k => connections[k]).join(", ") || "none";
       const narrative = `
@@ -177,7 +202,8 @@ export default function OnboardingPage() {
         Answer: ${answers[2] || "Unknown"}
       `.trim();
 
-      // 2. Transmit to backend graph
+      // 2. Transmit to backend graph using the newly generated API key
+      // fetchFromMetaphor uses `metaphor_api_key` from localStorage, so it will pick up the new key automatically.
       await fetchFromMetaphor("/context/lore", { content: narrative });
 
       // 3. Mark complete and redirect
@@ -186,7 +212,7 @@ export default function OnboardingPage() {
     } catch (e: any) {
       console.error("Failed to commit graph:", e);
       setIsSubmitting(false);
-      alert("Failed to commit context. Please try again.");
+      alert("Failed to commit context. Please ensure backend is running.");
     }
   };
 

@@ -56,7 +56,7 @@ async def sync_integration(
     current_user: User = Depends(get_user_via_api_key),
     db: AsyncSession = Depends(get_session)
 ):
-    valid_providers = ["notion", "gmail", "gcal"]
+    valid_providers = ["notion", "gmail", "gcal", "github", "linear"]
     if provider not in valid_providers:
         raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
 

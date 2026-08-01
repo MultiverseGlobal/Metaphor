@@ -53,6 +53,14 @@ class SyncEngine:
             elif provider == "gcal":
                 from app.integrations.gcal import gcal_ingestor
                 raw_events = await gcal_ingestor.fetch_raw_events(limit)
+            elif provider == "github":
+                import asyncio
+                await asyncio.sleep(1) # Simulate pulling from Github
+                raw_events = []
+            elif provider == "linear":
+                import asyncio
+                await asyncio.sleep(1) # Simulate pulling from Linear
+                raw_events = []
             else:
                 raise ValueError(f"Unknown provider: {provider}")
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Brain, Code, PenTool, Hash, Plus, RefreshCw } from "lucide-react";
+import { Brain, Code, PenTool, Hash, Plus, RefreshCw, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { fetchFromMetaphor } from "@/app/api";
 
@@ -17,6 +17,12 @@ type ModelItem = {
 export default function ContextModelsPage() {
   const [models, setModels] = useState<ModelItem[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [newTypes, setNewTypes] = useState("project,constraint");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     loadModels();
@@ -42,6 +48,27 @@ export default function ContextModelsPage() {
     }
   };
 
+  const handleCreateModel = async () => {
+    if (!newName.trim() || !newDesc.trim() || !newTypes.trim()) return;
+    setIsSubmitting(true);
+    try {
+      await fetchFromMetaphor("/context/models", {
+        name: newName,
+        description: newDesc,
+        node_types: newTypes
+      });
+      setIsModalOpen(false);
+      setNewName("");
+      setNewDesc("");
+      setNewTypes("project,constraint");
+      loadModels();
+    } catch (e) {
+      console.error("Failed to create context model", e);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-8 animate-in fade-in duration-150">
       <header className="flex justify-between items-start mb-12">
@@ -55,7 +82,7 @@ export default function ContextModelsPage() {
           <button onClick={loadModels} className="p-2 text-muted hover:text-foreground bg-surface-1 border border-border-subtle rounded-lg">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm font-medium rounded-md hover:opacity-90 transition-opacity">
+          <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm font-medium rounded-md hover:opacity-90 transition-opacity">
             <Plus className="w-4 h-4" />
             New Model
           </button>
@@ -91,6 +118,46 @@ export default function ContextModelsPage() {
           </Card>
         ))}
       </div>
+
+      {/* New Model Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-surface-1 border border-border-strong rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-5 border-b border-border-subtle">
+              <h3 className="text-lg font-semibold text-foreground">Create Context Model</h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-muted hover:text-foreground">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Model Name</label>
+                <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Frontend Architecture" className="w-full bg-background border border-border-subtle rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Description</label>
+                <textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="What is this model optimized for?" className="w-full bg-background border border-border-subtle rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary h-24 resize-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Included Node Types</label>
+                <input type="text" value={newTypes} onChange={e => setNewTypes(e.target.value)} placeholder="e.g. project,constraint,goal" className="w-full bg-background border border-border-subtle rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary" />
+                <p className="text-[10px] text-muted mt-1.5">Comma-separated list of types to include.</p>
+              </div>
+            </div>
+            <div className="p-5 border-t border-border-subtle bg-surface-2 flex justify-end gap-3">
+              <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-muted hover:text-foreground">Cancel</button>
+              <button 
+                onClick={handleCreateModel} 
+                disabled={isSubmitting || !newName.trim()} 
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+              >
+                {isSubmitting ? "Creating..." : "Create Model"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

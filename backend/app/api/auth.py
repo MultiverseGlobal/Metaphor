@@ -26,6 +26,7 @@ class UserUpdateProfile(BaseModel):
     writing_style: str = None
     preferred_terms: str = None
     banned_terms: str = None
+    settings: dict = None
 
 class Token(BaseModel):
     access_token: str
@@ -101,6 +102,8 @@ async def update_user_me(
     current_user.writing_style = profile_in.writing_style
     current_user.preferred_terms = profile_in.preferred_terms
     current_user.banned_terms = profile_in.banned_terms
+    if profile_in.settings is not None:
+        current_user.settings = profile_in.settings
     
     db.add(current_user)
     await db.commit()

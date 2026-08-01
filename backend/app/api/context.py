@@ -82,7 +82,7 @@ async def get_context_models(current_user: User = Depends(get_user_via_api_key),
     
     # Query node counts by type
     from sqlmodel import select, func
-    from app.models.graph import Node
+    from app.models.graph import Node, ContextModel
     
     stmt = select(Node.type, func.count(Node.id)).where(Node.organization_id == org.id).group_by(Node.type)
     res = await db.execute(stmt)
@@ -90,7 +90,12 @@ async def get_context_models(current_user: User = Depends(get_user_via_api_key),
     
     total_nodes = sum(counts.values())
     
-    return [
+    # Get custom models
+    model_stmt = select(ContextModel).where(ContextModel.organization_id == org.id)
+    model_res = await db.execute(model_stmt)
+    custom_models = model_res.scalars().all()
+    
+    results = [
         {
             "id": "global",
             "name": "Global Identity",
@@ -116,6 +121,52 @@ async def get_context_models(current_user: User = Depends(get_user_via_api_key),
             "lastSync": "Active"
         }
     ]
+    
+    for m in custom_models:
+        # Calculate nodes based on types
+        types = [t.strip().capitalize() for t in m.node_types.split(",")]
+        m_nodes = sum(counts.get(t, 0) for t in types)
+        
+        results.append({
+            "id": str(m.id),
+            "name": m.name,
+            "description": m.description,
+            "nodes": m_nodes,
+            "isDefault": m.is_default,
+            "lastSync": "Active"
+        })
+        
+    return results
+
+class ContextModelCreate(BaseModel):
+    name: str
+    description: str
+    node_types: str
+
+@router.post("/models")
+async def create_context_model(req: ContextModelCreate, current_user: User = Depends(get_user_via_api_key), db: AsyncSession = Depends(get_session)):
+    identity = IdentityService(db)
+    org = await identity.get_user_organization(current_user.id) or await identity.get_or_create_default_organization()
+    
+    from app.models.graph import ContextModel
+    new_model = ContextModel(
+        organization_id=org.id,
+        name=req.name,
+        description=req.description,
+        node_types=req.node_types
+    )
+    db.add(new_model)
+    await db.commit()
+    await db.refresh(new_model)
+    
+    return {
+        "id": str(new_model.id),
+        "name": new_model.name,
+        "description": new_model.description,
+        "nodes": 0,
+        "isDefault": new_model.is_default,
+        "lastSync": "Just now"
+    }
 
 @router.post("/lore")
 async def build_lore(req: LoreRequest, current_user: User = Depends(get_user_via_api_key), db: AsyncSession = Depends(get_session)):

@@ -84,3 +84,17 @@ class SearchDocument(SQLModel, table=True):
     keywords: str # Comma-separated or full text search vector in DB
     
     updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
+
+class ContextModel(SQLModel, table=True):
+    __tablename__ = "context_models"
+    
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    organization_id: uuid.UUID = Field(foreign_key="organizations.id", index=True)
+    
+    name: str
+    description: str
+    node_types: str # comma-separated list of types to include, e.g., "project,constraint"
+    is_default: bool = Field(default=False)
+    
+    created_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
+

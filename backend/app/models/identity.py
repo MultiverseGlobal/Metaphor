@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, List
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import Column, DateTime, String
+from sqlalchemy import Column, DateTime, String, JSON
 
 class Organization(SQLModel, table=True):
     __tablename__ = "organizations"
@@ -31,6 +31,8 @@ class User(SQLModel, table=True):
     writing_style: Optional[str] = None
     preferred_terms: Optional[str] = None
     banned_terms: Optional[str] = None
+    
+    settings: dict = Field(default_factory=dict, sa_column=Column(JSON))
     
     created_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
     updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))

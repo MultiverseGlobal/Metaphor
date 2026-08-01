@@ -46,6 +46,8 @@ export default function KnowledgeGraphPage() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
   const [loading, setLoading] = useState(true);
   const [rawNodes, setRawNodes] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState("All");
 
   useEffect(() => {
     async function fetchGraph() {
@@ -96,6 +98,17 @@ export default function KnowledgeGraphPage() {
     fetchGraph();
   }, [setNodes, setEdges]);
 
+  const filteredNodes = useMemo(() => {
+    return rawNodes.filter(node => {
+      const matchesSearch = node.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            (node.summary && node.summary.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      const matchesFilter = activeFilter === "All" || node.type.toLowerCase() === activeFilter.toLowerCase();
+      
+      return matchesSearch && matchesFilter;
+    });
+  }, [rawNodes, searchQuery, activeFilter]);
+
   return (
     <div className="flex flex-col h-full bg-background animate-in fade-in duration-150">
       
@@ -143,19 +156,21 @@ export default function KnowledgeGraphPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
               <input 
                 type="text" 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search nodes by semantic meaning..." 
                 className="w-full bg-background border border-border-subtle rounded-lg pl-9 pr-4 py-2 text-xs text-foreground focus:outline-none focus:border-primary shadow-sm"
               />
             </div>
             <div className="flex gap-2">
-              <button className="flex-1 py-1.5 bg-background border border-border-subtle rounded-md text-[10px] uppercase tracking-wider font-semibold text-muted hover:text-foreground hover:border-primary transition-colors">All</button>
-              <button className="flex-1 py-1.5 bg-background border border-border-subtle rounded-md text-[10px] uppercase tracking-wider font-semibold text-muted hover:text-foreground hover:border-primary transition-colors">Identity</button>
-              <button className="flex-1 py-1.5 bg-background border border-border-subtle rounded-md text-[10px] uppercase tracking-wider font-semibold text-muted hover:text-foreground hover:border-primary transition-colors">Projects</button>
+              <button onClick={() => setActiveFilter("All")} className={`flex-1 py-1.5 bg-background border ${activeFilter === "All" ? "border-primary text-foreground" : "border-border-subtle text-muted"} rounded-md text-[10px] uppercase tracking-wider font-semibold hover:text-foreground hover:border-primary transition-colors`}>All</button>
+              <button onClick={() => setActiveFilter("Identity")} className={`flex-1 py-1.5 bg-background border ${activeFilter === "Identity" ? "border-primary text-foreground" : "border-border-subtle text-muted"} rounded-md text-[10px] uppercase tracking-wider font-semibold hover:text-foreground hover:border-primary transition-colors`}>Identity</button>
+              <button onClick={() => setActiveFilter("Project")} className={`flex-1 py-1.5 bg-background border ${activeFilter === "Project" ? "border-primary text-foreground" : "border-border-subtle text-muted"} rounded-md text-[10px] uppercase tracking-wider font-semibold hover:text-foreground hover:border-primary transition-colors`}>Projects</button>
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-            {rawNodes.map(node => (
+            {filteredNodes.map(node => (
               <div key={node.id} className="p-3 bg-background border border-border-subtle rounded-lg flex flex-col gap-1 group cursor-pointer hover:border-primary/50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -169,8 +184,8 @@ export default function KnowledgeGraphPage() {
                 )}
               </div>
             ))}
-            {rawNodes.length === 0 && !loading && (
-              <div className="text-center p-8 text-muted text-xs">No nodes found. Connect an integration to begin building your graph.</div>
+            {filteredNodes.length === 0 && !loading && (
+              <div className="text-center p-8 text-muted text-xs">No nodes match your filters.</div>
             )}
           </div>
         </div>

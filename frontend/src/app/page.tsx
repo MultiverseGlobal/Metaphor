@@ -8,6 +8,9 @@ import { MetaphorLogo } from '@/components/ui/MetaphorLogo';
 
 export default function LandingPage() {
   const [activeStep, setActiveStep] = useState(0);
+  const [wordIndex, setWordIndex] = useState(0);
+  
+  const words = ["yourself.", "your team.", "your business.", "your codebase."];
 
   const steps = [
     { id: "init", title: "Initialize Identity", icon: <Key className="w-5 h-5" />, desc: "Set your core persona and connect Metaphor to your world." },
@@ -17,11 +20,18 @@ export default function LandingPage() {
   ];
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const stepInterval = setInterval(() => {
       setActiveStep((prev) => (prev + 1) % steps.length);
     }, 4000);
-    return () => clearInterval(interval);
+    return () => clearInterval(stepInterval);
   }, [steps.length]);
+
+  useEffect(() => {
+    const wordInterval = setInterval(() => {
+      setWordIndex((prev) => (prev + 1) % words.length);
+    }, 2500);
+    return () => clearInterval(wordInterval);
+  }, [words.length]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans selection:bg-primary-dim selection:text-foreground overflow-x-hidden">
@@ -70,10 +80,27 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="text-6xl md:text-8xl font-semibold tracking-tighter text-foreground leading-[1.1] mb-8"
+            className="text-5xl md:text-7xl font-semibold tracking-tighter text-foreground leading-[1.1] mb-8"
           >
             Every AI should know you <br />
-            <span className="text-muted">the way you know yourself.</span>
+            <span className="text-muted flex items-center justify-center gap-3">
+              the way you know
+              <span className="relative inline-block w-[240px] text-left">
+                <AnimatePresence mode="popLayout">
+                  <motion.span
+                    key={wordIndex}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.4 }}
+                    className="absolute inset-0 text-foreground"
+                  >
+                    {words[wordIndex]}
+                  </motion.span>
+                </AnimatePresence>
+                <span className="invisible">{words[3]}</span>
+              </span>
+            </span>
           </motion.h1>
           
           <motion.p 

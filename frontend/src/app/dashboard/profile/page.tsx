@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { User, Mail, CreditCard, LogOut, CheckCircle2 } from "lucide-react";
+import { Mail, CheckCircle2, LogOut, Shield } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { fetchFromMetaphor } from "@/app/api";
+import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     async function fetchUser() {
@@ -20,9 +22,16 @@ export default function ProfilePage() {
     fetchUser();
   }, []);
 
+  const handleSignOut = () => {
+    localStorage.removeItem("metaphor_api_key");
+    localStorage.removeItem("metaphor_token");
+    router.push("/");
+  };
+
   const name = user?.name || "Metaphor Dev User";
   const email = user?.email || "dev@metaphor.local";
   const initial = name.charAt(0).toUpperCase();
+  const memberSince = user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Loading...';
 
   return (
     <div className="flex flex-col h-full bg-background animate-in fade-in duration-150 max-w-3xl mx-auto p-8">
@@ -33,8 +42,12 @@ export default function ProfilePage() {
         </div>
         <div className="pb-2">
           <h1 className="text-3xl font-semibold text-foreground tracking-tight mb-1">{name}</h1>
-          <p className="text-sm text-muted flex items-center gap-2">
+          <p className="text-sm text-muted flex items-center gap-2 mb-1">
             <Mail className="w-4 h-4" /> {email}
+          </p>
+          <p className="text-muted text-sm flex items-center gap-2">
+            <Shield className="w-3.5 h-3.5" />
+            Member since {memberSince}
           </p>
         </div>
       </header>
@@ -49,8 +62,9 @@ export default function ProfilePage() {
             </h2>
             <p className="text-xs text-muted">Unlimited nodes and active webhook ingestion.</p>
           </div>
-          <button className="px-4 py-2 bg-background border border-border-strong text-xs font-medium rounded-lg hover:border-primary transition-colors shadow-sm">
-            Manage Billing
+          <button onClick={handleSignOut} className="flex items-center gap-2 px-4 py-2 bg-background border border-border-strong text-xs font-medium rounded-lg hover:border-primary transition-colors shadow-sm">
+            <LogOut className="w-4 h-4" />
+            Sign Out
           </button>
         </Card>
 

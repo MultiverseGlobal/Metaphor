@@ -48,9 +48,12 @@ const PROVIDER_METADATA: Record<string, { name: string; category: string; descri
 export default function IntegrationsPage() {
   const [integrations, setIntegrations] = useState<IntegrationState[]>([]);
   const [syncing, setSyncing] = useState<Record<string, boolean>>({});
+  const [apiKey, setApiKey] = useState<string>("");
 
   useEffect(() => {
     loadIntegrations();
+    const storedKey = localStorage.getItem("metaphor_api_key");
+    if (storedKey) setApiKey(storedKey);
   }, []);
 
   const loadIntegrations = async () => {
@@ -134,7 +137,6 @@ export default function IntegrationsPage() {
               
               <div className="pt-4 border-t border-border-subtle flex items-center justify-between text-xs text-muted">
                 <span>{item.events_processed} events processed</span>
-                {['notion', 'gmail', 'gcal'].includes(item.provider) && (
                   <button 
                     onClick={() => handleSync(item.provider)}
                     disabled={isSyncing}
@@ -143,12 +145,33 @@ export default function IntegrationsPage() {
                     {isSyncing && <div className="w-3 h-3 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />}
                     {isSyncing ? "Syncing..." : "Sync Now"}
                   </button>
-                )}
               </div>
             </Card>
           );
         })}
       </div>
+
+      {apiKey && (
+        <div className="mt-16 animate-in fade-in duration-300">
+          <h2 className="text-xl text-foreground font-medium mb-4">Webhook Configuration</h2>
+          <p className="text-muted text-sm leading-relaxed mb-6 max-w-2xl">
+            To configure a passive data stream from a 3rd party tool (e.g., GitHub, Linear), set the webhook endpoint to the URL below. Metaphor will securely ingest payloads and extract semantic context.
+          </p>
+          <Card className="flex flex-col gap-4">
+            <div>
+              <label className="text-xs font-bold uppercase tracking-wider text-muted mb-2 block">Your Webhook URL</label>
+              <div className="flex items-center gap-3 bg-background border border-border-strong rounded-lg p-3 font-mono text-xs overflow-x-auto">
+                <span className="text-foreground whitespace-nowrap">
+                  https://api.metaphor.os/api/v1/webhooks/&lt;provider&gt;?api_key={<span className="text-primary">{apiKey}</span>}
+                </span>
+              </div>
+            </div>
+            <div className="text-xs text-muted">
+              Replace <code>&lt;provider&gt;</code> with the source name (e.g., <code>github</code>, <code>notion</code>).
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
