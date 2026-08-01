@@ -1,30 +1,59 @@
-from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
-from sqlmodel.ext.asyncio.session import AsyncSession
-from app.database.session import get_session, async_session_maker
-from app.core.security import get_current_user
-from app.models.identity import User
-from app.services.identity import IdentityService
 import uuid
+from typing import Any
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import select, func
+
+from app.database import get_session
+from app.core.security import get_user_via_api_key
+from app.models.identity import User
+from app.models.operations import Integration, SyncJob, WebhookEvent
+from app.services.identity import IdentityService
+from app.services.sync import SyncEngine
 
 router = APIRouter()
 
-async def bg_sync(provider: str, org_id: uuid.UUID, limit: int = 5):
-    """Background task wrapper to handle independent database sessions for integrations."""
-    async with async_session_maker() as session:
-        if provider == "notion":
-            from app.integrations.notion import notion_ingestor
-            await notion_ingestor.process_and_ingest(session, org_id, limit)
-        elif provider == "gmail":
-            from app.integrations.gmail import gmail_ingestor
-            await gmail_ingestor.process_and_ingest(session, org_id, limit)
-        elif provider == "gcal":
-            from app.integrations.gcal import gcal_ingestor
-            await gcal_ingestor.process_and_ingest(session, org_id, limit)
+@router.get("")
+async def get_integrations(
+    current_user: User = Depends(get_user_via_api_key),
+    db: AsyncSession = Depends(get_session)
+) -> Any:
+    """Returns real status of all connected integrations for the user's organization."""
+    identity = IdentityService(db)
+    org = await identity.get_user_organization(current_user.id) or await identity.get_or_create_default_organization()
+    
+    # Query event counts per provider from WebhookEvent
+    providers = ["notion", "gmail", "gcal", "github", "linear"]
+    res = []
+    
+    for p in providers:
+        stmt = select(func.count(WebhookEvent.id)).where(WebhookEvent.provider == p)
+        event_count_res = await db.execute(stmt)
+        event_count = event_count_res.scalar() or 0
+        
+        # Check last sync job
+        job_stmt = select(SyncJob).where(
+            SyncJob.organization_id == org.id,
+            SyncJob.provider == p
+        ).order_by(SyncJob.started_at.desc())
+        job_res = await db.execute(job_stmt)
+        last_job = job_res.scalars().first()
+        
+        status = "connected" if event_count > 0 or (last_job and last_job.status == "completed") else "disconnected"
+        
+        res.append({
+            "provider": p,
+            "status": status,
+            "events_processed": event_count,
+            "last_sync": last_job.completed_at.isoformat() if last_job and last_job.completed_at else None
+        })
+        
+    return res
 
 @router.post("/{provider}/sync")
 async def sync_integration(
     provider: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_user_via_api_key),
     db: AsyncSession = Depends(get_session)
 ):
     valid_providers = ["notion", "gmail", "gcal"]
@@ -34,8 +63,6 @@ async def sync_integration(
     identity = IdentityService(db)
     org = await identity.get_user_organization(current_user.id) or await identity.get_or_create_default_organization()
     
-    # Run the sync synchronously through the Sync Engine
-    from app.services.sync import SyncEngine
     try:
         sync_engine = SyncEngine(db)
         await sync_engine.run_pull_sync(provider, org.id, 5)

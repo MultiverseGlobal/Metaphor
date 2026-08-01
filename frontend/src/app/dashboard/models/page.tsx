@@ -1,36 +1,46 @@
 "use client";
 
-import React from "react";
-import { Brain, Code, PenTool, Hash, Plus } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Brain, Code, PenTool, Hash, Plus, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { fetchFromMetaphor } from "../../api";
+
+type ModelItem = {
+  id: string;
+  name: string;
+  description: string;
+  nodes: number;
+  isDefault: boolean;
+  lastSync: string;
+};
 
 export default function ContextModelsPage() {
-  const models = [
-    {
-      name: "Global Identity",
-      description: "Your default context model. Applies to all generalized queries.",
-      icon: <Brain className="w-5 h-5 text-foreground" />,
-      nodes: 142,
-      lastSync: "Just now",
-      isDefault: true,
-    },
-    {
-      name: "Software Engineering",
-      description: "Strict technical context. Heavily weighted towards codebase constraints and architectural decisions.",
-      icon: <Code className="w-5 h-5 text-muted" />,
-      nodes: 384,
-      lastSync: "2 hours ago",
-      isDefault: false,
-    },
-    {
-      name: "Writing & Content",
-      description: "Optimized for drafting. Focuses on style preferences and banned terminology.",
-      icon: <PenTool className="w-5 h-5 text-muted" />,
-      nodes: 56,
-      lastSync: "1 day ago",
-      isDefault: false,
+  const [models, setModels] = useState<ModelItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadModels();
+  }, []);
+
+  const loadModels = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchFromMetaphor("/context/models");
+      setModels(data);
+    } catch (e) {
+      console.error("Failed to load context models", e);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const getModelIcon = (id: string) => {
+    switch (id) {
+      case "global": return <Brain className="w-5 h-5 text-foreground" />;
+      case "engineering": return <Code className="w-5 h-5 text-primary" />;
+      default: return <PenTool className="w-5 h-5 text-muted" />;
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-8 animate-in fade-in duration-150">
@@ -41,21 +51,26 @@ export default function ContextModelsPage() {
             Context Models allow you to partition your Knowledge Graph. Downstream AIs can request specific models to filter out irrelevant noise.
           </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm font-medium rounded-md hover:opacity-90 transition-opacity">
-          <Plus className="w-4 h-4" />
-          New Model
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={loadModels} className="p-2 text-muted hover:text-foreground bg-surface-1 border border-border-subtle rounded-lg">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm font-medium rounded-md hover:opacity-90 transition-opacity">
+            <Plus className="w-4 h-4" />
+            New Model
+          </button>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {models.map((model, idx) => (
-          <Card key={idx} className="flex flex-col h-full">
+        {models.map((model) => (
+          <Card key={model.id} className="flex flex-col h-full">
             <div className="flex justify-between items-start mb-6">
               <div className="p-2 bg-surface-2 rounded-md">
-                {model.icon}
+                {getModelIcon(model.id)}
               </div>
               {model.isDefault && (
-                <span className="text-[10px] uppercase tracking-wider font-semibold bg-surface-2 text-foreground px-2 py-1 rounded">
+                <span className="text-[10px] uppercase tracking-wider font-semibold bg-primary/10 text-primary px-2 py-1 rounded border border-primary/20">
                   Default
                 </span>
               )}
@@ -66,10 +81,10 @@ export default function ContextModelsPage() {
               {model.description}
             </p>
             
-            <div className="flex items-center justify-between pt-4 border-t border-subtle text-xs text-muted">
-              <span className="flex items-center gap-1.5">
-                <Hash className="w-3.5 h-3.5" />
-                {model.nodes} Nodes
+            <div className="flex items-center justify-between pt-4 border-t border-border-subtle text-xs text-muted">
+              <span className="flex items-center gap-1.5 font-mono">
+                <Hash className="w-3.5 h-3.5 text-primary" />
+                {model.nodes} Nodes Partitioned
               </span>
               <span>Synced {model.lastSync}</span>
             </div>

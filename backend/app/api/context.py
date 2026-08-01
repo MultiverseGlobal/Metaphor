@@ -74,6 +74,49 @@ async def chat_with_context(req: ContextRequest, current_user: User = Depends(ge
         "context": package_json
     }
 
+@router.get("/models")
+async def get_context_models(current_user: User = Depends(get_user_via_api_key), db: AsyncSession = Depends(get_session)):
+    """Returns active context models (partitions) and live metrics for the organization."""
+    identity = IdentityService(db)
+    org = await identity.get_user_organization(current_user.id) or await identity.get_or_create_default_organization()
+    
+    # Query node counts by type
+    from sqlmodel import select, func
+    from app.models.graph import Node
+    
+    stmt = select(Node.type, func.count(Node.id)).where(Node.organization_id == org.id).group_by(Node.type)
+    res = await db.execute(stmt)
+    counts = dict(res.all())
+    
+    total_nodes = sum(counts.values())
+    
+    return [
+        {
+            "id": "global",
+            "name": "Global Identity",
+            "description": "Your default primary context model. Applies to all generalized AI queries.",
+            "nodes": total_nodes,
+            "isDefault": True,
+            "lastSync": "Just now"
+        },
+        {
+            "id": "engineering",
+            "name": "Software Engineering & Architecture",
+            "description": "Strict technical context. Heavily weighted towards codebase constraints, decisions, and system design.",
+            "nodes": counts.get("Project", 0) + counts.get("Constraint", 0),
+            "isDefault": False,
+            "lastSync": "Active"
+        },
+        {
+            "id": "operations",
+            "name": "Operations & Product Goals",
+            "description": "Optimized for strategic planning. Focuses on active goals, roadmap items, and team commitments.",
+            "nodes": counts.get("Goal", 0) + counts.get("Preference", 0),
+            "isDefault": False,
+            "lastSync": "Active"
+        }
+    ]
+
 @router.post("/lore")
 async def build_lore(req: LoreRequest, current_user: User = Depends(get_user_via_api_key), db: AsyncSession = Depends(get_session)):
     identity = IdentityService(db)
