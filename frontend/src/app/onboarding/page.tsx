@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Bot, Building, FolderGit2, Target, Settings2, AlertCircle, Share2, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Bot, Building, FolderGit2, Target, Settings2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { fetchFromMetaphor } from "../api";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  
   const [content, setContent] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<{
@@ -24,7 +23,6 @@ export default function OnboardingPage() {
       setAnalysis(null);
       return;
     }
-
     const timer = setTimeout(async () => {
       setIsAnalyzing(true);
       try {
@@ -36,7 +34,6 @@ export default function OnboardingPage() {
         setIsAnalyzing(false);
       }
     }, 1000);
-
     return () => clearTimeout(timer);
   }, [content]);
 
@@ -56,156 +53,157 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="h-screen w-full bg-background flex overflow-hidden font-sans">
+    <div className="min-h-screen w-full bg-background flex flex-col items-center font-sans py-24 px-8 overflow-y-auto">
       
-      {/* ── Left Side: Input ── */}
-      <div className="w-1/2 h-full flex flex-col border-r border-border-subtle bg-background z-10 shadow-[20px_0_40px_rgba(0,0,0,0.05)]">
+      <div className="w-full max-w-3xl flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-700">
         
         {/* Header */}
-        <div className="px-12 py-12 border-b border-border-subtle">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-3 h-3 rounded-full bg-foreground shadow-[0_0_8px_rgba(var(--foreground-rgb),0.5)]" />
-            <span className="text-sm font-semibold tracking-tight text-foreground">Context Setup</span>
-          </div>
+        <div className="mb-12 border-b border-border-subtle pb-8">
           <h1 className="text-3xl font-light tracking-tight text-foreground mb-4">Build Your Shared Context</h1>
-          <p className="text-muted text-sm leading-relaxed max-w-md">
+          <p className="text-muted text-sm leading-relaxed">
             Every AI you connect will use this to understand your work, projects, and goals.
           </p>
         </div>
 
         {/* Input Area */}
-        <div className="flex-1 p-12 flex flex-col">
-          <label className="text-sm font-semibold tracking-tight text-foreground mb-4">What are you currently building?</label>
+        <div className="mb-12">
+          <label className="block text-sm font-semibold tracking-tight text-foreground mb-6">
+            What are you currently building?
+          </label>
           <textarea 
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="I am building..."
-            className="w-full flex-1 bg-surface-1 border border-border-subtle rounded-xl p-6 text-foreground focus:outline-none focus:border-primary transition-colors shadow-inner resize-none text-base leading-relaxed"
+            placeholder="I am working on..."
+            className="w-full min-h-[160px] bg-transparent border-none p-0 text-foreground focus:outline-none focus:ring-0 text-xl font-light leading-relaxed placeholder:text-muted/40 resize-y"
             autoFocus
           />
         </div>
 
-        {/* Footer */}
-        <div className="p-8 border-t border-border-subtle bg-background flex justify-end">
-           <button 
-              onClick={finalize}
-              disabled={isFinalizing || !content.trim()}
-              className="px-8 py-4 bg-foreground text-background rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {isFinalizing ? "Building Graph..." : "Finalize Context"} <ArrowRight className="w-4 h-4" />
-            </button>
+        {/* Live Understanding Divider */}
+        <div className="flex items-center gap-4 mb-12">
+          <div className="h-px bg-border-subtle flex-1" />
+          <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-muted">
+            {isAnalyzing ? (
+              <><Bot className="w-4 h-4 animate-pulse text-primary" /> Thinking...</>
+            ) : (
+              "Live Understanding"
+            )}
+          </div>
+          <div className="h-px bg-border-subtle flex-1" />
         </div>
-      </div>
 
-      {/* ── Right Side: Live Understanding ── */}
-      <div className="w-1/2 h-full bg-surface-1 relative overflow-y-auto p-12">
-        
-        <div className="flex items-center justify-between mb-12">
-          <h2 className="text-sm font-mono uppercase tracking-widest text-muted">Live Understanding</h2>
-          {isAnalyzing && (
-            <div className="flex items-center gap-2 text-xs text-muted animate-pulse">
-              <Bot className="w-3 h-3" /> Thinking...
+        {/* Live Understanding Rendering */}
+        <div className="min-h-[200px] mb-12 transition-all duration-500">
+          {!analysis && !isAnalyzing ? (
+             <div className="text-center text-muted opacity-40 py-12 text-sm italic">
+                Start typing above...
+             </div>
+          ) : (
+            <div className="space-y-8 animate-in fade-in duration-500">
+              
+              {/* Organization */}
+              {analysis?.organization && (
+                <div className="flex flex-col md:flex-row md:items-start gap-4">
+                  <div className="flex items-center gap-2 w-48 shrink-0 pt-1 text-muted">
+                    <Building className="w-4 h-4" />
+                    <span className="text-sm font-medium">Organization</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="w-4 h-4 text-primary" />
+                      <span className="text-base text-foreground font-medium">{analysis.organization}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Projects */}
+              {analysis?.projects && analysis.projects.length > 0 && (
+                <div className="flex flex-col md:flex-row md:items-start gap-4">
+                  <div className="flex items-center gap-2 w-48 shrink-0 pt-1 text-muted">
+                    <FolderGit2 className="w-4 h-4" />
+                    <span className="text-sm font-medium">Projects</span>
+                  </div>
+                  <div className="flex-1 space-y-4">
+                    {analysis.projects.map((proj, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <CheckCircle2 className="w-4 h-4 text-primary" />
+                        <span className="text-base text-foreground font-medium">{proj}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Goals */}
+              {analysis?.goals && analysis.goals.length > 0 && (
+                <div className="flex flex-col md:flex-row md:items-start gap-4">
+                  <div className="flex items-center gap-2 w-48 shrink-0 pt-1 text-muted">
+                    <Target className="w-4 h-4" />
+                    <span className="text-sm font-medium">Goals</span>
+                  </div>
+                  <div className="flex-1 space-y-4">
+                    {analysis.goals.map((goal, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <CheckCircle2 className="w-4 h-4 text-primary" />
+                        <span className="text-base text-foreground font-medium">{goal}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Preferences */}
+              {analysis?.preferences && analysis.preferences.length > 0 && (
+                <div className="flex flex-col md:flex-row md:items-start gap-4">
+                  <div className="flex items-center gap-2 w-48 shrink-0 pt-1 text-muted">
+                    <Settings2 className="w-4 h-4" />
+                    <span className="text-sm font-medium">Preferences</span>
+                  </div>
+                  <div className="flex-1 space-y-4">
+                    {analysis.preferences.map((pref, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <CheckCircle2 className="w-4 h-4 text-primary" />
+                        <span className="text-base text-foreground font-medium">{pref}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Missing Info */}
+              {analysis?.missing_information && analysis.missing_information.length > 0 && (
+                <div className="flex flex-col md:flex-row md:items-start gap-4 pt-6 mt-6 border-t border-border-subtle">
+                  <div className="flex items-center gap-2 w-48 shrink-0 pt-1 text-muted">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">Missing Info</span>
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    {analysis.missing_information.map((info, i) => (
+                      <div key={i} className="text-sm text-muted">
+                        • {info}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
             </div>
           )}
         </div>
 
-        {!analysis && !isAnalyzing ? (
-          <div className="flex flex-col items-center justify-center h-64 text-muted opacity-50">
-            <Share2 className="w-12 h-12 mb-4" />
-            <p className="text-sm font-mono uppercase tracking-widest">Awaiting Input...</p>
-          </div>
-        ) : (
-          <div className="space-y-10 animate-in fade-in duration-500">
-            
-            {/* Organization */}
-            {analysis?.organization && (
-              <div>
-                <div className="flex items-center gap-2 mb-4 text-foreground">
-                  <Building className="w-4 h-4 text-foreground" />
-                  <span className="text-sm font-semibold">Organization</span>
-                </div>
-                <div className="flex items-center gap-2 px-4 py-3 bg-background border border-border-subtle rounded-lg">
-                  <CheckCircle2 className="w-4 h-4 text-primary" />
-                  <span className="text-sm text-foreground">{analysis.organization}</span>
-                </div>
-              </div>
-            )}
+        {/* Finalize Button */}
+        <div className="flex justify-end pt-8 border-t border-border-subtle">
+           <button 
+              onClick={finalize}
+              disabled={isFinalizing || !content.trim()}
+              className="px-8 py-3 bg-foreground text-background rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50 shadow-md"
+            >
+              {isFinalizing ? "Constructing Graph..." : "Finalize Context"} <ArrowRight className="w-4 h-4" />
+            </button>
+        </div>
 
-            {/* Projects */}
-            {analysis?.projects && analysis.projects.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-4 text-foreground">
-                  <FolderGit2 className="w-4 h-4 text-foreground" />
-                  <span className="text-sm font-semibold">Projects</span>
-                </div>
-                <div className="space-y-2">
-                  {analysis.projects.map((proj, i) => (
-                    <div key={i} className="flex items-center gap-2 px-4 py-3 bg-background border border-border-subtle rounded-lg">
-                      <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span className="text-sm text-foreground">{proj}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Goals */}
-            {analysis?.goals && analysis.goals.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-4 text-foreground">
-                  <Target className="w-4 h-4 text-foreground" />
-                  <span className="text-sm font-semibold">Goals</span>
-                </div>
-                <div className="space-y-2">
-                  {analysis.goals.map((goal, i) => (
-                    <div key={i} className="flex items-center gap-2 px-4 py-3 bg-background border border-border-subtle rounded-lg">
-                      <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span className="text-sm text-foreground">{goal}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Preferences */}
-            {analysis?.preferences && analysis.preferences.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-4 text-foreground">
-                  <Settings2 className="w-4 h-4 text-foreground" />
-                  <span className="text-sm font-semibold">Preferences</span>
-                </div>
-                <div className="space-y-2">
-                  {analysis.preferences.map((pref, i) => (
-                    <div key={i} className="flex items-center gap-2 px-4 py-3 bg-background border border-border-subtle rounded-lg">
-                      <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span className="text-sm text-foreground">{pref}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Missing Info */}
-            {analysis?.missing_information && analysis.missing_information.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-4 text-foreground">
-                  <AlertCircle className="w-4 h-4 text-foreground" />
-                  <span className="text-sm font-semibold">Missing Information</span>
-                </div>
-                <div className="space-y-2">
-                  {analysis.missing_information.map((info, i) => (
-                    <div key={i} className="px-4 py-3 bg-surface-2 border border-border-subtle rounded-lg">
-                      <span className="text-sm text-muted">{info}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-          </div>
-        )}
       </div>
-
     </div>
   );
 }
