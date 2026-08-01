@@ -41,6 +41,8 @@ class SnapshotResponse(BaseModel):
     timeline: List[Dict[str, Any]]
     recommended_focus: str
     confidence: float
+    is_partial: bool = False
+    error_message: Optional[str] = None
 
 
 class ContextQueryRequest(BaseModel):
@@ -189,9 +191,11 @@ async def get_context_snapshot(
             f"Synthesize the overarching mission, context constraints/rules, and recommended focus for this AI agent."
         )
 
-        mission = "Develop the Metaphor universal context engine to align all connected AI agents."
-        constraints = ["Avoid OAuth setup overhead for V1 (Developer Keys First)", "Use Postgres + pgvector inside Docker"]
-        recommended_focus = "Focus on implementing the Context Inbox and mock conversation ingestion flow."
+        mission = ""
+        constraints = []
+        recommended_focus = ""
+        is_partial = False
+        error_message = None
         
         try:
             llm_response = await llm_provider.query_llm(
@@ -205,11 +209,13 @@ async def get_context_snapshot(
             if clean_res.endswith("```"):
                 clean_res = clean_res[:-3]
             data = json.loads(clean_res)
-            mission = data.get("mission", mission)
-            constraints = data.get("constraints", constraints)
-            recommended_focus = data.get("recommended_focus", recommended_focus)
+            mission = data.get("mission", "")
+            constraints = data.get("constraints", [])
+            recommended_focus = data.get("recommended_focus", "")
         except Exception as llm_err:
-            logger.warning(f"LLM context snapshot synthesis failed: {llm_err}. Using default fallback context.")
+            logger.warning(f"LLM context snapshot synthesis failed: {llm_err}.")
+            is_partial = True
+            error_message = f"LLM synthesis failed: {str(llm_err)}"
 
         # ── 5. Calculate Confidence (Context Health) ──────────────────────
         active_integrations = 0
@@ -229,7 +235,9 @@ async def get_context_snapshot(
             constraints=constraints,
             timeline=timeline,
             recommended_focus=recommended_focus,
-            confidence=round(confidence, 2)
+            confidence=round(confidence, 2),
+            is_partial=is_partial,
+            error_message=error_message
         )
 
     except Exception as e:

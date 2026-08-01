@@ -40,13 +40,14 @@ class ReflectionService:
             f"Type: {event.event_type}\n"
             f"Payload: {payload_str}\n\n"
             f"Task: Analyze the event. Output a JSON object containing a list of 'operations'.\n"
-            f"Supported actions: CREATE_NODE, UPDATE_NODE, SUPERSEDE_NODE, CREATE_EDGE, IGNORE.\n"
+            f"Supported actions: CREATE_NODE, UPDATE_NODE, SUPERSEDE_NODE, CREATE_EDGE, ASK_CLARIFICATION, IGNORE.\n"
+            f"Generate a confidence score (0.0 to 1.0) for your extraction. If your confidence is below 0.7, or if there is glaring ambiguity, DO NOT create the node. Instead, output an ASK_CLARIFICATION action.\n"
             f"Output Schema:\n"
             f"{{\n"
             f"  \"operations\": [\n"
             f"    {{\n"
             f"       \"action\": \"CREATE_NODE\",\n"
-            f"       \"node\": {{\"title\": \"...\", \"type\": \"Project|Decision|Goal|Constraint|Preference|Person|Concept\", \"summary\": \"...\", \"metadata\": {{}}}}\n"
+            f"       \"node\": {{\"title\": \"...\", \"type\": \"Project|Decision|Goal|Constraint|Preference|Person|Concept\", \"summary\": \"...\", \"metadata\": {{}}, \"confidence\": 0.95}}\n"
             f"    }},\n"
             f"    {{\n"
             f"       \"action\": \"SUPERSEDE_NODE\",\n"
@@ -56,12 +57,18 @@ class ReflectionService:
             f"    {{\n"
             f"       \"action\": \"UPDATE_NODE\",\n"
             f"       \"node_id\": \"uuid\",\n"
-            f"       \"summary\": \"Updated summary...\"\n"
+            f"       \"summary\": \"Updated summary...\",\n"
+            f"       \"confidence\": 0.95\n"
+            f"    }},\n"
+            f"    {{\n"
+            f"       \"action\": \"ASK_CLARIFICATION\",\n"
+            f"       \"question\": \"What is the timeline for the Metaphor launch?\",\n"
+            f"       \"context\": \"Found a mention of launch but no date.\"\n"
             f"    }},\n"
             f"    {{\n"
             f"       \"action\": \"CREATE_EDGE\",\n"
-            f"       \"source_id\": \"uuid\",\n"
-            f"       \"target_id\": \"uuid\",\n"
+            f"       \"source_title_or_id\": \"title or uuid\",\n"
+            f"       \"target_title_or_id\": \"title or uuid\",\n"
             f"       \"relationship\": \"owns|requires|contradicts|relates_to\"\n"
             f"    }},\n"
             f"    {{\n"
@@ -113,7 +120,9 @@ class ReflectionService:
                         summary=summary,
                         content=summary,
                         metadata=n_data.get("metadata", {}),
-                        embedding_vector=embedding
+                        embedding_vector=embedding,
+                        confidence=n_data.get("confidence", 1.0),
+                        source_event_id=event.id
                     )
                     node_map[title.lower()] = node
                     applied_ops += 1
@@ -137,7 +146,9 @@ class ReflectionService:
                             summary=summary,
                             content=summary,
                             metadata=n_data.get("metadata", {}),
-                            embedding_vector=embedding
+                            embedding_vector=embedding,
+                            confidence=n_data.get("confidence", 1.0),
+                            source_event_id=event.id
                         )
                         node_map[title.lower()] = new_node
                         
@@ -145,7 +156,7 @@ class ReflectionService:
                         await self.graph.update_node(old_id, status="superseded", superseded_by_id=new_node.id)
                         
                         # Create an explicit edge
-                        await self.graph.create_edge(from_node=new_node.id, to_node=old_id, relationship="supersedes")
+                        await self.graph.create_edge(from_node=new_node.id, to_node=old_id, relationship="supersedes", source_event_id=event.id)
                         
                         applied_ops += 1
                     except Exception as e:
@@ -163,16 +174,47 @@ class ReflectionService:
                         logger.error(f"Error updating node: {e}")
                         
             elif action == "CREATE_EDGE":
-                src = op.get("source_id")
-                tgt = op.get("target_id")
+                src_ref = op.get("source_title_or_id")
+                tgt_ref = op.get("target_title_or_id")
                 rel = op.get("relationship", "relates_to")
-                if src and tgt:
+                if src_ref and tgt_ref:
+                    def resolve_ref(ref_str):
+                        if ref_str.lower() in node_map:
+                            return node_map[ref_str.lower()].id
+                        try:
+                            return uuid.UUID(ref_str)
+                        except ValueError:
+                            found = next((n for n in existing_nodes if n.title.lower() == ref_str.lower()), None)
+                            return found.id if found else None
+
                     try:
-                        await self.graph.create_edge(uuid.UUID(src), uuid.UUID(tgt), rel)
-                        applied_ops += 1
+                        src_id = resolve_ref(src_ref)
+                        tgt_id = resolve_ref(tgt_ref)
+                        if src_id and tgt_id:
+                            await self.graph.create_edge(src_id, tgt_id, rel, source_event_id=event.id)
+                            applied_ops += 1
+                        else:
+                            logger.error(f"Error creating edge: Could not resolve references src='{src_ref}' tgt='{tgt_ref}'")
                     except Exception as e:
                         logger.error(f"Error creating edge: {e}")
                         
+            elif action == "ASK_CLARIFICATION":
+                question = op.get("question", "Unknown question")
+                context = op.get("context", "")
+                try:
+                    await self.graph.create_node(
+                        org_id=org_id,
+                        type="Clarification",
+                        title=question,
+                        summary=context,
+                        content=context,
+                        metadata={},
+                        source_event_id=event.id
+                    )
+                    applied_ops += 1
+                except Exception as e:
+                    logger.error(f"Error creating clarification: {e}")
+
             elif action == "IGNORE":
                 logger.info(f"LLM Ignored event: {op.get('reason')}")
                 applied_ops += 1

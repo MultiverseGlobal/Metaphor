@@ -9,6 +9,7 @@ class Integration(SQLModel, table=True):
     
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     organization_id: uuid.UUID = Field(foreign_key="organizations.id", index=True)
+    user_id: uuid.UUID = Field(foreign_key="users.id", index=True)
     
     provider: str # e.g., "notion", "github"
     status: str = Field(default="active")
@@ -74,6 +75,7 @@ class SyncJob(SQLModel, table=True):
     
     provider: str
     status: str = Field(default="processing") # processing, completed, failed
+    payload: dict = Field(default_factory=dict, sa_column=Column(JSON))
     
     items_processed: int = Field(default=0)
     error_message: Optional[str] = None

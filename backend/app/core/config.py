@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     # Google Service Account JSON path
     GOOGLE_SERVICE_ACCOUNT_JSON_PATH: str = ""
 
+    # Redis and Security
+    REDIS_URL: str = "redis://localhost:6379"
+    ENCRYPTION_KEY: str = "" # Read from .env
+
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"),
         env_file_encoding="utf-8",

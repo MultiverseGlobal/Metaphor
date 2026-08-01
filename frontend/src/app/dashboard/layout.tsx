@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Network, Database, Key, Plug, Settings, Sidebar, User, ChevronDown, Layers, Terminal } from "lucide-react";
+import { Network, Database, Key, Plug, Settings, Sidebar, User, ChevronDown, Layers, Terminal, Inbox } from "lucide-react";
 import { Kbd } from "@/components/ui/Kbd";
 import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
 
@@ -51,6 +51,7 @@ export default function LinearLayout({
           
           {/* Action Layer */}
           <div className="space-y-0.5 mb-6">
+            <NavItem href="/dashboard/inbox" icon={<Inbox />} label="Context Inbox" shortcut="⌘I" pathname={pathname} />
             <NavItem href="/dashboard/playground" icon={<Terminal />} label="The Context Layer" shortcut="⌘P" pathname={pathname} />
           </div>
 

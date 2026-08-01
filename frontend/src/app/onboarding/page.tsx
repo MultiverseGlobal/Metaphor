@@ -120,6 +120,12 @@ export default function OnboardingPage() {
   
   // Analyzing State
   const [analysisStep, setAnalysisStep] = useState(0);
+  const [stats, setStats] = useState({
+    node_count: 0,
+    edge_count: 0,
+    active_sessions: 0,
+    total_events: 0
+  });
   
   // Resolving State
   const [questions, setQuestions] = useState<string[]>(AMBIGUITY_QUESTIONS);
@@ -150,6 +156,16 @@ export default function OnboardingPage() {
         while (isPolling) {
           try {
             const statusRes = await fetchFromMetaphor("/integrations/status", undefined, "GET");
+            const statsRes = await fetchFromMetaphor("/graph/stats", undefined, "GET");
+            if (statsRes) {
+              setStats({
+                node_count: statsRes.node_count || 0,
+                edge_count: statsRes.edge_count || 0,
+                active_sessions: statsRes.active_sessions || 0,
+                total_events: statsRes.total_events || 0
+              });
+            }
+
             if (statusRes.has_data || statusRes.status === "completed") {
               isPolling = false;
               clearInterval(animationInterval);
@@ -485,19 +501,19 @@ export default function OnboardingPage() {
 
           <div className="w-full grid grid-cols-2 gap-4">
             <div className={`flex flex-col items-center p-4 bg-surface-1 border border-border-subtle rounded-xl transition-opacity duration-700 ${analysisStep >= 1 ? 'opacity-100' : 'opacity-0'}`}>
-              <span className="text-2xl font-light text-foreground mb-1">12</span>
-              <span className="text-xs text-muted font-medium">Projects found</span>
+              <span className="text-2xl font-light text-foreground mb-1">{stats.total_events}</span>
+              <span className="text-xs text-muted font-medium">Events processed</span>
             </div>
             <div className={`flex flex-col items-center p-4 bg-surface-1 border border-border-subtle rounded-xl transition-opacity duration-700 ${analysisStep >= 1 ? 'opacity-100' : 'opacity-0'}`}>
-              <span className="text-2xl font-light text-foreground mb-1">148</span>
-              <span className="text-xs text-muted font-medium">Documents read</span>
+              <span className="text-2xl font-light text-foreground mb-1">{stats.edge_count}</span>
+              <span className="text-xs text-muted font-medium">Relationships mapped</span>
             </div>
             <div className={`flex flex-col items-center p-4 bg-surface-1 border border-border-subtle rounded-xl transition-opacity duration-700 ${analysisStep >= 2 ? 'opacity-100' : 'opacity-0'}`}>
-              <span className="text-2xl font-light text-foreground mb-1">3</span>
-              <span className="text-xs text-muted font-medium">Companies</span>
+              <span className="text-2xl font-light text-foreground mb-1">{stats.active_sessions}</span>
+              <span className="text-xs text-muted font-medium">Active sessions</span>
             </div>
             <div className={`flex flex-col items-center p-4 bg-surface-1 border border-border-subtle rounded-xl transition-opacity duration-700 ${analysisStep >= 2 ? 'opacity-100' : 'opacity-0'}`}>
-              <span className="text-2xl font-light text-foreground mb-1">2,410</span>
+              <span className="text-2xl font-light text-foreground mb-1">{stats.node_count}</span>
               <span className="text-xs text-muted font-medium">Nodes created</span>
             </div>
           </div>

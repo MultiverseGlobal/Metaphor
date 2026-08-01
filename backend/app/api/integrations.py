@@ -14,7 +14,9 @@ from app.core.security import get_user_via_api_key
 from app.models.identity import User
 from app.services.reflection import ReflectionService
 from app.services.integrations.github import fetch_public_repository
-from app.services.integrations.notion import fetch_notion_mockup
+from app.services.integrations.notion import fetch_notion_workspace
+from app.services.integrations.linear import fetch_linear_workspace
+from app.services.integrations.google import fetch_google_workspace
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -25,74 +27,11 @@ class IntegrationSyncRequest(BaseModel):
     github_token: Optional[str] = None
     notion_token: Optional[str] = None
 
-async def process_integration_sync(
-    user_id: str,
-    org_id: str,
-    sources: List[str],
-    github_repo: str,
-    github_token: Optional[str] = None,
-    notion_token: Optional[str] = None
-):
-    """
-    Background task that fetches data from the requested sources and feeds it into the Knowledge Graph.
-    """
-    try:
-        combined_content = f"User {user_id} has connected the following sources: {', '.join(sources)}.\n\n"
-        
-        # Initialize an isolated DB session for the background task
-        from app.database.session import get_session_context
-        from sqlmodel import select
-        from app.models.operations import Integration
-        import uuid
-        
-        async with get_session_context() as session:
-            # Look up tokens from the database if they were not provided via request
-            if not github_token and "github" in sources:
-                stmt = select(Integration).where(Integration.organization_id == uuid.UUID(org_id), Integration.provider == "github")
-                res = await session.execute(stmt)
-                integ = res.scalars().first()
-                if integ and integ.access_token:
-                    github_token = integ.access_token
-                    
-            if not notion_token and "notion" in sources:
-                stmt = select(Integration).where(Integration.organization_id == uuid.UUID(org_id), Integration.provider == "notion")
-                res = await session.execute(stmt)
-                integ = res.scalars().first()
-                if integ and integ.access_token:
-                    notion_token = integ.access_token
-                    
-            if "github" in sources:
-                logger.info(f"Fetching GitHub repo: {github_repo}")
-                github_content = await fetch_public_repository(github_repo, github_token)
-                combined_content += github_content + "\n\n"
-                
-            if "notion" in sources:
-                logger.info("Fetching Notion mockup")
-                notion_content = await fetch_notion_mockup()
-                combined_content += notion_content + "\n\n"
-            
-            from app.services.graph import GraphService
-            from app.models.operations import WebhookEvent
-            
-            graph = GraphService(session)
-            reflection_service = ReflectionService(graph)
-            
-            event = WebhookEvent(
-                organization_id=uuid.UUID(org_id),
-                provider="metaphor_onboarding",
-                event_type="initial_sync",
-                payload={"content": combined_content}
-            )
-            
-            # Feed into graph
-            await reflection_service.reflect_and_evolve(
-                org_id=uuid.UUID(org_id),
-                event=event
-            )
-            logger.info(f"Integration sync completed successfully for user {user_id}")
-            
-    except Exception as e:
-        logger.error(f"Integration sync failed: {e}")
+class ContextDropRequest(BaseModel):
+    source: str
+    content: str
+
+# process_integration_sync has been moved to arq_worker.py to support the Arq queue
 
 @router.post("/sync")
 async def trigger_integration_sync(
@@ -118,17 +57,75 @@ async def trigger_integration_sync(
         
     org_id = str(org_member.organization_id)
     
-    background_tasks.add_task(
-        process_integration_sync,
+    from app.models.operations import SyncJob
+    
+    # Create the job synchronously so we don't lose it if we crash
+    job = SyncJob(
+        organization_id=uuid.UUID(org_id),
+        provider="metaphor_onboarding",
+        status="Initializing synchronization...",
+        payload={
+            "user_id": str(user.id),
+            "sources": request.sources,
+            "github_repo": request.github_repo
+        }
+    )
+    session.add(job)
+    await session.commit()
+    await session.refresh(job)
+    
+    from arq import create_pool
+    from arq.connections import RedisSettings
+    from app.core.config import settings
+    import urllib.parse
+    
+    parsed = urllib.parse.urlparse(settings.REDIS_URL)
+    redis_host = parsed.hostname or "localhost"
+    redis_port = parsed.port or 6379
+    
+    redis = await create_pool(RedisSettings(host=redis_host, port=redis_port))
+    await redis.enqueue_job(
+        "process_integration_sync",
         user_id=str(user.id),
         org_id=org_id,
         sources=request.sources,
         github_repo=request.github_repo,
-        github_token=request.github_token,
-        notion_token=request.notion_token
+        job_id=job.id
     )
     
-    return {"status": "sync_started", "message": "Integration sync running in the background."}
+    return {"status": "sync_started", "message": "Integration sync running in the background via Arq."}
+
+@router.post("/drop")
+async def context_drop(
+    request: ContextDropRequest,
+    db: AsyncSession = Depends(get_session)
+):
+    """
+    Accepts raw text drops from ChatGPT, Claude, or any text source.
+    """
+    from app.services.identity import IdentityService
+    identity = IdentityService(db)
+    org = await identity.get_or_create_default_organization()
+    
+    from app.models.operations import WebhookEvent
+    event = WebhookEvent(
+        provider=request.source,
+        event_type="context_drop",
+        payload={"content": request.content},
+        organization_id=org.id
+    )
+    db.add(event)
+    await db.commit()
+    await db.refresh(event)
+    
+    from app.services.graph import GraphService
+    from app.services.reflection import ReflectionService
+    graph = GraphService(db)
+    reflection = ReflectionService(graph)
+    
+    await reflection.process_event(event, org.id)
+    
+    return {"status": "success", "message": "Context drop processed."}
 
 @router.get("/status")
 async def check_integration_status(
@@ -138,24 +135,38 @@ async def check_integration_status(
     """
     Checks if there are any nodes in the graph for the user's primary organization.
     This serves as a polling endpoint to know if the background sync has completed.
+    Returns the latest progress message from the SyncJob table.
     """
-    from sqlmodel import select
+    from sqlmodel import select, desc
     from app.models.identity import OrganizationMember
     from app.models.graph import Node
+    from app.models.operations import SyncJob
     
     stmt = select(OrganizationMember).where(OrganizationMember.user_id == user.id)
     result = await session.execute(stmt)
     org_member = result.scalars().first()
     
     if not org_member:
-        return {"status": "no_org", "has_data": False}
+        return {"status": "no_org", "has_data": False, "message": ""}
         
     stmt_nodes = select(Node).where(Node.organization_id == org_member.organization_id).limit(1)
     result_nodes = await session.execute(stmt_nodes)
     node = result_nodes.scalars().first()
     
+    stmt_job = select(SyncJob).where(
+        SyncJob.organization_id == org_member.organization_id, 
+        SyncJob.provider == "metaphor_onboarding"
+    ).order_by(desc(SyncJob.started_at)).limit(1)
+    result_job = await session.execute(stmt_job)
+    latest_job = result_job.scalars().first()
+    
+    job_msg = latest_job.status if latest_job else ("completed" if node else "Initializing synchronization...")
+    if latest_job and latest_job.status == "failed":
+        job_msg = "failed"
+    
     return {
-        "status": "completed" if node else "processing",
+        "status": "completed" if (latest_job and latest_job.status == "completed") or (not latest_job and node) else job_msg,
+        "message": job_msg,
         "has_data": node is not None
     }
 
@@ -182,6 +193,7 @@ async def authorize_integration(
     # Create state token
     state_payload = {
         "org_id": org_id,
+        "user_id": str(user.id),
         "provider": provider,
         "exp": int(datetime.now(timezone.utc).timestamp()) + 3600
     }
@@ -220,12 +232,14 @@ async def integration_callback(
     from sqlmodel import select
     from app.models.operations import Integration
     from fastapi.responses import RedirectResponse
+    from app.core.security import encrypt_token
     import base64
     
     try:
         payload = jwt.decode(state, settings.SECRET_KEY, algorithms=["HS256"])
         org_id = payload.get("org_id")
-        if not org_id or payload.get("provider") != provider:
+        user_id = payload.get("user_id")
+        if not org_id or not user_id or payload.get("provider") != provider:
             raise ValueError("Invalid state payload")
     except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid or expired state token")
@@ -271,18 +285,22 @@ async def integration_callback(
         # Upsert integration
         stmt = select(Integration).where(
             Integration.organization_id == uuid.UUID(org_id),
+            Integration.user_id == uuid.UUID(user_id),
             Integration.provider == provider
         )
         result = await session.execute(stmt)
         integration = result.scalars().first()
         
+        encrypted_token = encrypt_token(access_token)
+        
         if integration:
-            integration.access_token = access_token
+            integration.access_token = encrypted_token
         else:
             integration = Integration(
                 organization_id=uuid.UUID(org_id),
+                user_id=uuid.UUID(user_id),
                 provider=provider,
-                access_token=access_token
+                access_token=encrypted_token
             )
             session.add(integration)
             

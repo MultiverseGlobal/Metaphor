@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 from typing import Optional, Any, Union
 import uuid
+import os
+from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -126,3 +128,31 @@ async def get_user_via_api_key(request: Request, session: AsyncSession = Depends
         detail="Invalid or missing API key / token",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+_fernet = None
+
+def get_fernet() -> Fernet:
+    global _fernet
+    if _fernet is None:
+        key = settings.ENCRYPTION_KEY
+        if not key:
+            raise ValueError("ENCRYPTION_KEY environment variable is not set. Token encryption requires it.")
+        
+        try:
+            _fernet = Fernet(key.encode('utf-8'))
+        except ValueError as e:
+            raise ValueError(f"ENCRYPTION_KEY is invalid: {e}")
+            
+    return _fernet
+
+def encrypt_token(token: str) -> str:
+    if not token:
+        return token
+    f = get_fernet()
+    return f.encrypt(token.encode('utf-8')).decode('utf-8')
+
+def decrypt_token(encrypted_token: str) -> str:
+    if not encrypted_token:
+        return encrypted_token
+    f = get_fernet()
+    return f.decrypt(encrypted_token.encode('utf-8')).decode('utf-8')

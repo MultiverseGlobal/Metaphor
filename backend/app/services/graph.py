@@ -9,13 +9,27 @@ class GraphService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create_node(self, org_id: uuid.UUID, type: str, title: str, summary: str, content: str, metadata: Dict[str, str] = None, embedding_vector: List[float] = None) -> Node:
+    async def create_node(self, org_id: uuid.UUID, type: str, title: str, summary: str, content: str, metadata: Dict[str, str] = None, embedding_vector: List[float] = None, confidence: float = 1.0, source_event_id: Optional[uuid.UUID] = None) -> Node:
+        # Idempotency check
+        if source_event_id:
+            stmt = select(Node).where(
+                Node.organization_id == org_id,
+                Node.source_event_id == source_event_id,
+                Node.title == title[:255]
+            )
+            res = await self.session.execute(stmt)
+            existing = res.scalars().first()
+            if existing:
+                return existing
+
         node = Node(
             organization_id=org_id,
             type=type,
             title=title[:255],
             summary=summary,
-            content=content
+            content=content,
+            confidence=confidence,
+            source_event_id=source_event_id
         )
         self.session.add(node)
         await self.session.commit()
@@ -69,12 +83,26 @@ class GraphService:
         await self.session.refresh(evidence)
         return evidence
 
-    async def create_edge(self, from_node: uuid.UUID, to_node: uuid.UUID, relationship: str, weight: float = 1.0) -> Edge:
+    async def create_edge(self, from_node: uuid.UUID, to_node: uuid.UUID, relationship: str, weight: float = 1.0, source_event_id: Optional[uuid.UUID] = None) -> Edge:
+        # Idempotency check
+        if source_event_id:
+            stmt = select(Edge).where(
+                Edge.from_node == from_node,
+                Edge.to_node == to_node,
+                Edge.relationship == relationship,
+                Edge.source_event_id == source_event_id
+            )
+            res = await self.session.execute(stmt)
+            existing = res.scalars().first()
+            if existing:
+                return existing
+
         edge = Edge(
             from_node=from_node,
             to_node=to_node,
             relationship=relationship,
-            weight=weight
+            weight=weight,
+            source_event_id=source_event_id
         )
         self.session.add(edge)
         await self.session.commit()

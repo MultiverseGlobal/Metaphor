@@ -17,7 +17,7 @@ class Node(SQLModel, table=True):
     content: str
     
     confidence: float = Field(default=1.0)
-    status: str = Field(default="active") # active, superseded, archived
+    status: str = Field(default="pending_review") # pending_review, approved, rejected, superseded, archived
     
     superseded_by_id: Optional[uuid.UUID] = Field(default=None, foreign_key="nodes.id")
     created_by: Optional[uuid.UUID] = Field(default=None, foreign_key="users.id")
@@ -25,6 +25,9 @@ class Node(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
     updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
     archived_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    
+    # For idempotency
+    source_event_id: Optional[uuid.UUID] = Field(default=None, index=True)
     
     # We maintain a reference to an embedding if it exists
     embedding_id: Optional[uuid.UUID] = Field(default=None, foreign_key="embeddings.id")
@@ -43,6 +46,9 @@ class Edge(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     from_node: uuid.UUID = Field(foreign_key="nodes.id", index=True)
     to_node: uuid.UUID = Field(foreign_key="nodes.id", index=True)
+    
+    # For idempotency
+    source_event_id: Optional[uuid.UUID] = Field(default=None, index=True)
     
     relationship: str = Field(index=True) # e.g., "owns", "requires", "contradicts"
     weight: float = Field(default=1.0)
