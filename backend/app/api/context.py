@@ -1,3 +1,4 @@
+from typing import List, Dict, Any
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -20,7 +21,8 @@ class LoreRequest(BaseModel):
     content: str
 
 class AnalyzeDraftRequest(BaseModel):
-    answers: list[dict]  # [{question: str, answer: str}]
+    answers: List[Dict[str, Any]]
+
 
 @router.post("/query")
 async def query_context(req: ContextRequest, current_user: User = Depends(get_user_via_api_key), db: AsyncSession = Depends(get_session)):

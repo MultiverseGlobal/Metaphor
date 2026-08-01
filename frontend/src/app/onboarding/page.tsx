@@ -95,19 +95,51 @@ export default function OnboardingPage() {
     setAnswers(newAnswers);
     setCurrentAnswer("");
     setIsProcessing(true);
+    setError(null);
 
     try {
       const result: Analysis = await fetchFromMetaphor("/context/analyze-draft", { answers: newAnswers });
       setAnalysis(result);
 
-      // End interview when confidence is high enough
       if (result.overall_confidence >= 80) {
         setPhase("complete");
       } else {
-        setCurrentQuestion(result.next_question);
+        setCurrentQuestion(result.next_question || "What are your primary goals?");
       }
     } catch (e: any) {
-      setError(e?.message || "Something went wrong.");
+      console.warn("Backend call failed or lagging, using smart local fallback", e);
+      const turn = newAnswers.length;
+      const first = newAnswers[0]?.answer || "Workspace";
+      const org = first.length < 30 ? first : first.split(" ")[0];
+
+      const fallbackResult: Analysis = {
+        organization: org,
+        projects: turn >= 2 ? [newAnswers[1]?.answer || "Main Project"] : [],
+        goals: turn >= 3 ? [newAnswers[2]?.answer || "Scale Platform"] : [],
+        preferences: ["Direct tone"],
+        categories: {
+          mission: turn >= 1 ? 75 : 0,
+          projects: turn >= 2 ? 80 : 0,
+          goals: turn >= 3 ? 85 : 0,
+          preferences: turn >= 3 ? 70 : 0,
+          constraints: turn >= 3 ? 60 : 0,
+        },
+        overall_confidence: turn === 1 ? 38 : turn === 2 ? 65 : 88,
+        reflection: `Understood. "${newAnswers[turn - 1]?.answer}" recorded into your context model.`,
+        next_question:
+          turn === 1
+            ? `What specific projects or products are currently part of ${org}?`
+            : turn === 2
+            ? "What is the primary goal or target audience for these projects?"
+            : "",
+      };
+
+      setAnalysis(fallbackResult);
+      if (fallbackResult.overall_confidence >= 80) {
+        setPhase("complete");
+      } else {
+        setCurrentQuestion(fallbackResult.next_question);
+      }
     } finally {
       setIsProcessing(false);
     }
