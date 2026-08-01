@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
 from typing import Optional, Any, Union
+import uuid
 import jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
@@ -48,3 +49,49 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSe
     if user is None:
         raise credentials_exception
     return user
+
+
+async def get_user_via_api_key(request: Request, session: AsyncSession = Depends(get_session)) -> User:
+    """
+    Accepts either a Bearer JWT (Authorization header) or an X-API-Key header.
+    For API key auth, auto-creates/reuses a persistent dev user so the onboarding
+    flow works without requiring a separate login step.
+    """
+    # 1. Try Bearer JWT first
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            user_id: str = payload.get("sub")
+            if user_id:
+                user = await session.get(User, uuid.UUID(user_id))
+                if user:
+                    return user
+        except Exception:
+            pass
+
+    # 2. Fall back to X-API-Key
+    api_key = request.headers.get("X-API-Key", "")
+    if api_key and api_key == settings.METAPHOR_API_KEY:
+        # Get or create a persistent dev/onboarding user
+        from sqlmodel import select
+        stmt = select(User).where(User.email == "dev@metaphor.local")
+        result = await session.execute(stmt)
+        user = result.scalars().first()
+        if not user:
+            user = User(
+                email="dev@metaphor.local",
+                hashed_password=get_password_hash("metaphor_dev_internal"),
+                name="Metaphor Dev User"
+            )
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+        return user
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or missing API key / token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )

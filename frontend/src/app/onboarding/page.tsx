@@ -9,6 +9,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [content, setContent] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<{
     organization: string;
     projects: string[];
@@ -53,12 +54,14 @@ export default function OnboardingPage() {
   const finalize = async () => {
     if (!content.trim()) return;
     setIsFinalizing(true);
+    setError(null);
     try {
       await fetchFromMetaphor("/context/lore", { content });
       localStorage.setItem("metaphor_onboarded", "true");
       router.push("/dashboard");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setError(e?.message || "Something went wrong. Please try again.");
       setIsFinalizing(false);
     }
   };
@@ -213,7 +216,10 @@ export default function OnboardingPage() {
         )}
 
         {/* Finalize Button */}
-        <div className="flex justify-end pt-8 mt-12 border-t border-border-subtle">
+        <div className="flex flex-col items-end gap-3 pt-8 mt-12 border-t border-border-subtle">
+           {error && (
+             <p className="text-sm text-red-500 text-right">{error}</p>
+           )}
            <button 
               onClick={finalize}
               disabled={isFinalizing || !content.trim()}
