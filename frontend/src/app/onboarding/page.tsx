@@ -198,19 +198,19 @@ export default function OnboardingPage() {
     }
   }, [phase]);
 
-  // Check for successful OAuth redirects
+  // Check for session and OAuth redirects
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setPhase(prev => (prev === "auth" || prev === "email_auth" || prev === "email_sent" ? "connect" : prev));
+      }
+    });
 
-    // Check for successful OAuth redirects
     const params = new URLSearchParams(window.location.search);
     const success = params.get("success");
     if (success) {
       setConnections(prev => ({ ...prev, [success]: true }));
-      // Clean up the URL to prevent re-triggering
       window.history.replaceState({}, document.title, window.location.pathname);
-      if (phase === "auth") {
-        setPhase("connect"); // ensure we are on the connect phase if they came back authenticated
-      }
     }
   }, []);
 
