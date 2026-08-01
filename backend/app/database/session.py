@@ -6,8 +6,22 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.config import settings
 
 from sqlalchemy.pool import NullPool
+from sqlalchemy.engine.url import make_url
 
-clean_db_url = settings.DATABASE_URL.strip() if settings.DATABASE_URL else ""
+def sanitize_db_url(raw_url: str) -> str:
+    if not raw_url:
+        return ""
+    cleaned = raw_url.strip().strip("'").strip('"').strip()
+    try:
+        url_obj = make_url(cleaned)
+        if url_obj.database:
+            cleaned_db = url_obj.database.strip().strip("\n").strip("\r").strip()
+            url_obj = url_obj._replace(database=cleaned_db)
+        return str(url_obj)
+    except Exception:
+        return cleaned
+
+clean_db_url = sanitize_db_url(settings.DATABASE_URL)
 
 # Create database engine
 engine = create_async_engine(
