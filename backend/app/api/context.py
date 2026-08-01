@@ -20,7 +20,7 @@ class LoreRequest(BaseModel):
     content: str
 
 class AnalyzeDraftRequest(BaseModel):
-    content: str
+    answers: list[dict]  # [{question: str, answer: str}]
 
 @router.post("/query")
 async def query_context(req: ContextRequest, current_user: User = Depends(get_user_via_api_key), db: AsyncSession = Depends(get_session)):
@@ -37,7 +37,7 @@ async def query_context(req: ContextRequest, current_user: User = Depends(get_us
 async def analyze_draft(req: AnalyzeDraftRequest, current_user: User = Depends(get_user_via_api_key), db: AsyncSession = Depends(get_session)):
     graph = GraphService(db)
     reflection = ReflectionService(graph)
-    result = await reflection.analyze_draft(req.content)
+    result = await reflection.analyze_interview(req.answers)
     return result
 
 @router.post("/lore")

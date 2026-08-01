@@ -1,234 +1,306 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Bot, Building, FolderGit2, Target, Settings2, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Bot, ChevronRight } from "lucide-react";
 import { fetchFromMetaphor } from "../api";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type Phase = "intro" | "interview" | "complete";
+
+interface Answer {
+  question: string;
+  answer: string;
+}
+
+interface Analysis {
+  organization: string;
+  projects: string[];
+  goals: string[];
+  preferences: string[];
+  categories: {
+    mission: number;
+    projects: number;
+    goals: number;
+    preferences: number;
+    constraints: number;
+  };
+  overall_confidence: number;
+  reflection: string;
+  next_question: string;
+}
+
+// ─── Confidence Bar ────────────────────────────────────────────────────────────
+
+function ConfidenceBar({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex justify-between items-center">
+        <span className="text-xs font-medium text-muted capitalize">{label}</span>
+        <span className="text-xs font-mono text-foreground">{value}%</span>
+      </div>
+      <div className="h-1 w-full bg-surface-2 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-foreground rounded-full transition-all duration-700 ease-out"
+          style={{ width: `${value}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [content, setContent] = useState("");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [phase, setPhase] = useState<Phase>("intro");
+  const [answers, setAnswers] = useState<Answer[]>([]);
+  const [currentQuestion, setCurrentQuestion] = useState("What are you currently working on?");
+  const [currentAnswer, setCurrentAnswer] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [isFinalizing, setIsFinalizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [analysis, setAnalysis] = useState<{
-    organization: string;
-    projects: string[];
-    goals: string[];
-    preferences: string[];
-    confidence: number;
-    next_question: string;
-  } | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (phase === "interview" && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [phase, analysis]);
 
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(e.target.value);
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+  const submitAnswer = async () => {
+    if (!currentAnswer.trim() || isProcessing) return;
+
+    const newAnswers: Answer[] = [...answers, { question: currentQuestion, answer: currentAnswer.trim() }];
+    setAnswers(newAnswers);
+    setCurrentAnswer("");
+    setIsProcessing(true);
+
+    try {
+      const result: Analysis = await fetchFromMetaphor("/context/analyze-draft", { answers: newAnswers });
+      setAnalysis(result);
+
+      // End interview when confidence is high enough
+      if (result.overall_confidence >= 80) {
+        setPhase("complete");
+      } else {
+        setCurrentQuestion(result.next_question);
+      }
+    } catch (e: any) {
+      setError(e?.message || "Something went wrong.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  // Debounce the analysis
-  useEffect(() => {
-    if (!content.trim()) {
-      setAnalysis(null);
-      return;
-    }
-    const timer = setTimeout(async () => {
-      setIsAnalyzing(true);
-      try {
-        const res = await fetchFromMetaphor("/context/analyze-draft", { content });
-        setAnalysis(res);
-      } catch (e) {
-        console.error("Live understanding failed", e);
-      } finally {
-        setIsAnalyzing(false);
-      }
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [content]);
-
-  const [isFinalizing, setIsFinalizing] = useState(false);
-  
   const finalize = async () => {
-    if (!content.trim()) return;
+    if (!analysis || isFinalizing) return;
     setIsFinalizing(true);
     setError(null);
+    // Reconstruct raw text from answers for the graph
+    const content = answers.map(a => `${a.question}\n${a.answer}`).join("\n\n");
     try {
       await fetchFromMetaphor("/context/lore", { content });
       localStorage.setItem("metaphor_onboarded", "true");
       router.push("/dashboard");
     } catch (e: any) {
-      console.error(e);
-      setError(e?.message || "Something went wrong. Please try again.");
+      setError(e?.message || "Something went wrong.");
       setIsFinalizing(false);
     }
   };
 
-  const getFinalizeText = () => {
-    if (isFinalizing) return "Building shared context...";
-    if (!analysis) return "Finalize Context";
-    if (analysis.confidence < 50) return "Construct Initial Graph";
-    if (analysis.confidence < 80) return "Finalize Context";
-    return "Finalize Comprehensive Context";
-  };
+  // ── PHASE: INTRO ────────────────────────────────────────────────────────────
+  if (phase === "intro") {
+    return (
+      <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in fade-in duration-700">
+        <div className="w-full max-w-xl flex flex-col items-center text-center">
 
-  return (
-    <div className="min-h-screen w-full bg-background flex flex-col items-center font-sans py-24 px-8 overflow-y-auto">
-      
-      <div className="w-full max-w-3xl flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-700">
-        
-        {/* Header */}
-        <div className="mb-12 border-b border-border-subtle pb-8">
-          <h1 className="text-3xl font-light tracking-tight text-foreground mb-4">Build Your Shared Context</h1>
-          <p className="text-muted text-sm leading-relaxed">
-            Every AI you connect will begin with the same understanding of your work.
+          <div className="w-3 h-3 rounded-full bg-foreground mb-12 shadow-[0_0_16px_rgba(0,0,0,0.2)]" />
+
+          <h1 className="text-4xl font-light tracking-tight text-foreground mb-6 leading-[1.2]">
+            Your AI tools are about to<br />share the same understanding of you.
+          </h1>
+          <p className="text-muted text-base leading-relaxed mb-16 max-w-sm">
+            This takes 2–3 minutes. When you're done, every AI you connect will know your work, your projects, and your goals.
           </p>
-        </div>
 
-        {/* Canvas / Input Area */}
-        <div className="mb-4">
-          <textarea 
-            ref={textareaRef}
-            value={content}
-            onChange={handleInput}
-            placeholder="What are you currently building?"
-            className="w-full min-h-[160px] bg-transparent border-none p-0 text-foreground focus:outline-none focus:ring-0 text-xl font-light leading-relaxed placeholder:text-muted/40 resize-none overflow-hidden"
-            autoFocus
-          />
-        </div>
-
-        {/* Intelligence Block */}
-        {content.trim() && (
-          <div className="mt-8 border-t border-border-subtle pt-12 transition-all duration-500 min-h-[300px]">
-            <div className="flex items-center gap-3 mb-8">
-              <Bot className={`w-4 h-4 ${isAnalyzing ? 'animate-pulse text-primary' : 'text-muted'}`} />
-              <span className="text-sm font-mono uppercase tracking-widest text-muted">
-                {isAnalyzing ? "Understanding..." : "Live Context"}
-              </span>
-              
-              {analysis && !isAnalyzing && (
-                <div className="ml-auto flex items-center gap-2">
-                   <div className="h-2 w-24 bg-surface-2 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary transition-all duration-1000 ease-out" 
-                        style={{ width: `${analysis.confidence}%` }}
-                      />
-                   </div>
-                   <span className="text-sm font-mono text-primary font-medium">
-                     {analysis.confidence}% Confidence
-                   </span>
+          {/* Connected AIs */}
+          <div className="flex items-center gap-6 mb-16">
+            {["ChatGPT", "Claude", "Cursor"].map((ai, i) => (
+              <div key={ai} className="flex flex-col items-center gap-2">
+                <div className="w-12 h-12 rounded-2xl bg-surface-2 border border-border-subtle flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-muted" />
                 </div>
-              )}
-            </div>
+                <span className="text-xs font-medium text-muted">{ai}</span>
+              </div>
+            ))}
+          </div>
 
-            {/* Extracted Entities */}
-            {analysis && !isAnalyzing && (
-              <div className="space-y-6 animate-in fade-in duration-500 mb-12">
-                
-                {/* Organization */}
-                {analysis.organization && (
-                  <div className="flex flex-col md:flex-row md:items-start gap-4">
-                    <div className="flex items-center gap-2 w-48 shrink-0 pt-1 text-muted">
-                      <Building className="w-4 h-4" />
-                      <span className="text-sm font-medium">Organization</span>
-                    </div>
-                    <div className="flex-1 flex items-center gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span className="text-base text-foreground font-medium">{analysis.organization}</span>
-                    </div>
-                  </div>
-                )}
+          <button
+            onClick={() => setPhase("interview")}
+            className="px-8 py-4 bg-foreground text-background rounded-xl text-sm font-medium flex items-center gap-2 hover:opacity-90 transition-opacity"
+          >
+            Begin <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-                {/* Projects */}
-                {analysis.projects && analysis.projects.length > 0 && (
-                  <div className="flex flex-col md:flex-row md:items-start gap-4">
-                    <div className="flex items-center gap-2 w-48 shrink-0 pt-1 text-muted">
-                      <FolderGit2 className="w-4 h-4" />
-                      <span className="text-sm font-medium">Projects</span>
-                    </div>
-                    <div className="flex-1 space-y-4">
-                      {analysis.projects.map((proj, i) => (
-                        <div key={i} className="flex items-center gap-3">
-                          <CheckCircle2 className="w-4 h-4 text-primary" />
-                          <span className="text-base text-foreground font-medium">{proj}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+  // ── PHASE: COMPLETE ─────────────────────────────────────────────────────────
+  if (phase === "complete" && analysis) {
+    return (
+      <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in fade-in duration-700">
+        <div className="w-full max-w-xl flex flex-col">
 
-                {/* Goals */}
-                {analysis.goals && analysis.goals.length > 0 && (
-                  <div className="flex flex-col md:flex-row md:items-start gap-4">
-                    <div className="flex items-center gap-2 w-48 shrink-0 pt-1 text-muted">
-                      <Target className="w-4 h-4" />
-                      <span className="text-sm font-medium">Goals</span>
-                    </div>
-                    <div className="flex-1 space-y-4">
-                      {analysis.goals.map((goal, i) => (
-                        <div key={i} className="flex items-center gap-3">
-                          <CheckCircle2 className="w-4 h-4 text-primary" />
-                          <span className="text-base text-foreground font-medium">{goal}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+          <div className="mb-12">
+            <p className="text-xs font-mono uppercase tracking-widest text-muted mb-4">Complete</p>
+            <h1 className="text-3xl font-light tracking-tight text-foreground mb-4">Your AI now understands you.</h1>
+            <p className="text-muted text-sm">Every AI you connect will begin from this shared context.</p>
+          </div>
 
-                {/* Preferences */}
-                {analysis.preferences && analysis.preferences.length > 0 && (
-                  <div className="flex flex-col md:flex-row md:items-start gap-4">
-                    <div className="flex items-center gap-2 w-48 shrink-0 pt-1 text-muted">
-                      <Settings2 className="w-4 h-4" />
-                      <span className="text-sm font-medium">Preferences</span>
-                    </div>
-                    <div className="flex-1 space-y-4">
-                      {analysis.preferences.map((pref, i) => (
-                        <div key={i} className="flex items-center gap-3">
-                          <CheckCircle2 className="w-4 h-4 text-primary" />
-                          <span className="text-base text-foreground font-medium">{pref}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Empty State if Nothing Detected Yet */}
-                {!analysis.organization && analysis.projects.length === 0 && analysis.goals.length === 0 && analysis.preferences.length === 0 && (
-                   <div className="text-muted text-sm italic py-4">
-                     Analyzing text for entities...
-                   </div>
-                )}
+          {/* Summary */}
+          <div className="space-y-4 mb-12 border-t border-border-subtle pt-8">
+            {analysis.organization && (
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-4 h-4 text-foreground shrink-0" />
+                <span className="text-sm text-foreground">Organization: <span className="font-medium">{analysis.organization}</span></span>
               </div>
             )}
+            {analysis.projects.length > 0 && (
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-4 h-4 text-foreground shrink-0" />
+                <span className="text-sm text-foreground">Projects: <span className="font-medium">{analysis.projects.join(", ")}</span></span>
+              </div>
+            )}
+            {analysis.goals.length > 0 && (
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-4 h-4 text-foreground shrink-0" />
+                <span className="text-sm text-foreground">Goals: <span className="font-medium">{analysis.goals.join(", ")}</span></span>
+              </div>
+            )}
+            {analysis.preferences.length > 0 && (
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-4 h-4 text-foreground shrink-0" />
+                <span className="text-sm text-foreground">Preferences noted</span>
+              </div>
+            )}
+          </div>
 
-            {/* Next Question Nudge */}
-            {analysis?.next_question && !isAnalyzing && (
-              <div className="p-6 bg-surface-2 rounded-xl border border-border-subtle border-l-4 border-l-primary animate-in fade-in slide-in-from-left-4 mt-8">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted mb-2 block">Follow-up Generated</span>
-                <p className="text-foreground text-lg leading-relaxed">{analysis.next_question}</p>
-                <p className="text-xs text-muted mt-4">↳ Press Enter above and keep writing.</p>
+          {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
+
+          <button
+            onClick={finalize}
+            disabled={isFinalizing}
+            className="w-full px-8 py-4 bg-foreground text-background rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {isFinalizing ? "Building your knowledge graph..." : "Connect Claude →"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── PHASE: INTERVIEW ────────────────────────────────────────────────────────
+  return (
+    <div className="min-h-screen w-full bg-background flex font-sans">
+
+      {/* ── Left: Interview ── */}
+      <div className="flex-1 flex flex-col justify-center px-16 max-w-2xl">
+
+        {/* Past answers */}
+        {answers.length > 0 && (
+          <div className="mb-12 space-y-6">
+            {answers.map((a, i) => (
+              <div key={i} className="opacity-40">
+                <p className="text-xs text-muted mb-1">{a.question}</p>
+                <p className="text-base text-foreground font-light">{a.answer}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Reflection from previous answer */}
+        {analysis?.reflection && !isProcessing && (
+          <div className="mb-8 flex items-start gap-3 animate-in fade-in duration-500">
+            <div className="w-5 h-5 rounded-full bg-foreground flex items-center justify-center shrink-0 mt-0.5">
+              <CheckCircle2 className="w-3 h-3 text-background" />
+            </div>
+            <p className="text-sm text-muted italic">{analysis.reflection}</p>
+          </div>
+        )}
+
+        {/* Current question */}
+        <div className="mb-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <p className="text-2xl font-light tracking-tight text-foreground mb-6">{currentQuestion}</p>
+
+          <div className="flex items-center gap-4 border-b border-border-strong pb-3">
+            <input
+              ref={inputRef}
+              value={currentAnswer}
+              onChange={(e) => setCurrentAnswer(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") submitAnswer(); }}
+              placeholder="Type your answer..."
+              disabled={isProcessing}
+              className="flex-1 bg-transparent text-foreground text-lg font-light placeholder:text-muted/40 focus:outline-none disabled:opacity-50"
+            />
+            <button
+              onClick={submitAnswer}
+              disabled={!currentAnswer.trim() || isProcessing}
+              className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center hover:opacity-80 transition-opacity disabled:opacity-30 shrink-0"
+            >
+              {isProcessing ? (
+                <div className="w-3 h-3 border border-background border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-background" />
+              )}
+            </button>
+          </div>
+          <p className="text-xs text-muted mt-3">Press Enter to continue</p>
+        </div>
+      </div>
+
+      {/* ── Right: Live Model ── */}
+      <div className="w-72 border-l border-border-subtle flex flex-col justify-center px-10 shrink-0">
+
+        <div className="mb-8">
+          <p className="text-xs font-mono uppercase tracking-widest text-muted mb-2">Your Context</p>
+          <div className="flex items-end gap-2">
+            <span className="text-4xl font-light text-foreground">{analysis?.overall_confidence ?? 0}</span>
+            <span className="text-muted text-sm mb-1.5">% understood</span>
+          </div>
+        </div>
+
+        {/* Category bars */}
+        <div className="space-y-5">
+          {(["mission", "projects", "goals", "preferences", "constraints"] as const).map((cat) => (
+            <ConfidenceBar
+              key={cat}
+              label={cat}
+              value={analysis?.categories?.[cat] ?? 0}
+            />
+          ))}
+        </div>
+
+        {/* Entity chips */}
+        {analysis && (
+          <div className="mt-10 space-y-3 border-t border-border-subtle pt-8">
+            {analysis.organization && (
+              <div className="text-xs text-muted">
+                <span className="font-medium text-foreground block mb-0.5">Organization</span>
+                {analysis.organization}
+              </div>
+            )}
+            {analysis.projects.length > 0 && (
+              <div className="text-xs text-muted">
+                <span className="font-medium text-foreground block mb-0.5">Projects</span>
+                {analysis.projects.join(", ")}
               </div>
             )}
           </div>
         )}
-
-        {/* Finalize Button */}
-        <div className="flex flex-col items-end gap-3 pt-8 mt-12 border-t border-border-subtle">
-           {error && (
-             <p className="text-sm text-red-500 text-right">{error}</p>
-           )}
-           <button 
-              onClick={finalize}
-              disabled={isFinalizing || !content.trim()}
-              className="px-8 py-3 bg-foreground text-background rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50 shadow-md"
-            >
-              {getFinalizeText()} <ArrowRight className="w-4 h-4" />
-            </button>
-        </div>
-
       </div>
     </div>
   );

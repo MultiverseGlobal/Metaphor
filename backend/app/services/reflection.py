@@ -213,54 +213,74 @@ class ReflectionService:
         }
 
     async def analyze_draft(self, text: str) -> Dict[str, Any]:
+        """Legacy single-text analysis. Kept for compatibility."""
+        return await self.analyze_interview([{"question": "What are you currently building?", "answer": text}])
+
+    async def analyze_interview(self, answers: list) -> Dict[str, Any]:
         """
-        Fast extraction of context from draft text without committing to the Graph.
-        Used for the 'Live Understanding' UI during Context Setup.
+        Multi-turn interview analysis. Accepts a full conversation history and returns:
+        - Extracted entities (org, projects, goals, preferences)
+        - Per-category confidence scores (mission, projects, goals, preferences, constraints)
+        - An overall confidence score
+        - A reflection statement proving the AI understood the last answer
+        - The single highest-value next question to increase overall confidence
         """
-        if not text.strip():
+        if not answers:
             return {
-                "organization": "",
-                "projects": [],
-                "goals": [],
-                "preferences": [],
-                "confidence": 0,
-                "next_question": "What are you currently building?"
+                "organization": "", "projects": [], "goals": [], "preferences": [],
+                "categories": {"mission": 0, "projects": 0, "goals": 0, "preferences": 0, "constraints": 0},
+                "overall_confidence": 0,
+                "reflection": "",
+                "next_question": "What are you currently working on?"
             }
 
+        # Format the conversation history for the prompt
+        history_str = "\n".join(
+            [f"Q: {a.get('question', '')}\nA: {a.get('answer', '')}" for a in answers]
+        )
+
         system_prompt = (
-            "You are the Metaphor Intelligence Engine's real-time parser.\n"
-            "Analyze the user's raw text and extract structured information.\n"
-            "Identify the Organization (if any), Projects, Goals, and Preferences/Constraints.\n"
-            "Calculate a 'confidence' score (0-100) representing how complete and robust this context is for an AI.\n"
-            "Generate a 'next_question' - a single, highly-targeted follow-up question designed to increase the confidence score (e.g., 'What specific products are part of MGE?').\n"
-            "Respond STRICTLY with JSON matching this schema:\n"
+            "You are the Metaphor Intelligence Engine — an expert researcher building a structured model of a user.\n"
+            "You are given a conversation history of questions and the user's answers.\n"
+            "Your job is to:\n"
+            "1. Extract all entities: organization, projects, goals, and preferences/constraints.\n"
+            "2. Score each category's completeness from 0-100 (mission, projects, goals, preferences, constraints).\n"
+            "3. Calculate an overall_confidence (0-100) as a weighted average.\n"
+            "4. Write a short 'reflection' statement that proves you understood the LAST answer. Example: 'So MGE is your primary organization. Got it.'\n"
+            "5. Generate the SINGLE highest-value next_question to most efficiently increase the overall_confidence.\n"
+            "   - If mission is low, ask about mission.\n"
+            "   - If projects are low, ask about specific products.\n"
+            "   - If goals are low, ask about primary objectives.\n"
+            "   - Make the question specific to what the user already said — not generic.\n"
+            "Respond STRICTLY with valid JSON matching this schema:\n"
             "{\n"
             "  \"organization\": \"str\",\n"
             "  \"projects\": [\"str\"],\n"
             "  \"goals\": [\"str\"],\n"
             "  \"preferences\": [\"str\"],\n"
-            "  \"confidence\": 0,\n"
+            "  \"categories\": {\"mission\": 0, \"projects\": 0, \"goals\": 0, \"preferences\": 0, \"constraints\": 0},\n"
+            "  \"overall_confidence\": 0,\n"
+            "  \"reflection\": \"str\",\n"
             "  \"next_question\": \"str\"\n"
             "}"
         )
-        
-        prompt = f"User Draft Text:\n{text}"
-        
+
+        prompt = f"Conversation History:\n{history_str}"
+
         try:
             response_text = await llm_service.query_llm(prompt=prompt, system_prompt=system_prompt, temperature=0.0)
-            clean_response = response_text.strip()
-            if clean_response.startswith("```json"):
-                clean_response = clean_response[7:]
-            if clean_response.endswith("```"):
-                clean_response = clean_response[:-3]
-            return json.loads(clean_response)
+            clean = response_text.strip()
+            if clean.startswith("```json"): clean = clean[7:]
+            if clean.startswith("```"): clean = clean[3:]
+            if clean.endswith("```"): clean = clean[:-3]
+            return json.loads(clean.strip())
         except Exception as e:
-            logger.error(f"Failed to parse analyze_draft JSON: {e}")
+            logger.error(f"Failed to parse analyze_interview JSON: {e}")
             return {
-                "organization": "",
-                "projects": [],
-                "goals": [],
-                "preferences": [],
-                "confidence": 0,
-                "next_question": ""
+                "organization": "", "projects": [], "goals": [], "preferences": [],
+                "categories": {"mission": 0, "projects": 0, "goals": 0, "preferences": 0, "constraints": 0},
+                "overall_confidence": 0,
+                "reflection": "",
+                "next_question": "Can you tell me more about what you're building?"
             }
+
