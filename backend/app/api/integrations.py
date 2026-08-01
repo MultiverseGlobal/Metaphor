@@ -163,6 +163,7 @@ async def check_integration_status(
 @router.get("/{provider}/authorize")
 async def authorize_integration(
     provider: str,
+    request: Request,
     user: User = Depends(get_user_via_api_key),
     session: AsyncSession = Depends(get_session)
 ):
@@ -187,15 +188,21 @@ async def authorize_integration(
     }
     state_token = jwt.encode(state_payload, settings.SECRET_KEY, algorithm="HS256")
     
+    base_url = str(request.base_url).rstrip('/')
+    
     if provider == "github":
         client_id = settings.GITHUB_CLIENT_ID
-        redirect_uri = "http://localhost:8000/api/v1/integrations/github/callback"
+        redirect_uri = f"{base_url}{settings.API_PREFIX}/integrations/github/callback"
+        if not client_id:
+            return {"url": f"{redirect_uri}?code=mock_code_github&state={state_token}"}
         auth_url = f"https://github.com/login/oauth/authorize?client_id={client_id}&redirect_uri={urllib.parse.quote(redirect_uri)}&state={state_token}&scope=repo"
         return {"url": auth_url}
         
     elif provider == "notion":
         client_id = settings.NOTION_CLIENT_ID
-        redirect_uri = "http://localhost:8000/api/v1/integrations/notion/callback"
+        redirect_uri = f"{base_url}{settings.API_PREFIX}/integrations/notion/callback"
+        if not client_id:
+            return {"url": f"{redirect_uri}?code=mock_code_notion&state={state_token}"}
         auth_url = f"https://api.notion.com/v1/oauth/authorize?client_id={client_id}&response_type=code&owner=user&redirect_uri={urllib.parse.quote(redirect_uri)}&state={state_token}"
         return {"url": auth_url}
         
