@@ -33,7 +33,7 @@ export default function ContextModelsPage() {
   ];
 
   return (
-    <div className="max-w-4xl animate-in">
+    <div className="max-w-4xl mx-auto p-8 animate-in fade-in duration-150">
       <header className="flex justify-between items-start mb-12">
         <div>
           <h1 className="text-2xl text-foreground font-medium mb-2">Context Models</h1>

@@ -69,18 +69,22 @@ export default function LinearLayout({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col relative min-w-0 bg-background">
+      <div className="flex-1 flex flex-col relative min-w-0 bg-background h-full overflow-hidden">
         
-        {/* Topbar with Sidebar Toggle */}
-        <div className="absolute top-4 left-4 z-50">
-          <button 
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-1.5 rounded-md text-muted hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-            style={{ transition: 'all var(--transition-fast)' }}
-          >
-            <Sidebar className="w-4 h-4" />
-          </button>
-        </div>
+        {/* Topbar Header */}
+        <header className="h-12 px-4 border-b border-border-subtle flex items-center justify-between bg-surface-1/40 backdrop-blur-md shrink-0 z-30">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-1.5 rounded-md text-muted hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors"
+              title="Toggle Sidebar"
+            >
+              <Sidebar className="w-4 h-4" />
+            </button>
+            <div className="h-4 w-[1px] bg-border-subtle" />
+            <span className="text-xs font-medium text-muted tracking-tight">Metaphor OS</span>
+          </div>
+        </header>
 
         {/* Workspace Void */}
         <div className="flex-1 overflow-y-auto relative z-10">

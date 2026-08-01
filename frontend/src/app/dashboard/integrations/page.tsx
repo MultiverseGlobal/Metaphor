@@ -49,7 +49,7 @@ export default function IntegrationsPage() {
   ];
 
   return (
-    <div className="max-w-4xl animate-in">
+    <div className="max-w-4xl mx-auto p-8 animate-in fade-in duration-150">
       <header className="mb-12">
         <h1 className="text-2xl text-foreground font-medium mb-2">Integrations</h1>
         <p className="text-muted text-sm leading-relaxed max-w-xl">
