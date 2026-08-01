@@ -11,6 +11,8 @@ from app.models.context import ContextSession
 from app.core.security import get_user_via_api_key
 from app.models.identity import User, Organization, OrganizationMember
 
+router = APIRouter()
+
 async def get_user_org(user: User, db: AsyncSession) -> Organization:
     stmt = select(OrganizationMember).where(OrganizationMember.user_id == user.id)
     res = await db.execute(stmt)
