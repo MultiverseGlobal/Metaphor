@@ -5,18 +5,16 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2, ChevronRight, Link2, Database, LayoutTemplate, Briefcase, Zap } from "lucide-react";
 import { fetchFromMetaphor } from "../api";
 
-// ─── Icons ─────────────────────�const NotionIcon = () => (
-  <img src="/icons/notion.svg" width="20" height="20" alt="Notion" />
+const NotionIcon = () => (
+  <img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Notion-logo.svg" alt="Notion" className="w-5 h-5 object-contain" />
 );
 
 const GoogleIcon = () => (
-  <img src="/icons/google.svg" width="20" height="20" alt="Google" />
+  <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" alt="Google Drive" className="w-5 h-5 object-contain" />
 );
 
 const SlackIcon = () => (
-  <img src="/icons/slack.svg" width="20" height="20" alt="Slack" />
-);27 2.527 0 0 1-2.523-2.523 2.526 2.526 0 0 1 2.523-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
-  </svg>
+  <img src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Slack_icon_2019.svg" alt="Slack" className="w-5 h-5 object-contain" />
 );
 
 const ChatGPTIcon = () => (
