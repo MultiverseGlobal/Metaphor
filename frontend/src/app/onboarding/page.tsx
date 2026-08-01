@@ -255,6 +255,7 @@ export default function OnboardingPage() {
 
   const finalize = async () => {
     setIsSubmitting(true);
+    document.cookie = "metaphor_onboarded=true; path=/; max-age=31536000"; // 1 year
     localStorage.setItem("metaphor_onboarded", "true");
     router.push("/dashboard");
   };

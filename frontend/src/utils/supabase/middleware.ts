@@ -40,8 +40,15 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
   
-  const isAuthRoute = request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/onboarding'
-  if (user && isAuthRoute) {
+  const hasOnboarded = request.cookies.has("metaphor_onboarded");
+
+  if (user && request.nextUrl.pathname === '/login') {
+    const url = request.nextUrl.clone()
+    url.pathname = hasOnboarded ? '/dashboard' : '/onboarding'
+    return NextResponse.redirect(url)
+  }
+
+  if (user && hasOnboarded && request.nextUrl.pathname === '/onboarding') {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
