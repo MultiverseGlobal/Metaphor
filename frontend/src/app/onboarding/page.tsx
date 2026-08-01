@@ -266,8 +266,9 @@ export default function OnboardingPage() {
       } else {
         setConnecting(null);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(`Failed to start ${id} OAuth flow:`, e);
+      alert(`Error starting ${id} integration: ${e.message || e}`);
       setConnecting(null);
     }
   };
