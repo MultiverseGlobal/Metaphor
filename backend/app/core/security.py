@@ -73,22 +73,42 @@ async def get_user_via_api_key(request: Request, session: AsyncSession = Depends
 
     # 2. Fall back to X-API-Key
     api_key = request.headers.get("X-API-Key", "")
-    if api_key and api_key == settings.METAPHOR_API_KEY:
-        # Get or create a persistent dev/onboarding user
+    if api_key:
         from sqlmodel import select
-        stmt = select(User).where(User.email == "dev@metaphor.local")
+        
+        # 2a. Check if it's a real generated API Key
+        from app.models.operations import APIKey
+        from app.models.identity import OrganizationMember
+        
+        stmt = select(APIKey).where(APIKey.hashed_key == api_key)
         result = await session.execute(stmt)
-        user = result.scalars().first()
-        if not user:
-            user = User(
-                email="dev@metaphor.local",
-                hashed_password=get_password_hash("metaphor_dev_internal"),
-                name="Metaphor Dev User"
-            )
-            session.add(user)
-            await session.commit()
-            await session.refresh(user)
-        return user
+        db_key = result.scalars().first()
+        
+        if db_key:
+            # We found a valid DB key. Let's return the owner of the organization.
+            # In a real system, you'd map the key to a specific user or bot.
+            stmt = select(User).join(OrganizationMember).where(OrganizationMember.organization_id == db_key.organization_id)
+            result = await session.execute(stmt)
+            org_user = result.scalars().first()
+            if org_user:
+                return org_user
+                
+        # 2b. Check if it's the dev master key
+        if api_key == settings.METAPHOR_API_KEY:
+            # Get or create a persistent dev/onboarding user
+            stmt = select(User).where(User.email == "dev@metaphor.local")
+            result = await session.execute(stmt)
+            user = result.scalars().first()
+            if not user:
+                user = User(
+                    email="dev@metaphor.local",
+                    hashed_password=get_password_hash("metaphor_dev_internal"),
+                    name="Metaphor Dev User"
+                )
+                session.add(user)
+                await session.commit()
+                await session.refresh(user)
+            return user
 
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
