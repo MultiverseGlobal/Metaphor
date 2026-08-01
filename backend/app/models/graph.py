@@ -17,8 +17,9 @@ class Node(SQLModel, table=True):
     content: str
     
     confidence: float = Field(default=1.0)
-    status: str = Field(default="active")
+    status: str = Field(default="active") # active, superseded, archived
     
+    superseded_by_id: Optional[uuid.UUID] = Field(default=None, foreign_key="nodes.id")
     created_by: Optional[uuid.UUID] = Field(default=None, foreign_key="users.id")
     
     created_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))

@@ -46,9 +46,10 @@ class ContextService:
         # 1. Resolve Session
         ctx_session = await self.get_or_create_session(org_id, ai_consumer, query)
         
-        # 2. Search for relevant nodes (Naive Keyword search for V1 MVP, Vector later)
-        # We will just fetch recent active nodes for now
-        nodes = await self.graph.list_recent_nodes(org_id, limit=20)
+        # 2. Search for relevant nodes via Vector Search
+        from app.services.llm import llm_service
+        query_embedding = await llm_service.generate_embedding(query)
+        nodes = await self.graph.vector_search(org_id, query_embedding, limit=20)
         
         # 3. Filter out nodes we already sent in this session to reduce token bloat
         previously_sent = set(ctx_session.state.get("previously_sent_node_ids", []))

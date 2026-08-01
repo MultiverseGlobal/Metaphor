@@ -20,7 +20,9 @@ async def get_graph(db: AsyncSession = Depends(get_session)):
     nodes = nodes_res.scalars().all()
 
     # Get edges
-    edges_res = await db.execute(select(Edge).where(Edge.organization_id == org.id))
+    edges_res = await db.execute(
+        select(Edge).join(Node, Edge.from_node == Node.id).where(Node.organization_id == org.id)
+    )
     edges = edges_res.scalars().all()
 
     return {
@@ -29,7 +31,7 @@ async def get_graph(db: AsyncSession = Depends(get_session)):
             for n in nodes
         ],
         "edges": [
-            {"id": str(e.id), "source": str(e.from_node_id), "target": str(e.to_node_id), "type": e.relationship}
+            {"id": str(e.id), "source": str(e.from_node), "target": str(e.to_node), "type": e.relationship}
             for e in edges
         ]
     }

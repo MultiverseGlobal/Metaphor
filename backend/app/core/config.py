@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     
     # Security
     METAPHOR_API_KEY: str = "metaphor_dev_secret_key_123"
+    SECRET_KEY: str = "metaphor_local_dev_jwt_secret_9949129"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 # 1 week
     
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgrespassword@localhost:5432/metaphor"

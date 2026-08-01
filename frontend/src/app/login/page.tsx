@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Shield, ArrowRight, Lock, User, Mail, Sparkles, Sun, BookOpen, Moon } from "lucide-react";
+import { BACKEND_URL, fetchFromMetaphor } from "../api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     
@@ -48,9 +49,37 @@ export default function LoginPage() {
 
     setLoading(true);
 
-    // Simulate authentication
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      if (isLogin) {
+        // Login with urlencoded form
+        const formData = new URLSearchParams();
+        formData.append("username", email);
+        formData.append("password", password);
+        
+        const response = await fetch(`${BACKEND_URL}/auth/token`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: formData.toString()
+        });
+        
+        if (!response.ok) {
+          const err = await response.json().catch(()=>({}));
+          throw new Error(err.detail || "Invalid credentials.");
+        }
+        
+        const data = await response.json();
+        localStorage.setItem("metaphor_token", data.access_token);
+        
+      } else {
+        // Register with JSON
+        const data = await fetchFromMetaphor("/auth/register", {
+          email,
+          password,
+          name
+        });
+        localStorage.setItem("metaphor_token", data.access_token);
+      }
+      
       localStorage.setItem("metaphor_logged_in", "true");
       localStorage.setItem("metaphor_user_email", email);
       if (name) localStorage.setItem("metaphor_user_name", name);
@@ -62,7 +91,11 @@ export default function LoginPage() {
       } else {
         router.push("/onboarding");
       }
-    }, 1200);
+    } catch (err: any) {
+      setError(err.message || "Failed to authenticate.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -29,3 +29,8 @@ class IdentityService:
             await self.session.refresh(org)
             
         return org
+
+    async def get_user_organization(self, user_id: uuid.UUID) -> Optional[Organization]:
+        stmt = select(Organization).join(OrganizationMember).where(OrganizationMember.user_id == user_id)
+        result = await self.session.execute(stmt)
+        return result.scalars().first()

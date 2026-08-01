@@ -3,8 +3,11 @@
 import React, { useEffect, useState } from "react";
 import { CheckCircle2, Plug, Database, Sparkles, Server, Folder, FileText, Calendar, Activity, Command } from "lucide-react";
 import { Kbd } from "@/components/ui/Kbd";
+import { fetchFromMetaphor } from "../api";
+import GraphViewer from "./GraphViewer";
 
 export default function SynchronizationDashboard() {
+  const [syncing, setSyncing] = useState<Record<string, boolean>>({});
   const [stats, setStats] = useState({
     node_count: 0,
     edge_count: 0,
@@ -12,34 +15,46 @@ export default function SynchronizationDashboard() {
     total_events: 0
   });
 
+  const [user, setUser] = useState<{name: string, email: string} | null>(null);
+
   useEffect(() => {
     async function fetchStats() {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-        const res = await fetch(`${apiUrl}/graph/stats`);
-        const data = await res.json();
+        const data = await fetchFromMetaphor("/graph/stats");
         setStats(data);
       } catch (e) {
         console.error("Failed to fetch stats:", e);
       }
     }
+    
+    async function fetchUser() {
+      try {
+        const data = await fetchFromMetaphor("/auth/me");
+        setUser(data);
+      } catch (e) {
+        console.error("Failed to fetch user:", e);
+      }
+    }
+    
     fetchStats();
+    fetchUser();
   }, []);
+
+  const syncIntegration = async (provider: string) => {
+    setSyncing(prev => ({ ...prev, [provider]: true }));
+    try {
+      await fetchFromMetaphor(`/integrations/${provider}/sync`, { method: "POST" });
+      setSyncing(prev => ({ ...prev, [provider]: false }));
+    } catch (e) {
+      console.error(`Failed to sync ${provider}:`, e);
+      setSyncing(prev => ({ ...prev, [provider]: false }));
+    }
+  };
 
   return (
     <div className="relative w-full min-h-full">
-      {/* Ambient Identity: Subtle SVG glowing lines/nodes */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-[0.03]">
-        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
-              <circle cx="50" cy="50" r="1.5" fill="currentColor" />
-              <path d="M50 50 L150 150 M50 50 L-50 150 M50 50 L150 -50 M50 50 L-50 -50" stroke="currentColor" strokeWidth="0.5" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
-      </div>
+      {/* Interactive Physics Graph */}
+      <GraphViewer />
 
       <div className="relative z-10 w-full max-w-4xl mx-auto px-8 pt-24 pb-32 flex flex-col items-start">
         
@@ -50,7 +65,7 @@ export default function SynchronizationDashboard() {
             <h1 className="text-sm font-semibold text-muted uppercase tracking-widest">System Online</h1>
           </div>
           <p className="text-3xl text-foreground font-medium tracking-tight leading-snug mb-4">
-            Your knowledge model is synchronized.
+            {user ? `${user.name}, your knowledge model is synchronized.` : "Your knowledge model is synchronized."}
           </p>
           <p className="text-muted text-sm font-medium tracking-tight">
             Metaphor is currently maintaining {stats.node_count} nodes across {stats.edge_count} relational dimensions.
@@ -97,9 +112,9 @@ export default function SynchronizationDashboard() {
               Connected Sources
             </h2>
             <div className="bg-surface-1 border border-border-subtle rounded-xl p-2 space-y-1">
-              <IntegrationItem name="Notion" status={`${stats.total_events} Documents Processed`} loading={false} />
-              <IntegrationItem name="Google Drive" status="Awaiting connection" inactive />
-              <IntegrationItem name="GitHub" status="Awaiting connection" inactive />
+              <IntegrationItem name="Notion" status={`${stats.total_events} Documents Processed`} loading={syncing['notion']} onSync={() => syncIntegration('notion')} />
+              <IntegrationItem name="Gmail" status="Awaiting sync" loading={syncing['gmail']} onSync={() => syncIntegration('gmail')} />
+              <IntegrationItem name="Google Calendar" status="Awaiting sync" loading={syncing['gcal']} onSync={() => syncIntegration('gcal')} />
             </div>
           </div>
 
@@ -152,14 +167,25 @@ function ContextCard({ label, value, icon, highlight = false, alert = false }: {
   );
 }
 
-function IntegrationItem({ name, status, loading = false, inactive = false }: { name: string, status: string, loading?: boolean, inactive?: boolean }) {
+function IntegrationItem({ name, status, loading = false, inactive = false, onSync }: { name: string, status: string, loading?: boolean, inactive?: boolean, onSync?: () => void }) {
   return (
-    <div className={`flex items-center justify-between p-3 rounded-lg transition-colors cursor-pointer group ${inactive ? 'opacity-50 hover:bg-surface-2 hover:opacity-100' : 'hover:bg-surface-2'}`}>
+    <div className={`flex items-center justify-between p-3 rounded-lg transition-colors group ${inactive ? 'opacity-50' : 'hover:bg-surface-2'}`}>
       <div className="flex items-center gap-3">
         <div className={`w-2 h-2 rounded-full ${loading ? 'bg-warning animate-pulse' : inactive ? 'bg-muted' : 'bg-success'}`}></div>
         <span className={`text-sm font-medium tracking-tight transition-colors ${inactive ? 'text-muted' : 'text-foreground group-hover:text-primary'}`}>{name}</span>
       </div>
-      <span className="text-xs font-medium text-muted">{status}</span>
+      <div className="flex items-center gap-4">
+        <span className="text-xs font-medium text-muted">{status}</span>
+        {onSync && !inactive && (
+          <button 
+            onClick={onSync} 
+            disabled={loading}
+            className="text-[10px] font-mono uppercase tracking-widest px-2 py-1 rounded bg-surface-2 border border-border-subtle hover:border-border-strong transition-all text-foreground cursor-pointer disabled:opacity-50"
+          >
+            {loading ? 'Syncing...' : 'Sync'}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -27,6 +27,7 @@ class WebhookEvent(SQLModel, table=True):
     event_type: str
     
     payload: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    checksum: Optional[str] = Field(default=None, index=True)
     
     received_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
     processed_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True)))
@@ -64,3 +65,18 @@ class MCPSession(SQLModel, table=True):
     
     connected_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
     last_seen: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
+
+class SyncJob(SQLModel, table=True):
+    __tablename__ = "sync_jobs"
+    
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    organization_id: uuid.UUID = Field(foreign_key="organizations.id", index=True)
+    
+    provider: str
+    status: str = Field(default="processing") # processing, completed, failed
+    
+    items_processed: int = Field(default=0)
+    error_message: Optional[str] = None
+    
+    started_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
+    completed_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True)))

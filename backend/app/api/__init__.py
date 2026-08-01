@@ -1,7 +1,11 @@
 from fastapi import APIRouter
 from .context import router as context_router
 from .graph import router as graph_router
+from .auth import router as auth_router
+from .integrations import router as integrations_router
 
 api_router = APIRouter()
+api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
+api_router.include_router(integrations_router, prefix="/integrations", tags=["integrations"])
 api_router.include_router(context_router, prefix="/context", tags=["context"])
 api_router.include_router(graph_router, prefix="/graph", tags=["graph"])

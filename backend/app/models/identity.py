@@ -22,6 +22,7 @@ class User(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     email: str = Field(unique=True, index=True)
     name: str
+    hashed_password: str
     avatar: Optional[str] = None
     timezone: Optional[str] = None
     

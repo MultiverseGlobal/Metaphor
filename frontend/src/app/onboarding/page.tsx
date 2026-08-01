@@ -11,6 +11,13 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [inputValue, setInputValue] = useState("");
   
+  const [formData, setFormData] = useState({
+    mission: "",
+    projects: "",
+    constraints: "",
+    preferences: ""
+  });
+  
   // Store the conversation history for the left panel
   const [chatHistory, setChatHistory] = useState([
     { role: "ai", text: "Let's build your Context Engine. What is your primary mission right now?" }
@@ -48,36 +55,49 @@ export default function OnboardingPage() {
     
     // Process step
     if (step === 1) {
-      setTimeout(() => {
-        addNode("n1", "Identity: William", "identity", 20, 40);
-        addNode("n2", "Project: Atlas", "project", 70, 20);
-        addEdge("n1", "n2");
-        setChatHistory(prev => [...prev, { role: "ai", text: "Got it. I've mapped Identity and Project nodes. How should AIs communicate with you? (e.g. tone, banned jargon)" }]);
-        setStep(2);
-      }, 600);
+      setFormData(prev => ({ ...prev, mission: text }));
+      setChatHistory(prev => [...prev, { role: "ai", text: "Got it. What projects are you actively building right now?" }]);
+      setStep(2);
     } else if (step === 2) {
-      setTimeout(() => {
-        addNode("n3", "Pref: Direct Tone", "insight", 70, 70);
-        addNode("n4", "Constraint: No Jargon", "insight", 30, 80);
-        addEdge("n1", "n3");
-        addEdge("n1", "n4");
-        setChatHistory(prev => [...prev, { role: "ai", text: "Preferences mapped. Finally, which tools do you want Metaphor to passively sync with?" }]);
-        setStep(3);
-      }, 600);
+      setFormData(prev => ({ ...prev, projects: text }));
+      setChatHistory(prev => [...prev, { role: "ai", text: "Great. Finally, how should AIs communicate with you? Any constraints or writing style preferences?" }]);
+      setStep(3);
+    } else if (step === 3) {
+      setFormData(prev => ({ ...prev, preferences: text, constraints: text }));
+      setChatHistory(prev => [...prev, { role: "ai", text: "Context Package assembled. Ready to synchronize with the Intelligence Layer." }]);
+      setStep(4);
     }
   };
 
-  const handleIntegrationSelect = (name: string, id: string, x: number, y: number) => {
-    addNode(id, `Source: ${name}`, "document", x, y);
-    addEdge("n2", id); // Attach to project Atlas
-  };
+  const [isFinalizing, setIsFinalizing] = useState(false);
+  const finalize = async () => {
+    setIsFinalizing(true);
+    setChatHistory(prev => [...prev, { role: "ai", text: "Synchronizing with Intelligence Layer... this may take a moment." }]);
+    try {
+      const { fetchFromMetaphor } = await import("../api");
+      const res = await fetchFromMetaphor("/context/lore", formData);
+      
+      if (res.created_nodes) {
+         const newNodes = res.created_nodes.map((n: any, idx: number) => ({
+             id: n.id,
+             label: n.title,
+             type: n.type.toLowerCase(),
+             x: 20 + (idx * 20) % 60,
+             y: 20 + (idx * 25) % 60
+         }));
+         setNodes(newNodes);
+      }
 
-  const finalize = () => {
-    setChatHistory(prev => [...prev, { role: "ai", text: "Context Package assembled. Synchronizing with MCP Server..." }]);
-    setTimeout(() => {
-      localStorage.setItem("metaphor_onboarded", "true");
-      router.push("/dashboard");
-    }, 1500);
+      setChatHistory(prev => [...prev, { role: "ai", text: `Success! Generated ${res.created_nodes?.length || 0} nodes. Heading to dashboard...` }]);
+      setTimeout(() => {
+        localStorage.setItem("metaphor_onboarded", "true");
+        router.push("/dashboard");
+      }, 3000);
+    } catch (e) {
+      console.error(e);
+      setChatHistory(prev => [...prev, { role: "ai", text: "Error during synchronization. Check console." }]);
+      setIsFinalizing(false);
+    }
   };
 
   return (
@@ -92,7 +112,7 @@ export default function OnboardingPage() {
             <div className="w-3 h-3 rounded-full bg-foreground shadow-[0_0_8px_rgba(var(--foreground-rgb),0.5)]" />
             <span className="text-sm font-semibold tracking-tight text-foreground">Lore Builder</span>
           </div>
-          <span className="text-xs font-mono text-muted uppercase tracking-widest">Step {step} of 3</span>
+          <span className="text-xs font-mono text-muted uppercase tracking-widest">Step {step} of 4</span>
         </div>
 
         {/* Chat Stream */}
@@ -114,36 +134,14 @@ export default function OnboardingPage() {
             </div>
           ))}
 
-          {step === 3 && (
-             <div className="animate-in fade-in duration-500 w-full max-w-sm mx-auto mt-4 space-y-3">
-               <button 
-                 onClick={() => handleIntegrationSelect("GitHub", "n5", 80, 50)}
-                 className="w-full text-left p-4 bg-surface-1 border border-border-subtle rounded-xl flex items-center justify-between hover:border-primary/50 transition-colors"
-               >
-                 <div className="flex items-center gap-3">
-                   <GitBranch className="w-4 h-4 text-muted" />
-                   <span className="text-sm font-medium">Connect GitHub</span>
-                 </div>
-                 <div className="w-2 h-2 rounded-full bg-success opacity-0 hover:opacity-100 transition-opacity" />
-               </button>
-               <button 
-                 onClick={() => handleIntegrationSelect("Notion", "n6", 60, 80)}
-                 className="w-full text-left p-4 bg-surface-1 border border-border-subtle rounded-xl flex items-center justify-between hover:border-primary/50 transition-colors"
-               >
-                 <div className="flex items-center gap-3">
-                   <Share2 className="w-4 h-4 text-muted" />
-                   <span className="text-sm font-medium">Connect Notion</span>
-                 </div>
-               </button>
-             </div>
-          )}
+
 
           <div ref={chatEndRef} />
         </div>
 
         {/* Input Area */}
         <div className="p-6 border-t border-border-subtle bg-background">
-          {step < 3 ? (
+          {step < 4 ? (
             <div className="relative">
               <input 
                 type="text"

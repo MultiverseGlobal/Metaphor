@@ -51,12 +51,10 @@ class NotionIngestor:
             text += "\n"
         return text.strip()
 
-    async def process_and_ingest(self, db_session: AsyncSession, org_id: uuid.UUID, limit: int = 5):
-        if not self.token: return
+    async def fetch_raw_events(self, limit: int = 5) -> List[Dict[str, Any]]:
+        if not self.token: return []
         pages = await self.fetch_recent_pages(limit=limit)
-        graph_service = GraphService(db_session)
-        reflection_service = ReflectionService(graph_service)
-        
+        events = []
         for page in pages:
             page_id = page.get("id")
             title_arr = page.get("properties", {}).get("title", {}).get("title", [])
@@ -66,21 +64,12 @@ class NotionIngestor:
             content = self.extract_text(blocks)
             if not content: continue
             
-            # Create WebhookEvent (V2 schema)
-            event = WebhookEvent(
-                provider="notion",
-                event_type="page_updated",
-                payload={"id": page_id, "title": title, "content": content, "url": page.get("url")}
-            )
-            db_session.add(event)
-            await db_session.commit()
-            
-            # Trigger Reflection
-            logger.info(f"Reflecting on Notion page: {title}")
-            await reflection_service.reflect_and_evolve(org_id, event)
-            
-            event.processed_at = datetime.datetime.utcnow()
-            db_session.add(event)
-            await db_session.commit()
+            events.append({
+                "id": page_id,
+                "title": title,
+                "content": content,
+                "url": page.get("url")
+            })
+        return events
 
 notion_ingestor = NotionIngestor()
