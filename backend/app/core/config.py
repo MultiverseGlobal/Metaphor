@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "super_secret_key_change_me"
     ENCRYPTION_KEY: str = ""
     ALGORITHM: str = "HS256"
-    FRONTEND_URL: str = "http://localhost:3000"
+    FRONTEND_URL: str = "https://metaphor-three.vercel.app"
     BACKEND_URL: str = "http://localhost:8000"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 # 1 week
     
@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     def strip_strings(cls, v: Any) -> Any:
         if isinstance(v, str):
             return v.strip()
+        return v
+
+    @field_validator("BACKEND_URL", mode="after")
+    @classmethod
+    def auto_detect_backend_url(cls, v: str) -> str:
+        render_url = os.getenv("RENDER_EXTERNAL_URL")
+        if render_url and (v == "http://localhost:8000" or not v):
+            return render_url.rstrip("/")
         return v
 
     model_config = SettingsConfigDict(
