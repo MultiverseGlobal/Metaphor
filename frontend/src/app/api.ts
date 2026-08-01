@@ -1,9 +1,5 @@
-const isProduction = process.env.NODE_ENV === "production";
-const BACKEND_URL = typeof window !== "undefined"
-  ? (isProduction
-      ? `${window.location.origin}/api/backend/api/v1`
-      : "http://localhost:8000/api/v1")
-  : "http://localhost:8000/api/v1";
+// Strictly use the cloud backend for everything (no local business)
+const BACKEND_URL = "https://metaphor-backend.onrender.com/api/v1";
 const DEFAULT_API_KEY = "metaphor_dev_secret_key_123";
 
 // Simple client-side API helper
