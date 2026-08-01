@@ -198,13 +198,8 @@ export default function OnboardingPage() {
     }
   }, [phase]);
 
-  // Check if already authenticated on mount
+  // Check for successful OAuth redirects
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session && phase === "auth") {
-        setPhase("connect");
-      }
-    });
 
     // Check for successful OAuth redirects
     const params = new URLSearchParams(window.location.search);

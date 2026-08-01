@@ -58,7 +58,7 @@ export default function LandingPage() {
           <Link href="/login" className="text-sm font-medium text-muted hover:text-foreground transition-colors duration-200">
             Sign In
           </Link>
-          <Link href="/login" className="group flex items-center gap-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity">
+          <Link href="/onboarding" className="group flex items-center gap-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity">
             Get Started
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
@@ -122,7 +122,7 @@ export default function LandingPage() {
             className="flex items-center gap-6"
           >
             <Link 
-              href="/login" 
+              href="/onboarding" 
               className="px-8 py-4 bg-foreground text-background text-sm font-medium rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm"
             >
               Get Started
