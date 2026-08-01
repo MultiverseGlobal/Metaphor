@@ -13,7 +13,12 @@ logger = logging.getLogger("metaphor")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Database is initialized via reset_db script or alembic, skip automatic sync_all here in V2
+    from app.database.session import init_db
+    try:
+        await init_db()
+        logger.info("Database tables initialized/verified.")
+    except Exception as e:
+        logger.error(f"Error initializing DB tables: {e}")
     from app.workers import resume_stuck_jobs
     import asyncio
     asyncio.create_task(resume_stuck_jobs())

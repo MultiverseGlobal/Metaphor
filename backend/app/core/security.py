@@ -70,9 +70,18 @@ async def get_user_via_api_key(request: Request, session: AsyncSession = Depends
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
         token = auth_header[7:]
+        user_res = None
         try:
             user_res = supabase.auth.get_user(token)
-            if user_res and user_res.user:
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Supabase token validation error: {str(e)}",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        if user_res and user_res.user:
+            try:
                 user = await session.get(User, uuid.UUID(user_res.user.id))
                 if user:
                     return user
@@ -97,12 +106,11 @@ async def get_user_via_api_key(request: Request, session: AsyncSession = Depends
                     await session.commit()
                     await session.refresh(new_user)
                     return new_user
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Supabase auth error: {str(e)}",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+            except Exception as db_err:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Database user sync failed: {str(db_err)}"
+                )
 
     # 2. Fall back to X-API-Key
     api_key = request.headers.get("X-API-Key", "")
