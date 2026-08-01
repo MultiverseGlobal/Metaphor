@@ -17,12 +17,16 @@ logger = logging.getLogger(__name__)
 class IntegrationSyncRequest(BaseModel):
     sources: List[str]
     github_repo: Optional[str] = "tiangolo/fastapi"  # default for demo
+    github_token: Optional[str] = None
+    notion_token: Optional[str] = None
 
 async def process_integration_sync(
     user_id: str,
     org_id: str,
     sources: List[str],
-    github_repo: str
+    github_repo: str,
+    github_token: Optional[str] = None,
+    notion_token: Optional[str] = None
 ):
     """
     Background task that fetches data from the requested sources and feeds it into the Knowledge Graph.
@@ -32,7 +36,7 @@ async def process_integration_sync(
         
         if "github" in sources:
             logger.info(f"Fetching GitHub repo: {github_repo}")
-            github_content = await fetch_public_repository(github_repo)
+            github_content = await fetch_public_repository(github_repo, github_token)
             combined_content += github_content + "\n\n"
             
         if "notion" in sources:
@@ -97,7 +101,38 @@ async def trigger_integration_sync(
         user_id=str(user.id),
         org_id=org_id,
         sources=request.sources,
-        github_repo=request.github_repo
+        github_repo=request.github_repo,
+        github_token=request.github_token,
+        notion_token=request.notion_token
     )
     
     return {"status": "sync_started", "message": "Integration sync running in the background."}
+
+@router.get("/status")
+async def check_integration_status(
+    user: User = Depends(get_user_via_api_key),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Checks if there are any nodes in the graph for the user's primary organization.
+    This serves as a polling endpoint to know if the background sync has completed.
+    """
+    from sqlmodel import select
+    from app.models.identity import OrganizationMember
+    from app.models.graph import Node
+    
+    stmt = select(OrganizationMember).where(OrganizationMember.user_id == user.id)
+    result = await session.execute(stmt)
+    org_member = result.scalars().first()
+    
+    if not org_member:
+        return {"status": "no_org", "has_data": False}
+        
+    stmt_nodes = select(Node).where(Node.organization_id == org_member.organization_id).limit(1)
+    result_nodes = await session.execute(stmt_nodes)
+    node = result_nodes.scalars().first()
+    
+    return {
+        "status": "completed" if node else "processing",
+        "has_data": node is not None
+    }

@@ -5,13 +5,17 @@ from github.GithubException import GithubException
 
 logger = logging.getLogger(__name__)
 
-async def fetch_public_repository(repo_name: str) -> str:
+async def fetch_public_repository(repo_name: str, github_token: str | None = None) -> str:
     """
-    Fetches the README and a summary of a public GitHub repository.
-    This acts as a fallback or a default integration for public data.
+    Fetches the README and a summary of a GitHub repository.
+    If github_token is provided, it acts as the authenticated user and can fetch private repos.
     """
     try:
-        g = Github() # Unauthenticated
+        if github_token:
+            g = Github(github_token)
+        else:
+            g = Github() # Unauthenticated fallback
+            
         repo = g.get_repo(repo_name)
         
         content_summary = f"GitHub Repository: {repo.full_name}\n"

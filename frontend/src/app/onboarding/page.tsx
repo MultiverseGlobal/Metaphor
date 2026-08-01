@@ -183,14 +183,32 @@ export default function OnboardingPage() {
       // 1. Trigger the background integration sync
       const connectedSources = Object.keys(connections).filter(k => connections[k]);
       
+      const { data: { session } } = await supabase.auth.getSession();
+      const providerToken = session?.provider_token;
+      
       if (connectedSources.length > 0) {
         await fetchFromMetaphor("/integrations/sync", {
           sources: connectedSources,
-          github_repo: "tiangolo/fastapi" // Example default repo
+          github_repo: "tiangolo/fastapi", // Example default repo
+          github_token: providerToken || undefined
         });
       } else {
         // Fallback for no sources
         await fetchFromMetaphor("/context/lore", { content: "User has not connected any sources yet." });
+      }
+
+      // 2. Poll the status endpoint until the background task is complete
+      let isDone = false;
+      while (!isDone) {
+        await new Promise(r => setTimeout(r, 3000));
+        try {
+          const statusRes = await fetchFromMetaphor("/integrations/status", undefined, "GET");
+          if (statusRes.has_data || statusRes.status === "completed") {
+            isDone = true;
+          }
+        } catch (pollErr) {
+          console.warn("Polling error:", pollErr);
+        }
       }
 
       // 3. Mark complete and redirect
