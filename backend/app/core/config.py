@@ -1,4 +1,6 @@
 import os
+from typing import Any
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -48,6 +50,13 @@ class Settings(BaseSettings):
     # Redis and Security
     REDIS_URL: str = "redis://localhost:6379"
     ENCRYPTION_KEY: str = "" # Read from .env
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def strip_strings(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.strip()
+        return v
 
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"),

@@ -7,9 +7,11 @@ from app.core.config import settings
 
 from sqlalchemy.pool import NullPool
 
+clean_db_url = settings.DATABASE_URL.strip() if settings.DATABASE_URL else ""
+
 # Create database engine
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    clean_db_url,
     echo=settings.DEBUG,
     future=True,
     poolclass=NullPool
