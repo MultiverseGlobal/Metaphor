@@ -39,23 +39,41 @@ async def process_integration_sync(
     try:
         combined_content = f"User {user_id} has connected the following sources: {', '.join(sources)}.\n\n"
         
-        if "github" in sources:
-            logger.info(f"Fetching GitHub repo: {github_repo}")
-            github_content = await fetch_public_repository(github_repo, github_token)
-            combined_content += github_content + "\n\n"
-            
-        if "notion" in sources:
-            logger.info("Fetching Notion mockup")
-            notion_content = await fetch_notion_mockup()
-            combined_content += notion_content + "\n\n"
-            
         # Initialize an isolated DB session for the background task
         from app.database.session import get_session_context
-        async for session in get_session_context():
+        from sqlmodel import select
+        from app.models.operations import Integration
+        import uuid
+        
+        async with get_session_context() as session:
+            # Look up tokens from the database if they were not provided via request
+            if not github_token and "github" in sources:
+                stmt = select(Integration).where(Integration.organization_id == uuid.UUID(org_id), Integration.provider == "github")
+                res = await session.execute(stmt)
+                integ = res.scalars().first()
+                if integ and integ.access_token:
+                    github_token = integ.access_token
+                    
+            if not notion_token and "notion" in sources:
+                stmt = select(Integration).where(Integration.organization_id == uuid.UUID(org_id), Integration.provider == "notion")
+                res = await session.execute(stmt)
+                integ = res.scalars().first()
+                if integ and integ.access_token:
+                    notion_token = integ.access_token
+                    
+            if "github" in sources:
+                logger.info(f"Fetching GitHub repo: {github_repo}")
+                github_content = await fetch_public_repository(github_repo, github_token)
+                combined_content += github_content + "\n\n"
+                
+            if "notion" in sources:
+                logger.info("Fetching Notion mockup")
+                notion_content = await fetch_notion_mockup()
+                combined_content += notion_content + "\n\n"
+            
             reflection_service = ReflectionService(session)
             # Create a synthetic context session for this background sync
             from app.models.graph import ContextSession
-            import uuid
             session_id = uuid.uuid4()
             ctx = ContextSession(
                 id=session_id,

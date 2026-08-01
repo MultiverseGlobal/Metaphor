@@ -1,16 +1,66 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { MessageBlock } from "@/components/thread/MessageBlock";
 import { ThreadInput } from "@/components/thread/ThreadInput";
-import { Share, MoreHorizontal } from "lucide-react";
+import { Share, MoreHorizontal, Loader2 } from "lucide-react";
+import { fetchFromMetaphor } from "@/app/api";
+
+type Message = {
+  role: "user" | "ai";
+  content: string;
+  sources?: { title: string; sourceName: string; time: string }[];
+};
 
 export default function CognitiveThreadPage({ params }: { params: { id: string } }) {
-  const MOCK_SOURCES = [
-    { title: "Atlas Architecture Overview", sourceName: "Metaphor Doc", time: "Oct 12" },
-    { title: "Data Ingestion Pipeline v2", sourceName: "Notion", time: "Oct 14" },
-    { title: "Pricing Model Contradictions", sourceName: "Memory", time: "Yesterday" }
-  ];
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: "ai",
+      content: "Hello! I am your Metaphor context engine. I have full access to your connected Knowledge Graph. What would you like to explore today?"
+    }
+  ]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (query: string) => {
+    // Append user message
+    const newMessages = [...messages, { role: "user" as const, content: query }];
+    setMessages(newMessages);
+    setIsLoading(true);
+
+    try {
+      const res = await fetchFromMetaphor("/context/chat", { query }, "POST");
+      
+      // The backend returns { answer: string, context: { delta_nodes: [] } }
+      let sources = [];
+      if (res.context && res.context.delta_nodes) {
+        sources = res.context.delta_nodes.map((n: any) => ({
+          title: n.title,
+          sourceName: n.type,
+          time: "Recently"
+        }));
+      }
+
+      setMessages([
+        ...newMessages,
+        {
+          role: "ai",
+          content: res.answer,
+          sources
+        }
+      ]);
+    } catch (e) {
+      console.error("Chat error:", e);
+      setMessages([
+        ...newMessages,
+        {
+          role: "ai",
+          content: "Sorry, I encountered an error connecting to the Context Engine."
+        }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full relative">
@@ -34,36 +84,32 @@ export default function CognitiveThreadPage({ params }: { params: { id: string }
 
       {/* The Conversation Stream */}
       <div className="flex-1 overflow-y-auto w-full pb-32">
-        <MessageBlock 
-          role="user" 
-          content="I am resuming work on Atlas. What were the key contradictions we found yesterday regarding the pricing model and the new vector ingestion pipeline?" 
-        />
-        <MessageBlock 
-          role="ai" 
-          content={`Welcome back. 
-          
-Based on your previous notes and the system architecture documents, there are two primary contradictions you need to resolve:
-
-First, the pricing model assumes a flat rate for token ingestion. However, the new \`VectorPipelineV2\` explicitly introduces a dynamic batching process that scales logarithmically. If you charge a flat rate, high-volume ingestion will destroy your margins within the first month.
-
-Second, you noted in Notion that "Atlas should never store raw strings," but the current fallback mechanism in the parser temporarily caches raw strings to Redis before the embedding model spins up.
-
-I recommend we fix the pricing tiers first, as that impacts the business model immediately. Should we pull up the pricing matrix?`}
-          sources={MOCK_SOURCES}
-        />
-        <MessageBlock 
-          role="user" 
-          content="Yes, pull up the pricing matrix. Let's see how much we lose if someone ingests 10 million vectors." 
-        />
-        <MessageBlock 
-          role="ai" 
-          content={`Pulling the pricing matrix. Give me a moment to simulate the new ingestion loads based on your logarithmic scaling model...`}
-        />
+        {messages.map((m, idx) => (
+          <MessageBlock 
+            key={idx}
+            role={m.role} 
+            content={m.content} 
+            sources={m.sources}
+          />
+        ))}
+        {isLoading && (
+          <div className="w-full py-8 bg-surface-1/30">
+            <div className="max-w-3xl mx-auto flex gap-6">
+              <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center flex-shrink-0 animate-pulse">
+                <Loader2 className="w-4 h-4 animate-spin" />
+              </div>
+              <div className="flex-1 pt-1 flex flex-col gap-2">
+                <div className="h-4 w-1/3 bg-border-subtle rounded animate-pulse"></div>
+                <div className="h-4 w-2/3 bg-border-subtle rounded animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Sticky Input Palette */}
       <div className="sticky bottom-0 w-full bg-gradient-to-t from-background via-background to-transparent pt-6">
-        <ThreadInput />
+        <ThreadInput onSubmit={handleSubmit} disabled={isLoading} />
       </div>
 
     </div>
