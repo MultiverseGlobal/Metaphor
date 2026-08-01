@@ -223,21 +223,24 @@ class ReflectionService:
                 "projects": [],
                 "goals": [],
                 "preferences": [],
-                "missing_information": ["Tell me what you're building.", "Who is it for?", "What are your core goals?"]
+                "confidence": 0,
+                "next_question": "What are you currently building?"
             }
 
         system_prompt = (
             "You are the Metaphor Intelligence Engine's real-time parser.\n"
             "Analyze the user's raw text and extract structured information.\n"
             "Identify the Organization (if any), Projects, Goals, and Preferences/Constraints.\n"
-            "Crucially, identify what 'Missing Information' would be helpful to know next to build a complete context.\n"
+            "Calculate a 'confidence' score (0-100) representing how complete and robust this context is for an AI.\n"
+            "Generate a 'next_question' - a single, highly-targeted follow-up question designed to increase the confidence score (e.g., 'What specific products are part of MGE?').\n"
             "Respond STRICTLY with JSON matching this schema:\n"
             "{\n"
             "  \"organization\": \"str\",\n"
             "  \"projects\": [\"str\"],\n"
             "  \"goals\": [\"str\"],\n"
             "  \"preferences\": [\"str\"],\n"
-            "  \"missing_information\": [\"str\"]\n"
+            "  \"confidence\": 0,\n"
+            "  \"next_question\": \"str\"\n"
             "}"
         )
         
@@ -258,5 +261,6 @@ class ReflectionService:
                 "projects": [],
                 "goals": [],
                 "preferences": [],
-                "missing_information": []
+                "confidence": 0,
+                "next_question": ""
             }
