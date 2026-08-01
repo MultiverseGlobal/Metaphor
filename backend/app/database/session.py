@@ -6,6 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.config import settings
 
 from sqlalchemy.pool import NullPool
+import urllib.parse
 from sqlalchemy.engine.url import make_url
 
 def sanitize_db_url(raw_url: str) -> str:
@@ -17,7 +18,7 @@ def sanitize_db_url(raw_url: str) -> str:
         if url_obj.database:
             cleaned_db = url_obj.database.strip().strip("\n").strip("\r").strip()
             url_obj = url_obj._replace(database=cleaned_db)
-        return str(url_obj)
+        return url_obj.render_as_string(hide_password=False)
     except Exception:
         return cleaned
 
