@@ -80,37 +80,43 @@ async def get_user_via_api_key(request: Request, session: AsyncSession = Depends
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        if user_res and user_res.user:
-            try:
-                user = await session.get(User, uuid.UUID(user_res.user.id))
-                if user:
-                    return user
-                else:
-                    # Sync user to DB
-                    name = user_res.user.user_metadata.get("full_name") or user_res.user.user_metadata.get("name") or "Supabase User"
-                    new_user = User(
-                        id=uuid.UUID(user_res.user.id),
-                        email=user_res.user.email,
-                        hashed_password="",
-                        name=name
-                    )
-                    session.add(new_user)
-                    
-                    from app.models.identity import Organization, OrganizationMember
-                    org = Organization(name=f"{name}'s Workspace", slug=f"workspace-{user_res.user.id}")
-                    session.add(org)
-                    
-                    member = OrganizationMember(user_id=new_user.id, organization_id=org.id, role="owner")
-                    session.add(member)
-                    
-                    await session.commit()
-                    await session.refresh(new_user)
-                    return new_user
-            except Exception as db_err:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Database user sync failed: {str(db_err)}"
+        if not user_res or not user_res.user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Supabase token is invalid or user not found. (user_res: {user_res})",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        try:
+            user = await session.get(User, uuid.UUID(user_res.user.id))
+            if user:
+                return user
+            else:
+                # Sync user to DB
+                name = user_res.user.user_metadata.get("full_name") or user_res.user.user_metadata.get("name") or "Supabase User"
+                new_user = User(
+                    id=uuid.UUID(user_res.user.id),
+                    email=user_res.user.email,
+                    hashed_password="",
+                    name=name
                 )
+                session.add(new_user)
+                
+                from app.models.identity import Organization, OrganizationMember
+                org = Organization(name=f"{name}'s Workspace", slug=f"workspace-{user_res.user.id}")
+                session.add(org)
+                
+                member = OrganizationMember(user_id=new_user.id, organization_id=org.id, role="owner")
+                session.add(member)
+                
+                await session.commit()
+                await session.refresh(new_user)
+                return new_user
+        except Exception as db_err:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Database user sync failed: {str(db_err)}"
+            )
 
     # 2. Fall back to X-API-Key
     api_key = request.headers.get("X-API-Key", "")
