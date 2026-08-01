@@ -10,8 +10,14 @@ const NotionIcon = () => (
   <img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Notion-logo.svg" alt="Notion" className="w-5 h-5 object-contain opacity-80" />
 );
 
-const GoogleIcon = () => (
+const GoogleDriveIcon = () => (
   <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" alt="Google Drive" className="w-5 h-5 object-contain opacity-80" />
+);
+
+const GoogleLogo = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className="opacity-80 text-foreground">
+    <path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972-3.332 0-6.033-2.701-6.033-6.032s2.701-6.032 6.033-6.032c1.498 0 2.866.549 3.921 1.453l2.814-2.814C17.503 2.988 15.139 2 12.545 2 7.021 2 2.545 6.477 2.545 12s4.476 10 10 10c5.772 0 9.61-4.062 9.61-9.761 0-.832-.115-1.636-.298-2.439h-9.312z" />
+  </svg>
 );
 
 const AppleIcon = () => (
@@ -199,7 +205,7 @@ export default function OnboardingPage() {
           </div>
 
           <div className="space-y-4 w-full">
-            <AuthButton icon={<GoogleIcon />} label="Continue with Google" onClick={handleAuth} />
+            <AuthButton icon={<GoogleLogo />} label="Continue with Google" onClick={handleAuth} />
             <AuthButton icon={<GithubIcon className="opacity-80" />} label="Continue with GitHub" onClick={handleAuth} />
             <AuthButton icon={<AppleIcon />} label="Continue with Apple" onClick={handleAuth} />
             
@@ -240,7 +246,7 @@ export default function OnboardingPage() {
 
           <div className="space-y-3 mb-10">
             <ConnectCard name="Notion" icon={<NotionIcon />} connected={!!connections["notion"]} onToggle={() => toggleConnection("notion")} />
-            <ConnectCard name="Google Drive" icon={<GoogleIcon />} connected={!!connections["google"]} onToggle={() => toggleConnection("google")} />
+            <ConnectCard name="Google Drive" icon={<GoogleDriveIcon />} connected={!!connections["google"]} onToggle={() => toggleConnection("google")} />
             <ConnectCard name="GitHub" icon={<GithubIcon className="opacity-80" />} connected={!!connections["github"]} onToggle={() => toggleConnection("github")} />
           </div>
 
