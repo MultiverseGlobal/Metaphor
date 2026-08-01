@@ -56,7 +56,7 @@ export default function SynchronizationDashboard() {
       {/* Interactive Physics Graph */}
       <GraphViewer />
 
-      <div className="relative z-10 w-full max-w-4xl mx-auto px-8 pt-24 pb-32 flex flex-col items-start">
+      <div className="relative z-10 w-full max-w-4xl mx-auto p-8 pb-16 flex flex-col items-start">
         
         {/* Core Positioning & Greeting */}
         <div className="mb-16 animate-fade-in-up w-full border-b border-border-subtle/50 pb-10">
