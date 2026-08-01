@@ -83,9 +83,9 @@ export default function LandingPage() {
             className="text-5xl md:text-7xl font-semibold tracking-tighter text-foreground leading-[1.1] mb-8"
           >
             Every AI should know you <br />
-            <span className="text-muted flex items-center justify-center gap-3">
+            <span className="text-muted flex flex-col md:flex-row items-center justify-center gap-3 mt-2">
               the way you know
-              <span className="relative inline-block w-[240px] text-left">
+              <span className="relative inline-block w-[280px] text-left">
                 <AnimatePresence mode="popLayout">
                   <motion.span
                     key={wordIndex}
@@ -93,12 +93,12 @@ export default function LandingPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.4 }}
-                    className="absolute inset-0 text-foreground"
+                    className="absolute left-0 top-0 text-foreground whitespace-nowrap"
                   >
                     {words[wordIndex]}
                   </motion.span>
                 </AnimatePresence>
-                <span className="invisible">{words[3]}</span>
+                <span className="invisible whitespace-nowrap">{words[3]}</span>
               </span>
             </span>
           </motion.h1>
