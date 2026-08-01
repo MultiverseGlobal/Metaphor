@@ -81,7 +81,11 @@ export default function OnboardingPage() {
   // Resolving State
   const [resolvingIndex, setResolvingIndex] = useState(0);
   const [currentAnswer, setCurrentAnswer] = useState("");
+  const [answers, setAnswers] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Complete State
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Focus input when resolving starts
   useEffect(() => {
@@ -113,6 +117,7 @@ export default function OnboardingPage() {
 
   const submitAmbiguityAnswer = () => {
     if (!currentAnswer.trim()) return;
+    setAnswers(prev => [...prev, currentAnswer.trim()]);
     setCurrentAnswer("");
     if (resolvingIndex < AMBIGUITY_QUESTIONS.length - 1) {
       setResolvingIndex(prev => prev + 1);
@@ -122,11 +127,35 @@ export default function OnboardingPage() {
   };
 
   const finalize = async () => {
+    setIsSubmitting(true);
     try {
+      // 1. Construct the synthetic narrative for the LLM
+      const connectedSources = Object.keys(connections).filter(k => connections[k]).join(", ") || "none";
+      const narrative = `
+        User has connected the following sources: ${connectedSources}.
+        From these sources, we identified the organization 'Multiverse Global' and core projects 'Atlas Platform' and 'Metaphor OS'.
+        
+        We asked the user some disambiguation questions:
+        1. ${AMBIGUITY_QUESTIONS[0]}
+        Answer: ${answers[0] || "Unknown"}
+        
+        2. ${AMBIGUITY_QUESTIONS[1]}
+        Answer: ${answers[1] || "Unknown"}
+        
+        3. ${AMBIGUITY_QUESTIONS[2]}
+        Answer: ${answers[2] || "Unknown"}
+      `.trim();
+
+      // 2. Transmit to backend graph
+      await fetchFromMetaphor("/context/lore", { content: narrative });
+
+      // 3. Mark complete and redirect
       localStorage.setItem("metaphor_onboarded", "true");
       router.push("/dashboard");
     } catch (e: any) {
-      console.error(e);
+      console.error("Failed to commit graph:", e);
+      setIsSubmitting(false);
+      alert("Failed to commit context. Please try again.");
     }
   };
 
@@ -347,9 +376,17 @@ export default function OnboardingPage() {
 
           <button
             onClick={finalize}
-            className="text-sm font-medium text-muted hover:text-foreground transition-colors underline underline-offset-4"
+            disabled={isSubmitting}
+            className="text-sm font-medium text-muted hover:text-foreground transition-colors underline underline-offset-4 disabled:opacity-50 disabled:no-underline flex items-center gap-2"
           >
-            Go to Dashboard
+            {isSubmitting ? (
+              <>
+                <div className="w-4 h-4 rounded-full border-2 border-muted border-t-foreground animate-spin" />
+                Synchronizing Graph...
+              </>
+            ) : (
+              "Go to Dashboard"
+            )}
           </button>
         </div>
       </div>

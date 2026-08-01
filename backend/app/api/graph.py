@@ -43,7 +43,7 @@ async def get_stats(db: AsyncSession = Depends(get_session)):
     org = await identity.get_or_create_default_organization()
 
     node_count = (await db.execute(select(func.count(Node.id)).where(Node.organization_id == org.id))).scalar()
-    edge_count = (await db.execute(select(func.count(Edge.id)).where(Edge.organization_id == org.id))).scalar()
+    edge_count = (await db.execute(select(func.count(Edge.id)).join(Node, Edge.from_node == Node.id).where(Node.organization_id == org.id))).scalar()
     session_count = (await db.execute(select(func.count(ContextSession.id)).where(ContextSession.organization_id == org.id))).scalar()
     event_count = (await db.execute(select(func.count(WebhookEvent.id)))).scalar()
 
