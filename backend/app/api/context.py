@@ -17,10 +17,10 @@ class ContextRequest(BaseModel):
     ai_consumer: str = "claude"
 
 class LoreRequest(BaseModel):
-    mission: str
-    projects: str
-    constraints: str
-    preferences: str
+    content: str
+
+class AnalyzeDraftRequest(BaseModel):
+    content: str
 
 @router.post("/query")
 async def query_context(req: ContextRequest, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_session)):
@@ -33,6 +33,13 @@ async def query_context(req: ContextRequest, current_user: User = Depends(get_cu
     package = await context.generate_context_package(org.id, req.ai_consumer, req.query)
     return package.package_json
 
+@router.post("/analyze-draft")
+async def analyze_draft(req: AnalyzeDraftRequest, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_session)):
+    graph = GraphService(db)
+    reflection = ReflectionService(graph)
+    result = await reflection.analyze_draft(req.content)
+    return result
+
 @router.post("/lore")
 async def build_lore(req: LoreRequest, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_session)):
     identity = IdentityService(db)
@@ -43,12 +50,9 @@ async def build_lore(req: LoreRequest, current_user: User = Depends(get_current_
     
     event = WebhookEvent(
         provider="metaphor_onboarding",
-        event_type="lore_builder",
+        event_type="context_setup",
         payload={
-            "mission": req.mission,
-            "projects": req.projects,
-            "constraints": req.constraints,
-            "preferences": req.preferences,
+            "content": req.content,
             "url": "app://onboarding"
         }
     )

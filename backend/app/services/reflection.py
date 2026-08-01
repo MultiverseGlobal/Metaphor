@@ -211,3 +211,52 @@ class ReflectionService:
                 for n in node_map.values()
             ]
         }
+
+    async def analyze_draft(self, text: str) -> Dict[str, Any]:
+        """
+        Fast extraction of context from draft text without committing to the Graph.
+        Used for the 'Live Understanding' UI during Context Setup.
+        """
+        if not text.strip():
+            return {
+                "organization": "",
+                "projects": [],
+                "goals": [],
+                "preferences": [],
+                "missing_information": ["Tell me what you're building.", "Who is it for?", "What are your core goals?"]
+            }
+
+        system_prompt = (
+            "You are the Metaphor Intelligence Engine's real-time parser.\n"
+            "Analyze the user's raw text and extract structured information.\n"
+            "Identify the Organization (if any), Projects, Goals, and Preferences/Constraints.\n"
+            "Crucially, identify what 'Missing Information' would be helpful to know next to build a complete context.\n"
+            "Respond STRICTLY with JSON matching this schema:\n"
+            "{\n"
+            "  \"organization\": \"str\",\n"
+            "  \"projects\": [\"str\"],\n"
+            "  \"goals\": [\"str\"],\n"
+            "  \"preferences\": [\"str\"],\n"
+            "  \"missing_information\": [\"str\"]\n"
+            "}"
+        )
+        
+        prompt = f"User Draft Text:\n{text}"
+        
+        try:
+            response_text = await llm_service.query_llm(prompt=prompt, system_prompt=system_prompt, temperature=0.0)
+            clean_response = response_text.strip()
+            if clean_response.startswith("```json"):
+                clean_response = clean_response[7:]
+            if clean_response.endswith("```"):
+                clean_response = clean_response[:-3]
+            return json.loads(clean_response)
+        except Exception as e:
+            logger.error(f"Failed to parse analyze_draft JSON: {e}")
+            return {
+                "organization": "",
+                "projects": [],
+                "goals": [],
+                "preferences": [],
+                "missing_information": []
+            }
