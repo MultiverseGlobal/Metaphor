@@ -71,24 +71,23 @@ async def process_integration_sync(
                 notion_content = await fetch_notion_mockup()
                 combined_content += notion_content + "\n\n"
             
-            reflection_service = ReflectionService(session)
-            # Create a synthetic context session for this background sync
-            from app.models.graph import ContextSession
-            session_id = uuid.uuid4()
-            ctx = ContextSession(
-                id=session_id,
+            from app.services.graph import GraphService
+            from app.models.operations import WebhookEvent
+            
+            graph = GraphService(session)
+            reflection_service = ReflectionService(graph)
+            
+            event = WebhookEvent(
                 organization_id=uuid.UUID(org_id),
-                user_id=uuid.UUID(user_id),
-                title="Integration Sync",
+                provider="metaphor_onboarding",
+                event_type="initial_sync",
+                payload={"content": combined_content}
             )
-            session.add(ctx)
-            await session.commit()
             
             # Feed into graph
             await reflection_service.reflect_and_evolve(
-                org_id=org_id,
-                session_id=str(session_id),
-                content=combined_content
+                org_id=uuid.UUID(org_id),
+                event=event
             )
             logger.info(f"Integration sync completed successfully for user {user_id}")
             
