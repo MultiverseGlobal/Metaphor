@@ -27,26 +27,33 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // refreshing the auth token
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user = null;
 
-  const isDashboardRoute = request.nextUrl.pathname.startsWith('/dashboard')
-  if (!user && isDashboardRoute) {
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data?.user || null;
+  } catch (err) {
+    console.error("Middleware auth error (failing closed):", err);
+    user = null;
+  }
+
+  const isProtectedRoute = request.nextUrl.pathname.startsWith('/dashboard') || request.nextUrl.pathname.startsWith('/inbox');
+  const isLoginRoute = request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup';
+
+  if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    url.searchParams.set('redirect', request.nextUrl.pathname)
     return NextResponse.redirect(url)
   }
-  
-  const hasOnboarded = request.cookies.has("metaphor_onboarded");
 
-  if (user && request.nextUrl.pathname === '/login') {
+  if (user && isLoginRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
 
+  const hasOnboarded = request.cookies.has("metaphor_onboarded");
   if (user && hasOnboarded && request.nextUrl.pathname === '/onboarding') {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'

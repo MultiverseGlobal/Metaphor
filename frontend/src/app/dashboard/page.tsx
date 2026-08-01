@@ -6,7 +6,13 @@ import { Kbd } from "@/components/ui/Kbd";
 import { fetchFromMetaphor } from "@/app/api";
 import GraphViewer from "./GraphViewer";
 
+import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+
 export default function SynchronizationDashboard() {
+  const router = useRouter();
+  const [authLoading, setAuthLoading] = useState(true);
   const [syncing, setSyncing] = useState<Record<string, boolean>>({});
   const [stats, setStats] = useState({
     node_count: 0,
@@ -17,28 +23,54 @@ export default function SynchronizationDashboard() {
 
   const [user, setUser] = useState<{name: string, email: string} | null>(null);
 
+  const supabase = createClient();
+
   useEffect(() => {
-    async function fetchStats() {
+    async function checkAuthAndFetch() {
       try {
-        const data = await fetchFromMetaphor("/graph/stats");
-        setStats(data);
-      } catch (e) {
-        console.error("Failed to fetch stats:", e);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          router.push("/login?redirect=/dashboard");
+          return;
+        }
+        setAuthLoading(false);
+
+        // Fetch stats and user
+        try {
+          const statsData = await fetchFromMetaphor("/graph/stats");
+          setStats(statsData);
+        } catch (e) {
+          console.error("Failed to fetch stats:", e);
+        }
+        
+        try {
+          const userData = await fetchFromMetaphor("/auth/me");
+          setUser(userData);
+        } catch (e) {
+          console.error("Failed to fetch user:", e);
+        }
+      } catch (err) {
+        console.error("Auth check failed:", err);
+        router.push("/login?redirect=/dashboard");
       }
     }
     
-    async function fetchUser() {
-      try {
-        const data = await fetchFromMetaphor("/auth/me");
-        setUser(data);
-      } catch (e) {
-        console.error("Failed to fetch user:", e);
-      }
+    checkAuthAndFetch();
+  }, [router]);
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error("Error signing out:", e);
     }
-    
-    fetchStats();
-    fetchUser();
-  }, []);
+    document.cookie = "metaphor_onboarded=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("metaphor_api_key");
+      localStorage.removeItem("metaphor_onboarded");
+    }
+    router.push("/login");
+  };
 
   const syncIntegration = async (provider: string) => {
     setSyncing(prev => ({ ...prev, [provider]: true }));
@@ -51,6 +83,14 @@ export default function SynchronizationDashboard() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-full min-h-full">
       {/* Interactive Physics Graph */}
@@ -60,9 +100,18 @@ export default function SynchronizationDashboard() {
         
         {/* Core Positioning & Greeting */}
         <div className="mb-16 animate-fade-in-up w-full border-b border-border-subtle/50 pb-10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
-            <h1 className="text-sm font-semibold text-muted uppercase tracking-widest">System Online</h1>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
+              <h1 className="text-sm font-semibold text-muted uppercase tracking-widest">System Online</h1>
+            </div>
+            <button 
+              onClick={handleSignOut}
+              className="flex items-center gap-2 text-xs font-medium text-muted hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-border-subtle hover:border-border-strong bg-surface-1 cursor-pointer"
+            >
+              <LogOut size={14} />
+              <span>Sign Out</span>
+            </button>
           </div>
           <p className="text-3xl text-foreground font-medium tracking-tight leading-snug mb-4">
             {user ? `${user.name}, your knowledge model is synchronized.` : "Your knowledge model is synchronized."}

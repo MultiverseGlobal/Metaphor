@@ -8,13 +8,27 @@ from app.models.graph import Node, Edge
 from app.models.operations import WebhookEvent
 from app.models.context import ContextSession
 
-router = APIRouter()
+from app.core.security import get_user_via_api_key
+from app.models.identity import User, Organization, OrganizationMember
+
+async def get_user_org(user: User, db: AsyncSession) -> Organization:
+    stmt = select(OrganizationMember).where(OrganizationMember.user_id == user.id)
+    res = await db.execute(stmt)
+    org_member = res.scalars().first()
+    if org_member:
+        org = await db.get(Organization, org_member.organization_id)
+        if org:
+            return org
+    identity = IdentityService(db)
+    return await identity.get_or_create_default_organization()
 
 @router.get("/")
-async def get_graph(db: AsyncSession = Depends(get_session)):
-    """Retrieve all nodes and edges for the active organization."""
-    identity = IdentityService(db)
-    org = await identity.get_or_create_default_organization()
+async def get_graph(
+    user: User = Depends(get_user_via_api_key),
+    db: AsyncSession = Depends(get_session)
+):
+    """Retrieve all nodes and edges for the authenticated user's organization."""
+    org = await get_user_org(user, db)
 
     # Get nodes
     nodes_res = await db.execute(select(Node).where(Node.organization_id == org.id))
@@ -38,10 +52,12 @@ async def get_graph(db: AsyncSession = Depends(get_session)):
     }
 
 @router.get("/stats")
-async def get_stats(db: AsyncSession = Depends(get_session)):
-    """Retrieve high-level metrics for the dashboard."""
-    identity = IdentityService(db)
-    org = await identity.get_or_create_default_organization()
+async def get_stats(
+    user: User = Depends(get_user_via_api_key),
+    db: AsyncSession = Depends(get_session)
+):
+    """Retrieve high-level metrics for the dashboard for the authenticated user."""
+    org = await get_user_org(user, db)
 
     node_count = (await db.execute(select(func.count(Node.id)).where(Node.organization_id == org.id))).scalar()
     edge_count = (await db.execute(select(func.count(Edge.id)).join(Node, Edge.from_node == Node.id).where(Node.organization_id == org.id))).scalar()
@@ -56,10 +72,12 @@ async def get_stats(db: AsyncSession = Depends(get_session)):
     }
 
 @router.get("/inbox")
-async def get_inbox(db: AsyncSession = Depends(get_session)):
-    """Retrieve all pending nodes for review in the Context Inbox."""
-    identity = IdentityService(db)
-    org = await identity.get_or_create_default_organization()
+async def get_inbox(
+    user: User = Depends(get_user_via_api_key),
+    db: AsyncSession = Depends(get_session)
+):
+    """Retrieve all pending nodes for review for the authenticated user's organization."""
+    org = await get_user_org(user, db)
 
     nodes_res = await db.execute(
         select(Node).where(Node.organization_id == org.id, Node.status == "pending_review")
@@ -74,10 +92,15 @@ async def get_inbox(db: AsyncSession = Depends(get_session)):
     }
 
 @router.post("/nodes/{node_id}/approve")
-async def approve_node(node_id: uuid.UUID, db: AsyncSession = Depends(get_session)):
+async def approve_node(
+    node_id: uuid.UUID,
+    user: User = Depends(get_user_via_api_key),
+    db: AsyncSession = Depends(get_session)
+):
     """Approve a pending node."""
+    org = await get_user_org(user, db)
     node = await db.get(Node, node_id)
-    if not node:
+    if not node or node.organization_id != org.id:
         raise HTTPException(status_code=404, detail="Node not found")
     node.status = "approved"
     db.add(node)
@@ -85,10 +108,15 @@ async def approve_node(node_id: uuid.UUID, db: AsyncSession = Depends(get_sessio
     return {"status": "success"}
 
 @router.post("/nodes/{node_id}/reject")
-async def reject_node(node_id: uuid.UUID, db: AsyncSession = Depends(get_session)):
+async def reject_node(
+    node_id: uuid.UUID,
+    user: User = Depends(get_user_via_api_key),
+    db: AsyncSession = Depends(get_session)
+):
     """Reject a pending node."""
+    org = await get_user_org(user, db)
     node = await db.get(Node, node_id)
-    if not node:
+    if not node or node.organization_id != org.id:
         raise HTTPException(status_code=404, detail="Node not found")
     node.status = "rejected"
     db.add(node)
