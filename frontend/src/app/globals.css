@@ -2,28 +2,29 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* THE COGNITIVE OS PALETTE (LINEAR/NOTION/APPLE) */
+  /* THE COGNITIVE OS PALETTE (ARCHITECTURAL / SWISS) */
   
   /* Foundation */
-  --color-background: #FFFFFF; 
-  --color-foreground: #111827; /* Near Black */
-  --color-muted: #6B7280;      /* Soft Gray */
+  --color-background: #F8F7F4; /* Porcelain */
+  --color-foreground: #111318; /* Obsidian */
+  --color-muted: #6B7280;      /* Slate */
   
   /* Surfaces */
   --color-surface-1: #FFFFFF;
-  --color-surface-2: #F9FAFB; /* Warm Gray */
-  --color-surface-hover: #F3F4F6;
+  --color-surface-2: #F1F0EC; 
+  --color-surface-hover: #EBEBE6;
   
   /* Borders */
-  --color-border-subtle: #E5E7EB;
-  --color-border-strong: #D1D5DB;
+  --color-border-subtle: #EBEAE5;
+  --color-border-strong: #D1D1CB;
   
   /* Accents */
-  --color-primary: #4F46E5; /* Indigo */
-  --color-primary-hover: #4338CA;
-  --color-primary-dim: rgba(79, 70, 229, 0.08);
+  --color-primary: #4E6CF2; /* Context Blue */
+  --color-primary-hover: #3C57CD;
+  --color-primary-dim: rgba(78, 108, 242, 0.08);
   
   --color-cyan: #06B6D4;
+  --color-success: #10B981;
   
   /* Shared Properties */
   --radius-lg: 12px;

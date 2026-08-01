@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Database, Brain, Sparkles, Check, ChevronRight, Activity, Network, Key } from 'lucide-react';
+import { ArrowRight, Database, Box, Check, ChevronRight, Activity, Network, Key } from 'lucide-react';
+import { MetaphorLogo } from '@/components/ui/MetaphorLogo';
 
 export default function LandingPage() {
   const [activeStep, setActiveStep] = useState(0);
@@ -12,7 +13,7 @@ export default function LandingPage() {
     { id: "init", title: "Initialize Identity", icon: <Key className="w-5 h-5" />, desc: "Set your core persona and connect Metaphor to your world." },
     { id: "ingest", title: "Passive Ingestion", icon: <Database className="w-5 h-5" />, desc: "Metaphor reads Notion, Drive, and GitHub in the background." },
     { id: "graph", title: "Context Graph", icon: <Network className="w-5 h-5" />, desc: "Data is resolved into semantic nodes and edges continuously." },
-    { id: "llm", title: "AI Injection", icon: <Brain className="w-5 h-5" />, desc: "Your context is automatically appended to Claude and ChatGPT." }
+    { id: "llm", title: "AI Injection", icon: <Box className="w-5 h-5" />, desc: "Your context is automatically appended to Claude and ChatGPT." }
   ];
 
   useEffect(() => {
@@ -33,7 +34,7 @@ export default function LandingPage() {
         className="flex items-center justify-between px-8 py-6 max-w-7xl mx-auto w-full z-50"
       >
         <div className="flex items-center gap-3">
-          <div className="w-4 h-4 rounded-full bg-foreground shadow-[0_0_12px_rgba(var(--foreground-rgb),0.5)]" />
+          <MetaphorLogo size={16} />
           <span className="text-sm font-semibold tracking-tight text-foreground">Metaphor OS</span>
         </div>
         
@@ -45,7 +46,7 @@ export default function LandingPage() {
         
         <div>
           <Link href="/onboarding" className="group flex items-center gap-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity">
-            Initialize
+            Get Started
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
@@ -92,9 +93,9 @@ export default function LandingPage() {
           >
             <Link 
               href="/onboarding" 
-              className="px-8 py-4 bg-foreground text-background text-sm font-medium rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_40px_rgba(var(--foreground-rgb),0.2)]"
+              className="px-8 py-4 bg-foreground text-background text-sm font-medium rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm"
             >
-              Build Your World Model
+              Get Started
             </Link>
           </motion.div>
         </div>

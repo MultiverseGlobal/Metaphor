@@ -3,8 +3,9 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Network, Database, Key, Plug, Settings, Sidebar, User, ChevronDown, Layers, Sparkles } from "lucide-react";
+import { Network, Database, Key, Plug, Settings, Sidebar, User, ChevronDown, Layers, Terminal } from "lucide-react";
 import { Kbd } from "@/components/ui/Kbd";
+import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
 
 export default function LinearLayout({
   children,
@@ -42,9 +43,7 @@ export default function LinearLayout({
       >
         {/* Workspace Header */}
         <div className="h-14 flex items-center px-6 mt-2 mb-2 font-semibold text-foreground tracking-tight">
-          <div className="w-6 h-6 rounded-md bg-foreground text-background flex items-center justify-center mr-3 text-[11px] font-bold shadow-sm">
-            M
-          </div>
+          <MetaphorLogo size={20} className="mr-3" />
           Metaphor OS
         </div>
 
@@ -52,7 +51,7 @@ export default function LinearLayout({
           
           {/* Action Layer */}
           <div className="space-y-0.5 mb-6">
-            <NavItem href="/dashboard/playground" icon={<Sparkles />} label="The Magic Layer" shortcut="⌘P" pathname={pathname} />
+            <NavItem href="/dashboard/playground" icon={<Terminal />} label="The Context Layer" shortcut="⌘P" pathname={pathname} />
           </div>
 
           {/* Infrastructure Actions */}

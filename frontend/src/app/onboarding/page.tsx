@@ -2,19 +2,22 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CheckCircle2, ChevronRight, Link2, Database, LayoutTemplate, Briefcase, Zap } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronRight, Database, LayoutTemplate, Zap, Github, Mail } from "lucide-react";
 import { fetchFromMetaphor } from "@/app/api";
+import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
 
 const NotionIcon = () => (
-  <img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Notion-logo.svg" alt="Notion" className="w-5 h-5 object-contain" />
+  <img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Notion-logo.svg" alt="Notion" className="w-5 h-5 object-contain opacity-80" />
 );
 
 const GoogleIcon = () => (
-  <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" alt="Google Drive" className="w-5 h-5 object-contain" />
+  <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" alt="Google Drive" className="w-5 h-5 object-contain opacity-80" />
 );
 
-const SlackIcon = () => (
-  <img src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Slack_icon_2019.svg" alt="Slack" className="w-5 h-5 object-contain" />
+const AppleIcon = () => (
+  <svg viewBox="0 0 384 512" width="20" height="20" fill="currentColor" className="opacity-80">
+    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.3 48.6-.7 90.4-84.3 102.8-119.6-34.9-15.8-61.5-39.8-61.9-91zM243.3 85.5c20.1-24.6 33.5-58.8 29.8-92.7-27.1 1.2-61.5 18.2-82.6 42.6-18.2 21.1-33.8 56.6-29.3 90.1 30.6 2.3 62-15.3 82.1-40z"/>
+  </svg>
 );
 
 const ChatGPTIcon = () => (
@@ -37,15 +40,27 @@ const CursorIcon = () => (
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Phase = "connect" | "analyzing" | "resolving" | "complete";
+type Phase = "auth" | "connect" | "analyzing" | "resolving" | "complete";
 
 const AMBIGUITY_QUESTIONS = [
-  "What is your current highest priority?",
+  "What is the most important thing you're working on?",
   "Is there anything your AI should *never* do or suggest?",
   "How would you describe your preferred communication style?"
 ];
 
-// ─── Connect Phase Component ──────────────────────────────────────────────────
+// ─── Shared Components ────────────────────────────────────────────────────────
+
+function AuthButton({ icon, label, onClick }: { icon: React.ReactNode, label: string, onClick: () => void }) {
+  return (
+    <button 
+      onClick={onClick}
+      className="w-full flex items-center gap-3 p-4 rounded-xl border border-border-subtle bg-surface-1 hover:border-border-strong hover:bg-surface-2 transition-all duration-200"
+    >
+      <div className="text-foreground shrink-0">{icon}</div>
+      <span className="text-sm font-medium text-foreground">{label}</span>
+    </button>
+  );
+}
 
 function ConnectCard({ name, icon, connected, onToggle }: { name: string, icon: React.ReactNode, connected: boolean, onToggle: () => void }) {
   return (
@@ -70,7 +85,7 @@ function ConnectCard({ name, icon, connected, onToggle }: { name: string, icon: 
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [phase, setPhase] = useState<Phase>("connect");
+  const [phase, setPhase] = useState<Phase>("auth");
   
   // Connect State
   const [connections, setConnections] = useState<Record<string, boolean>>({});
@@ -101,15 +116,19 @@ export default function OnboardingPage() {
         setAnalysisStep(s => {
           if (s >= 3) {
             clearInterval(interval);
-            setTimeout(() => setPhase("resolving"), 800);
+            setTimeout(() => setPhase("resolving"), 1200);
             return s;
           }
           return s + 1;
         });
-      }, 1200);
+      }, 1500);
       return () => clearInterval(interval);
     }
   }, [phase]);
+
+  const handleAuth = () => {
+    setPhase("connect");
+  };
 
   const toggleConnection = (id: string) => {
     setConnections(prev => ({ ...prev, [id]: !prev[id] }));
@@ -159,39 +178,75 @@ export default function OnboardingPage() {
     }
   };
 
+  // ── PHASE: AUTH (WORKSPACE CREATION) ─────────────────────────────────────────
+  if (phase === "auth") {
+    return (
+      <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in fade-in duration-700">
+        <div className="w-full max-w-sm flex flex-col items-center">
+          
+          <MetaphorLogo size={48} className="mb-10 text-foreground" />
+
+          <div className="mb-12 text-center w-full">
+            <h1 className="text-3xl font-medium tracking-tight text-foreground mb-4">
+              Create your private workspace
+            </h1>
+          </div>
+
+          <div className="space-y-4 w-full">
+            <AuthButton icon={<GoogleIcon />} label="Continue with Google" onClick={handleAuth} />
+            <AuthButton icon={<Github className="w-5 h-5 text-foreground opacity-80" />} label="Continue with GitHub" onClick={handleAuth} />
+            <AuthButton icon={<AppleIcon />} label="Continue with Apple" onClick={handleAuth} />
+            
+            <div className="py-2 flex items-center gap-4 w-full">
+              <div className="flex-1 border-t border-border-subtle"></div>
+              <span className="text-xs text-muted font-medium">or</span>
+              <div className="flex-1 border-t border-border-subtle"></div>
+            </div>
+
+            <AuthButton icon={<Mail className="w-5 h-5 text-foreground opacity-80" />} label="Continue with Email" onClick={handleAuth} />
+          </div>
+
+          <p className="mt-10 text-xs text-muted max-w-[280px] text-center leading-relaxed">
+            By creating a workspace, you agree to our Terms of Service and Privacy Policy. Data is encrypted and stored locally-first.
+          </p>
+
+        </div>
+      </div>
+    );
+  }
+
   // ── PHASE: CONNECT ────────────────────────────────────────────────────────────
   if (phase === "connect") {
     const connectedCount = Object.values(connections).filter(Boolean).length;
     
     return (
       <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in fade-in duration-700">
-        <div className="w-full max-w-md flex flex-col">
+        <div className="w-full max-w-sm flex flex-col">
 
-          <div className="mb-12 text-center">
-            <h1 className="text-3xl font-light tracking-tight text-foreground mb-4">
-              Connect your knowledge.
+          <div className="mb-10 w-full">
+            <h1 className="text-2xl font-medium tracking-tight text-foreground mb-3">
+              Where should Metaphor learn from?
             </h1>
             <p className="text-muted text-sm leading-relaxed">
-              Metaphor builds your context engine by reading what you've already written. 
-              The more you connect, the smarter it gets.
+              Connect your data sources. Metaphor will securely map your context in the background.
             </p>
           </div>
 
-          <div className="space-y-4 mb-12">
+          <div className="space-y-3 mb-10">
             <ConnectCard name="Notion" icon={<NotionIcon />} connected={!!connections["notion"]} onToggle={() => toggleConnection("notion")} />
-            <ConnectCard name="Google Workspace" icon={<GoogleIcon />} connected={!!connections["google"]} onToggle={() => toggleConnection("google")} />
-            <ConnectCard name="Slack" icon={<SlackIcon />} connected={!!connections["slack"]} onToggle={() => toggleConnection("slack")} />
+            <ConnectCard name="Google Drive" icon={<GoogleIcon />} connected={!!connections["google"]} onToggle={() => toggleConnection("google")} />
+            <ConnectCard name="GitHub" icon={<Github className="w-5 h-5 opacity-80" />} connected={!!connections["github"]} onToggle={() => toggleConnection("github")} />
           </div>
 
           <button
             onClick={() => setPhase("analyzing")}
             className={`w-full px-8 py-4 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all ${
               connectedCount > 0 
-                ? "bg-foreground text-background hover:opacity-90" 
+                ? "bg-foreground text-background shadow-md hover:opacity-90" 
                 : "bg-surface-2 text-foreground hover:bg-surface-1"
             }`}
           >
-            {connectedCount > 0 ? `Import & Analyze ${connectedCount} Source${connectedCount > 1 ? 's' : ''}` : "Skip for now"}
+            {connectedCount > 0 ? `Import ${connectedCount} Source${connectedCount > 1 ? 's' : ''}` : "Skip for now"}
           </button>
         </div>
       </div>
@@ -201,17 +256,17 @@ export default function OnboardingPage() {
   // ── PHASE: ANALYZING ─────────────────────────────────────────────────────────
   if (phase === "analyzing") {
     const analysisSteps = [
-      "Reading workspaces and documents...",
-      "Extracting core projects and goals...",
-      "Building relationship graph...",
-      "Identifying missing context..."
+      "Connecting to integrations...",
+      "Mapping directory structures...",
+      "Extracting organizational context...",
+      "Building relationship graph..."
     ];
 
     return (
       <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in fade-in duration-500">
         <div className="w-full max-w-sm flex flex-col items-center text-center">
           
-          <div className="w-12 h-12 rounded-full border-2 border-surface-2 border-t-foreground animate-spin mb-10" />
+          <MetaphorLogo size={64} className="mb-10 text-primary animate-pulse" />
           
           <div className="h-8 relative w-full overflow-hidden mb-12">
             {analysisSteps.map((step, idx) => (
@@ -231,21 +286,21 @@ export default function OnboardingPage() {
           </div>
 
           <div className="w-full grid grid-cols-2 gap-4">
-            <div className={`flex flex-col items-center p-4 bg-surface-1 rounded-xl transition-opacity duration-700 ${analysisStep >= 1 ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`flex flex-col items-center p-4 bg-surface-1 border border-border-subtle rounded-xl transition-opacity duration-700 ${analysisStep >= 1 ? 'opacity-100' : 'opacity-0'}`}>
               <span className="text-2xl font-light text-foreground mb-1">12</span>
               <span className="text-xs text-muted font-medium">Projects found</span>
             </div>
-            <div className={`flex flex-col items-center p-4 bg-surface-1 rounded-xl transition-opacity duration-700 ${analysisStep >= 1 ? 'opacity-100' : 'opacity-0'}`}>
-              <span className="text-2xl font-light text-foreground mb-1">28</span>
+            <div className={`flex flex-col items-center p-4 bg-surface-1 border border-border-subtle rounded-xl transition-opacity duration-700 ${analysisStep >= 1 ? 'opacity-100' : 'opacity-0'}`}>
+              <span className="text-2xl font-light text-foreground mb-1">148</span>
               <span className="text-xs text-muted font-medium">Documents read</span>
             </div>
-            <div className={`flex flex-col items-center p-4 bg-surface-1 rounded-xl transition-opacity duration-700 ${analysisStep >= 2 ? 'opacity-100' : 'opacity-0'}`}>
-              <span className="text-2xl font-light text-foreground mb-1">4</span>
+            <div className={`flex flex-col items-center p-4 bg-surface-1 border border-border-subtle rounded-xl transition-opacity duration-700 ${analysisStep >= 2 ? 'opacity-100' : 'opacity-0'}`}>
+              <span className="text-2xl font-light text-foreground mb-1">3</span>
               <span className="text-xs text-muted font-medium">Companies</span>
             </div>
-            <div className={`flex flex-col items-center p-4 bg-surface-1 rounded-xl transition-opacity duration-700 ${analysisStep >= 2 ? 'opacity-100' : 'opacity-0'}`}>
-              <span className="text-2xl font-light text-foreground mb-1">7</span>
-              <span className="text-xs text-muted font-medium">Goals extracted</span>
+            <div className={`flex flex-col items-center p-4 bg-surface-1 border border-border-subtle rounded-xl transition-opacity duration-700 ${analysisStep >= 2 ? 'opacity-100' : 'opacity-0'}`}>
+              <span className="text-2xl font-light text-foreground mb-1">2,410</span>
+              <span className="text-xs text-muted font-medium">Nodes created</span>
             </div>
           </div>
 
@@ -260,17 +315,17 @@ export default function OnboardingPage() {
       <div className="min-h-screen w-full bg-background flex font-sans animate-in fade-in duration-700">
         
         {/* ── Left: Found Context ── */}
-        <div className="w-[400px] border-r border-border-subtle bg-surface-1 flex flex-col p-10 justify-center">
-          <div className="mb-10">
-            <h2 className="text-lg font-medium text-foreground mb-2">We found most of your context.</h2>
-            <p className="text-sm text-muted">Metaphor has successfully mapped your workspace structure.</p>
+        <div className="w-[400px] border-r border-border-subtle bg-surface-1 flex flex-col p-12 justify-center">
+          <div className="mb-12">
+            <h2 className="text-xl font-medium text-foreground mb-3">Context mapping complete.</h2>
+            <p className="text-sm text-muted">Metaphor has successfully indexed your workspace structure.</p>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div>
-              <p className="text-xs font-mono uppercase tracking-widest text-muted mb-3">Organization</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-4">Core Organizations</p>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-surface-2 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-surface-2 border border-border-strong flex items-center justify-center">
                   <Database className="w-4 h-4 text-foreground" />
                 </div>
                 <span className="text-sm font-medium text-foreground">Multiverse Global</span>
@@ -278,16 +333,16 @@ export default function OnboardingPage() {
             </div>
 
             <div>
-              <p className="text-xs font-mono uppercase tracking-widest text-muted mb-3">Core Projects</p>
-              <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-4">Active Projects</p>
+              <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-surface-2 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-surface-2 border border-border-strong flex items-center justify-center">
                     <LayoutTemplate className="w-4 h-4 text-foreground" />
                   </div>
                   <span className="text-sm font-medium text-foreground">Atlas Platform</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-surface-2 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-surface-2 border border-border-strong flex items-center justify-center">
                     <Zap className="w-4 h-4 text-foreground" />
                   </div>
                   <span className="text-sm font-medium text-foreground">Metaphor OS</span>
@@ -295,36 +350,36 @@ export default function OnboardingPage() {
               </div>
             </div>
             
-            <div className="pt-6 border-t border-border-subtle">
-              <p className="text-xs font-mono uppercase tracking-widest text-muted mb-3">Missing Context</p>
-              <p className="text-sm text-muted">We couldn't infer {AMBIGUITY_QUESTIONS.length} strategic details from your documents.</p>
+            <div className="pt-8 border-t border-border-subtle">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-3">Missing Context</p>
+              <p className="text-sm text-muted">We couldn't determine {AMBIGUITY_QUESTIONS.length} specific details.</p>
             </div>
           </div>
         </div>
 
         {/* ── Right: Ambiguity Resolution ── */}
-        <div className="flex-1 flex flex-col justify-center px-16 max-w-2xl">
+        <div className="flex-1 flex flex-col justify-center px-16 max-w-2xl mx-auto">
           <div className="mb-8 animate-in slide-in-from-bottom-2 duration-500">
             
-            <div className="flex items-center gap-2 mb-6">
-              <span className="w-6 h-6 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-medium">
+            <div className="flex items-center gap-3 mb-8">
+              <span className="w-6 h-6 rounded-full bg-primary text-background flex items-center justify-center text-xs font-bold shadow-[0_0_10px_rgba(78,108,242,0.3)]">
                 {resolvingIndex + 1}
               </span>
-              <span className="text-xs font-medium text-muted uppercase tracking-widest">of {AMBIGUITY_QUESTIONS.length}</span>
+              <span className="text-xs font-bold text-muted uppercase tracking-widest">of {AMBIGUITY_QUESTIONS.length}</span>
             </div>
 
-            <p className="text-2xl font-light tracking-tight text-foreground mb-8 leading-snug">
+            <p className="text-3xl font-medium tracking-tight text-foreground mb-8 leading-snug">
               {AMBIGUITY_QUESTIONS[resolvingIndex]}
             </p>
 
-            <div className="flex items-center gap-4 border-b border-border-strong pb-3">
+            <div className="flex items-center gap-4 border-b border-border-strong pb-3 transition-colors focus-within:border-foreground">
               <input
                 ref={inputRef}
                 value={currentAnswer}
                 onChange={(e) => setCurrentAnswer(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") submitAmbiguityAnswer(); }}
                 placeholder="Type your answer..."
-                className="flex-1 bg-transparent text-foreground text-lg font-light placeholder:text-muted/40 focus:outline-none"
+                className="flex-1 bg-transparent text-foreground text-lg font-normal placeholder:text-muted focus:outline-none"
               />
               <button
                 onClick={submitAmbiguityAnswer}
@@ -348,15 +403,13 @@ export default function OnboardingPage() {
       <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in fade-in duration-700">
         <div className="w-full max-w-xl flex flex-col text-center items-center">
 
-          <div className="w-16 h-16 rounded-full bg-surface-2 flex items-center justify-center mb-8">
-            <CheckCircle2 className="w-8 h-8 text-foreground" />
-          </div>
+          <MetaphorLogo size={48} className="mb-8 text-foreground" />
 
-          <h1 className="text-3xl font-light tracking-tight text-foreground mb-4">
-            Your shared context is ready.
+          <h1 className="text-3xl font-medium tracking-tight text-foreground mb-4">
+            Your workspace is ready.
           </h1>
           <p className="text-muted text-sm mb-16 max-w-md">
-            Metaphor has mapped your entire digital workspace and resolved all ambiguities. You can now connect your AI tools.
+            Metaphor has mapped your entire digital workspace. You can now inject this understanding into your AI consumers.
           </p>
 
           <div className="flex items-center gap-6 mb-16 w-full justify-center">
@@ -377,15 +430,15 @@ export default function OnboardingPage() {
           <button
             onClick={finalize}
             disabled={isSubmitting}
-            className="text-sm font-medium text-muted hover:text-foreground transition-colors underline underline-offset-4 disabled:opacity-50 disabled:no-underline flex items-center gap-2"
+            className="px-8 py-4 bg-foreground text-background text-sm font-medium rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm flex items-center gap-2"
           >
             {isSubmitting ? (
               <>
-                <div className="w-4 h-4 rounded-full border-2 border-muted border-t-foreground animate-spin" />
-                Synchronizing Graph...
+                <div className="w-4 h-4 rounded-full border-2 border-background border-t-transparent animate-spin" />
+                Synchronizing...
               </>
             ) : (
-              "Go to Dashboard"
+              "Enter Workspace"
             )}
           </button>
         </div>
