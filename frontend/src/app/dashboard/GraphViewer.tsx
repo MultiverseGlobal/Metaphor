@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { fetchFromMetaphor } from "../api";
+import { fetchFromMetaphor } from "@/app/api";
 
 // Dynamically import to prevent SSR canvas errors
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });

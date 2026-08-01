@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Brain, Code, PenTool, Hash, Plus, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { fetchFromMetaphor } from "../../api";
+import { fetchFromMetaphor } from "@/app/api";
 
 type ModelItem = {
   id: string;

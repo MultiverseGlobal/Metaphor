@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { GitBranch as Github, FileText, Calendar, Box, HardDrive, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { fetchFromMetaphor } from "../../api";
+import { fetchFromMetaphor } from "@/app/api";
 
 type IntegrationState = {
   provider: string;

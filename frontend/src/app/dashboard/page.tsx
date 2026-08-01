@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { CheckCircle2, Plug, Database, Sparkles, Server, Folder, FileText, Calendar, Activity, Command } from "lucide-react";
 import { Kbd } from "@/components/ui/Kbd";
-import { fetchFromMetaphor } from "../api";
+import { fetchFromMetaphor } from "@/app/api";
 import GraphViewer from "./GraphViewer";
 
 export default function SynchronizationDashboard() {

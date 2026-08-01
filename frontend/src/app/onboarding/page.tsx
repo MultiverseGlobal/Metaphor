@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2, ChevronRight, Link2, Database, LayoutTemplate, Briefcase, Zap } from "lucide-react";
-import { fetchFromMetaphor } from "../api";
+import { fetchFromMetaphor } from "@/app/api";
 
 const NotionIcon = () => (
   <img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Notion-logo.svg" alt="Notion" className="w-5 h-5 object-contain" />

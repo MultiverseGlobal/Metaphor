@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Key, Copy, Check, Terminal, ExternalLink, Shield, Plus, Lock } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { fetchFromMetaphor } from "../../api";
+import { fetchFromMetaphor } from "@/app/api";
 
 type ApiKey = {
   id: string;

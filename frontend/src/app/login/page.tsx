@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Shield, ArrowRight, Lock, User, Mail, Sparkles, Sun, BookOpen, Moon } from "lucide-react";
-import { BACKEND_URL, fetchFromMetaphor } from "../api";
+import { BACKEND_URL, fetchFromMetaphor } from "@/app/api";
 
 export default function LoginPage() {
   const router = useRouter();

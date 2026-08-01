@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { User, Mail, CreditCard, LogOut, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { fetchFromMetaphor } from "../api";
+import { fetchFromMetaphor } from "@/app/api";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);

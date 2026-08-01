@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Sparkles, Send, Bot, User, ShieldCheck, Target, Network, Check } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { fetchFromMetaphor } from "../../api";
+import { fetchFromMetaphor } from "@/app/api";
 
 type Message = {
   role: "user" | "ai";

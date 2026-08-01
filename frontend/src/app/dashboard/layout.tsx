@@ -18,7 +18,7 @@ export default function LinearLayout({
   React.useEffect(() => {
     async function fetchUser() {
       try {
-        const { fetchFromMetaphor } = await import("./api");
+        const { fetchFromMetaphor } = await import("@/app/api");
         const data = await fetchFromMetaphor("/auth/me");
         if (data && data.name) {
           setUser(data);
