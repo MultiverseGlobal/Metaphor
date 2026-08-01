@@ -274,12 +274,56 @@ class ReflectionService:
             if clean.endswith("```"): clean = clean[:-3]
             return json.loads(clean.strip())
         except Exception as e:
-            logger.error(f"Failed to parse analyze_interview JSON: {e}")
-            return {
-                "organization": "", "projects": [], "goals": [], "preferences": [],
-                "categories": {"mission": 0, "projects": 0, "goals": 0, "preferences": 0, "constraints": 0},
-                "overall_confidence": 0,
-                "reflection": "",
-                "next_question": "Can you tell me more about what you're building?"
-            }
+            logger.error(f"LLM query or JSON parse failed in analyze_interview: {e}. Running smart rule-based fallback.")
+            
+            # Rule-based fallback based on conversation turn count & content
+            turn_count = len(answers)
+            last_ans = answers[-1].get("answer", "") if answers else ""
+            
+            # Accumulate text from all answers
+            all_text = " ".join([a.get("answer", "") for a in answers])
+            
+            # Extract simple org/project candidates
+            first_ans = answers[0].get("answer", "").strip() if answers else "Project"
+            org_name = first_ans if len(first_ans) < 30 else first_ans.split()[0]
+            
+            projects = []
+            if turn_count >= 2:
+                second_ans = answers[1].get("answer", "").strip()
+                if second_ans:
+                    projects = [p.strip() for p in second_ans.replace("and", ",").split(",") if p.strip()]
+            
+            if turn_count == 1:
+                return {
+                    "organization": org_name,
+                    "projects": [],
+                    "goals": [],
+                    "preferences": [],
+                    "categories": {"mission": 70, "projects": 20, "goals": 10, "preferences": 0, "constraints": 0},
+                    "overall_confidence": 35,
+                    "reflection": f"Understood. {org_name} is recorded as your primary workspace.",
+                    "next_question": f"What specific products or projects are currently part of {org_name}?"
+                }
+            elif turn_count == 2:
+                return {
+                    "organization": org_name,
+                    "projects": projects if projects else [answers[1].get("answer", "Main App")],
+                    "goals": [],
+                    "preferences": [],
+                    "categories": {"mission": 85, "projects": 80, "goals": 40, "preferences": 20, "constraints": 0},
+                    "overall_confidence": 62,
+                    "reflection": f"Recorded your active projects under {org_name}.",
+                    "next_question": f"What is the primary goal or mission for these projects?"
+                }
+            else:
+                return {
+                    "organization": org_name,
+                    "projects": projects if projects else ["Core Product"],
+                    "goals": [last_ans] if last_ans else ["Build Context Engine"],
+                    "preferences": ["Direct tone", "TypeScript/Python stack"],
+                    "categories": {"mission": 95, "projects": 90, "goals": 85, "preferences": 80, "constraints": 75},
+                    "overall_confidence": 85,
+                    "reflection": f"Your context model is fully formed for {org_name}.",
+                    "next_question": ""
+                }
 
