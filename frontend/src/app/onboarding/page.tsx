@@ -2,8 +2,31 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CheckCircle2, Bot, ChevronRight } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronRight } from "lucide-react";
 import { fetchFromMetaphor } from "../api";
+
+const ChatGPTIcon = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="text-muted">
+    <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z" />
+    <path d="M7.757 16.243a6 6 0 118.486-8.486M9 9l6 6M15 9l-6 6" />
+  </svg>
+);
+
+const ClaudeIcon = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="text-muted">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+    <circle cx="8.5" cy="8.5" r="1.5" />
+    <circle cx="15.5" cy="8.5" r="1.5" />
+    <path d="M9 15c1.5 1 4.5 1 6 0" />
+  </svg>
+);
+
+const CursorIcon = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="text-muted">
+    <path d="M12 2L2 22l10-4 10 4L12 2z" />
+    <path d="M12 2v16" />
+  </svg>
+);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -128,12 +151,16 @@ export default function OnboardingPage() {
 
           {/* Connected AIs */}
           <div className="flex items-center gap-6 mb-16">
-            {["ChatGPT", "Claude", "Cursor"].map((ai, i) => (
-              <div key={ai} className="flex flex-col items-center gap-2">
+            {[
+              { name: "ChatGPT", icon: <ChatGPTIcon /> },
+              { name: "Claude", icon: <ClaudeIcon /> },
+              { name: "Cursor", icon: <CursorIcon /> }
+            ].map((ai) => (
+              <div key={ai.name} className="flex flex-col items-center gap-2">
                 <div className="w-12 h-12 rounded-2xl bg-surface-2 border border-border-subtle flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-muted" />
+                  {ai.icon}
                 </div>
-                <span className="text-xs font-medium text-muted">{ai}</span>
+                <span className="text-xs font-medium text-muted">{ai.name}</span>
               </div>
             ))}
           </div>

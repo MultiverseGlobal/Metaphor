@@ -248,10 +248,9 @@ class ReflectionService:
             "3. Calculate an overall_confidence (0-100) as a weighted average.\n"
             "4. Write a short 'reflection' statement that proves you understood the LAST answer. Example: 'So MGE is your primary organization. Got it.'\n"
             "5. Generate the SINGLE highest-value next_question to most efficiently increase the overall_confidence.\n"
-            "   - If mission is low, ask about mission.\n"
-            "   - If projects are low, ask about specific products.\n"
-            "   - If goals are low, ask about primary objectives.\n"
-            "   - Make the question specific to what the user already said — not generic.\n"
+            "   - CRITICAL: DO NOT repeat a question that has already been asked in the conversation history.\n"
+            "   - If mission is low, ask about mission. If projects are low, ask about specific products, etc.\n"
+            "   - Make the question specific to the user's last answer to feel conversational.\n"
             "Respond STRICTLY with valid JSON matching this schema:\n"
             "{\n"
             "  \"organization\": \"str\",\n"
@@ -268,7 +267,7 @@ class ReflectionService:
         prompt = f"Conversation History:\n{history_str}"
 
         try:
-            response_text = await llm_service.query_llm(prompt=prompt, system_prompt=system_prompt, temperature=0.0)
+            response_text = await llm_service.query_llm(prompt=prompt, system_prompt=system_prompt, temperature=0.4)
             clean = response_text.strip()
             if clean.startswith("```json"): clean = clean[7:]
             if clean.startswith("```"): clean = clean[3:]
