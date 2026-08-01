@@ -19,7 +19,7 @@ class LLMService:
             return '{"nodes_to_create": [], "edges_to_create": [], "evidence_links": []}'
             
         full_prompt = f"{system_prompt}\n\n{prompt}"
-        response = self.model.generate_content(
+        response = await self.model.generate_content_async(
             full_prompt,
             generation_config=genai.types.GenerationConfig(
                 temperature=temperature,
@@ -31,7 +31,7 @@ class LLMService:
         if not settings.GEMINI_API_KEY:
             return [0.0] * 768
             
-        result = genai.embed_content(
+        result = await genai.embed_content_async(
             model="models/text-embedding-004",
             content=text,
             task_type="retrieval_document"
