@@ -5,11 +5,14 @@ from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.config import settings
 
+from sqlalchemy.pool import NullPool
+
 # Create database engine
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,
-    future=True
+    future=True,
+    poolclass=NullPool
 )
 
 # Async session maker

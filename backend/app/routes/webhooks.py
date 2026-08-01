@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import uuid
 from typing import Dict, Any
 
-from app.database import get_session
+from app.database.session import get_session
 from app.ingestion.normalizer import normalizer
 from app.reflection import reflection_engine
 

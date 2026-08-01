@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, func
 
-from app.database import get_session
+from app.database.session import get_session
 from app.core.security import get_user_via_api_key
 from app.models.identity import User
 from app.models.operations import Integration, SyncJob, WebhookEvent

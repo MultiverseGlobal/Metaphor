@@ -3,15 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Shield, ArrowRight, Lock, User, Mail, Sparkles, Sun, BookOpen, Moon } from "lucide-react";
+import { Shield, ArrowRight, Sparkles, Sun, BookOpen, Moon } from "lucide-react";
 import { BACKEND_URL, fetchFromMetaphor } from "@/app/api";
-
-export default function LoginPage() {
-  const router = useRouter();
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+import { createClient } from "@/utils/supabase/client";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [theme, setTheme] = useState<"theme-clean" | "theme-paper" | "theme-dark">("theme-clean");
@@ -38,62 +32,20 @@ export default function LoginPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    
-    if (!email || !password || (!isLogin && !name)) {
-      setError("Please fill out all fields.");
-      return;
-    }
+  const supabase = createClient();
 
+  const handleOAuthLogin = async (provider: 'github' | 'google') => {
     setLoading(true);
-
-    try {
-      if (isLogin) {
-        // Login with urlencoded form
-        const formData = new URLSearchParams();
-        formData.append("username", email);
-        formData.append("password", password);
-        
-        const response = await fetch(`${BACKEND_URL}/auth/token`, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: formData.toString()
-        });
-        
-        if (!response.ok) {
-          const err = await response.json().catch(()=>({}));
-          throw new Error(err.detail || "Invalid credentials.");
-        }
-        
-        const data = await response.json();
-        localStorage.setItem("metaphor_token", data.access_token);
-        
-      } else {
-        // Register with JSON
-        const data = await fetchFromMetaphor("/auth/register", {
-          email,
-          password,
-          name
-        });
-        localStorage.setItem("metaphor_token", data.access_token);
-      }
-      
-      localStorage.setItem("metaphor_logged_in", "true");
-      localStorage.setItem("metaphor_user_email", email);
-      if (name) localStorage.setItem("metaphor_user_name", name);
-
-      const savedKey = localStorage.getItem("metaphor_api_key");
-      
-      if (savedKey) {
-        router.push("/dashboard");
-      } else {
-        router.push("/onboarding");
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to authenticate.");
-    } finally {
+    setError("");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+    if (error) {
+      console.error(error)
+      setError("Error logging in: " + error.message)
       setLoading(false);
     }
   };
@@ -153,77 +105,28 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 text-left">
-            {error && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-2">
-                <Shield size={14} className="shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {/* Name field (Signup only) */}
-            {!isLogin && (
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-[var(--muted)] font-mono tracking-wider uppercase">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={16} />
-                  <input 
-                    type="text" 
-                    placeholder="Benjamin Franklin"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full atlas-input pl-10"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Email field */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-[var(--muted)] font-mono tracking-wider uppercase">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={16} />
-                <input 
-                  type="email" 
-                  placeholder="benjamin@atlas.io"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full atlas-input pl-10"
-                />
-              </div>
-            </div>
-
-            {/* Password field */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-[var(--muted)] font-mono tracking-wider uppercase">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={16} />
-                <input 
-                  type="password" 
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full atlas-input pl-10"
-                />
-              </div>
-            </div>
-
-            {/* Submit button */}
+          <div className="space-y-4 w-full">
             <button 
-              type="submit" 
+              onClick={() => handleOAuthLogin('google')}
               disabled={loading}
-              className="w-full atlas-btn-primary py-3 rounded-lg flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full flex items-center justify-center gap-3 p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] hover:border-[var(--card-hover-border)] transition-all duration-200 cursor-pointer"
             >
-              {loading ? (
-                <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  {isLogin ? "Sign In to Console" : "Create Developer Console"}
-                  <ArrowRight size={16} />
-                </>
-              )}
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className="opacity-80 text-foreground">
+                <path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972-3.332 0-6.033-2.701-6.033-6.032s2.701-6.032 6.033-6.032c1.498 0 2.866.549 3.921 1.453l2.814-2.814C17.503 2.988 15.139 2 12.545 2 7.021 2 2.545 6.477 2.545 12s4.476 10 10 10c5.772 0 9.61-4.062 9.61-9.761 0-.832-.115-1.636-.298-2.439h-9.312z" />
+              </svg>
+              <span className="text-sm font-medium">Continue with Google</span>
             </button>
-          </form>
+            <button 
+              onClick={() => handleOAuthLogin('github')}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3 p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] hover:border-[var(--card-hover-border)] transition-all duration-200 cursor-pointer"
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className="opacity-80">
+                <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+              </svg>
+              <span className="text-sm font-medium">Continue with GitHub</span>
+            </button>
+          </div>
 
           {/* Micro-onboarding banner */}
           <div className="mt-6 pt-5 border-t border-[var(--card-border)] flex items-center justify-center gap-1.5 text-[9px] font-mono text-[var(--muted)]">

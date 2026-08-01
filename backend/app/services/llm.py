@@ -9,7 +9,7 @@ class LLMService:
     def __init__(self):
         if settings.GEMINI_API_KEY:
             genai.configure(api_key=settings.GEMINI_API_KEY)
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            self.model = genai.GenerativeModel('gemini-2.5-flash')
         else:
             self.model = None
 
@@ -29,12 +29,13 @@ class LLMService:
 
     async def generate_embedding(self, text: str) -> list[float]:
         if not settings.GEMINI_API_KEY:
-            return [0.0] * 768
+            raise ValueError("LLM not configured: missing GEMINI_API_KEY for embedding generation")
             
         result = await genai.embed_content_async(
-            model="models/text-embedding-004",
+            model="models/gemini-embedding-2",
             content=text,
-            task_type="retrieval_document"
+            task_type="retrieval_document",
+            output_dimensionality=768
         )
         return result['embedding']
 

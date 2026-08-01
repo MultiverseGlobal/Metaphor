@@ -1,35 +1,24 @@
 from datetime import datetime, timedelta
 from typing import Optional, Any, Union
 import uuid
-import jwt
-from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
+from supabase import create_client, Client
 
 from app.core.config import settings
-from app.database import get_session
+from app.database.session import get_session
 from app.models.identity import User
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_PREFIX}/auth/token")
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+def get_supabase_client() -> Client:
+    if not settings.SUPABASE_URL or not settings.SUPABASE_ANON_KEY:
+        raise ValueError("Supabase credentials are not set")
+    return create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
 
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
-
-def create_access_token(subject: Union[str, Any], expires_delta: timedelta = None) -> str:
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
-    to_encode = {"exp": expire, "sub": str(subject)}
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return encoded_jwt
+supabase = get_supabase_client()
 
 async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSession = Depends(get_session)) -> User:
     credentials_exception = HTTPException(
@@ -37,78 +26,83 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSe
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
+        user_res = supabase.auth.get_user(token)
+        if not user_res or not user_res.user:
             raise credentials_exception
-    except jwt.PyJWTError:
+        user_id = user_res.user.id
+    except Exception as e:
         raise credentials_exception
         
-    user = await session.get(User, user_id)
+    user = await session.get(User, uuid.UUID(user_id))
     if user is None:
-        raise credentials_exception
+        # Create a user record if it doesn't exist
+        email = user_res.user.email
+        name = user_res.user.user_metadata.get("full_name") or user_res.user.user_metadata.get("name") or "Supabase User"
+        user = User(
+            id=uuid.UUID(user_id),
+            email=email,
+            hashed_password="", # No local password needed
+            name=name
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
     return user
 
 
 async def get_user_via_api_key(request: Request, session: AsyncSession = Depends(get_session)) -> User:
     """
     Accepts either a Bearer JWT (Authorization header) or an X-API-Key header.
-    For API key auth, auto-creates/reuses a persistent dev user so the onboarding
-    flow works without requiring a separate login step.
     """
     # 1. Try Bearer JWT first
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
         token = auth_header[7:]
         try:
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-            user_id: str = payload.get("sub")
-            if user_id:
-                user = await session.get(User, uuid.UUID(user_id))
+            user_res = supabase.auth.get_user(token)
+            if user_res and user_res.user:
+                user = await session.get(User, uuid.UUID(user_res.user.id))
                 if user:
                     return user
+                else:
+                    # Sync user to DB
+                    new_user = User(
+                        id=uuid.UUID(user_res.user.id),
+                        email=user_res.user.email,
+                        hashed_password="",
+                        name=user_res.user.user_metadata.get("full_name") or user_res.user.user_metadata.get("name") or "Supabase User"
+                    )
+                    session.add(new_user)
+                    await session.commit()
+                    await session.refresh(new_user)
+                    return new_user
         except Exception:
             pass
 
     # 2. Fall back to X-API-Key
     api_key = request.headers.get("X-API-Key", "")
     if api_key:
+        import hashlib
         from sqlmodel import select
         
         # 2a. Check if it's a real generated API Key
         from app.models.operations import APIKey
         from app.models.identity import OrganizationMember
         
-        stmt = select(APIKey).where(APIKey.hashed_key == api_key)
+        hashed_api_key = hashlib.sha256(api_key.encode('utf-8')).hexdigest()
+        
+        stmt = select(APIKey).where(APIKey.hashed_key == hashed_api_key)
         result = await session.execute(stmt)
         db_key = result.scalars().first()
         
         if db_key:
-            # We found a valid DB key. Let's return the owner of the organization.
-            # In a real system, you'd map the key to a specific user or bot.
             stmt = select(User).join(OrganizationMember).where(OrganizationMember.organization_id == db_key.organization_id)
             result = await session.execute(stmt)
             org_user = result.scalars().first()
             if org_user:
                 return org_user
-                
-        # 2b. Check if it's the dev master key
-        if api_key == settings.METAPHOR_API_KEY:
-            # Get or create a persistent dev/onboarding user
-            stmt = select(User).where(User.email == "dev@metaphor.local")
-            result = await session.execute(stmt)
-            user = result.scalars().first()
-            if not user:
-                user = User(
-                    email="dev@metaphor.local",
-                    hashed_password=get_password_hash("metaphor_dev_internal"),
-                    name="Metaphor Dev User"
-                )
-                session.add(user)
-                await session.commit()
-                await session.refresh(user)
-            return user
 
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

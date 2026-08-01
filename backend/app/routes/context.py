@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, desc
 from pydantic import BaseModel
 
-from app.database import get_session
+from app.database.session import get_session
 from app.config import settings
 from app.models import Node, Edge, Chunk
 from app.provider import llm_provider

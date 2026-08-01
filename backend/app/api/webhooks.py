@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
-from app.database import get_session
+from app.database.session import get_session
 from app.models.operations import APIKey, WebhookEvent
 from app.services.graph import GraphService
 from app.services.reflection import ReflectionService

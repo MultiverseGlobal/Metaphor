@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Sparkles, Send, Bot, User, ShieldCheck, Target, Network, Check } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
 import { fetchFromMetaphor } from "@/app/api";
 
 type Message = {
@@ -56,7 +57,7 @@ export default function PlaygroundPage() {
         {/* Chat Header */}
         <header className="h-14 px-6 flex items-center justify-between border-b border-border-subtle bg-surface-1/80 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
+            <MetaphorLogo size={20} />
             <span className="text-sm font-semibold text-foreground tracking-tight">Metaphor Playground</span>
             <span className="px-2 py-0.5 rounded-full bg-surface-2 text-[10px] font-medium text-muted ml-2">Gemini 1.5 Flash</span>
           </div>
@@ -78,7 +79,7 @@ export default function PlaygroundPage() {
               
               {msg.role === "ai" && (
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 mr-4">
-                  <Sparkles className="w-4 h-4 text-primary" />
+                  <MetaphorLogo size={16} />
                 </div>
               )}
 

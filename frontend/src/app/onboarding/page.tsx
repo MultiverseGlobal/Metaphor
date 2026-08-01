@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2, ChevronRight, Database, LayoutTemplate, Zap, Mail } from "lucide-react";
 import { fetchFromMetaphor } from "@/app/api";
 import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
+import { createClient } from "@/utils/supabase/client";
 
 const NotionIcon = () => (
   <img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Notion-logo.svg" alt="Notion" className="w-5 h-5 object-contain opacity-80" />
@@ -142,6 +143,21 @@ export default function OnboardingPage() {
     setPhase("connect");
   };
 
+  const supabase = createClient();
+
+  const handleOAuthLogin = async (provider: 'github' | 'google') => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+    if (error) {
+      console.error(error)
+      alert("Error logging in: " + error.message)
+    }
+  };
+
   const toggleConnection = (id: string) => {
     setConnections(prev => ({ ...prev, [id]: !prev[id] }));
   };
@@ -160,29 +176,8 @@ export default function OnboardingPage() {
   const finalize = async () => {
     setIsSubmitting(true);
     try {
-      // 0. Register user & get token
-      const registerRes = await fetch("http://localhost:8000/api/v1/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: `founder_${Date.now()}@metaphor.os`,
-          password: "password123",
-          name: "Metaphor Founder"
-        })
-      });
-      const registerData = await registerRes.json();
-      const token = registerData.access_token;
-      
-      if (!token) throw new Error("Registration failed.");
-      
-      localStorage.setItem("metaphor_token", token);
-      
       // Generate permanent API Key for Webhooks
-      const keyRes = await fetch("http://localhost:8000/api/v1/auth/apikeys", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      const keyData = await keyRes.json();
+      const keyData = await fetchFromMetaphor("/auth/apikeys", undefined, "POST");
       localStorage.setItem("metaphor_api_key", keyData.raw_token);
 
       // 1. Construct the synthetic narrative for the LLM
@@ -231,8 +226,8 @@ export default function OnboardingPage() {
           </div>
 
           <div className="space-y-4 w-full">
-            <AuthButton icon={<GoogleLogo />} label="Continue with Google" onClick={handleAuth} />
-            <AuthButton icon={<GithubIcon className="opacity-80" />} label="Continue with GitHub" onClick={handleAuth} />
+            <AuthButton icon={<GoogleLogo />} label="Continue with Google" onClick={() => handleOAuthLogin('google')} />
+            <AuthButton icon={<GithubIcon className="opacity-80" />} label="Continue with GitHub" onClick={() => handleOAuthLogin('github')} />
             <AuthButton icon={<AppleIcon />} label="Continue with Apple" onClick={handleAuth} />
             
             <div className="py-2 flex items-center gap-4 w-full">

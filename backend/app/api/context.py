@@ -67,7 +67,7 @@ async def chat_with_context(req: ContextRequest, current_user: User = Depends(ge
     """
     
     # 3. Generate response using the underlying LLM Service
-    answer = await llm_service.generate(system_prompt)
+    answer = await llm_service.query_llm(system_prompt)
     
     return {
         "answer": answer,
@@ -170,20 +170,110 @@ async def create_context_model(req: ContextModelCreate, current_user: User = Dep
 
 @router.post("/lore")
 async def build_lore(req: LoreRequest, current_user: User = Depends(get_user_via_api_key), db: AsyncSession = Depends(get_session)):
-    identity = IdentityService(db)
-    org = await identity.get_user_organization(current_user.id) or await identity.get_or_create_default_organization()
+    print("ENTER BUILD LORE")
+    try:
+        identity = IdentityService(db)
+        org = await identity.get_user_organization(current_user.id) or await identity.get_or_create_default_organization()
+        print("ORG:", org.id)
+        
+        graph = GraphService(db)
+        reflection = ReflectionService(graph)
+        
+        event = WebhookEvent(
+            provider="metaphor_onboarding",
+            event_type="context_setup",
+            payload={
+                "content": req.content,
+                "url": getattr(req, "url", None) or "app://onboarding"
+            }
+        )
     
+        print("CALLING REFLECT AND EVOLVE")
+        try:
+            result = await reflection.reflect_and_evolve(org.id, event)
+            print("RESULT:", result)
+            return result
+        except Exception as e:
+            print("EXCEPTION IN REFLECT AND EVOLVE:", e)
+            import traceback
+            traceback.print_exc()
+            raise e
+    except Exception as e:
+        print("EXCEPTION IN BUILD LORE:", e)
+        import traceback
+        traceback.print_exc()
+        raise
+
+@router.post("/generate-ambiguities")
+async def generate_ambiguities(db: AsyncSession = Depends(get_session)):
+    """
+    Scrapes connected data sources and generates dynamic questions.
+    Because onboarding happens before a user is fully authenticated (they register at the end), 
+    we query the default org's integrations.
+    """
+    from sqlmodel import select
+    from app.models.operations import Integration
+    import httpx
+    
+    identity = IdentityService(db)
+    org = await identity.get_or_create_default_organization()
+    
+    stmt = select(Integration).where(Integration.organization_id == org.id)
+    res = await db.execute(stmt)
+    integrations = res.scalars().all()
+    
+    samples = []
+    
+    for integ in integrations:
+        if integ.provider == "github" and integ.access_token:
+            # Attempt real fetch
+            try:
+                async with httpx.AsyncClient() as client:
+                    resp = await client.get(
+                        "https://api.github.com/user/repos?sort=updated&per_page=3",
+                        headers={"Authorization": f"Bearer {integ.access_token}", "Accept": "application/vnd.github.v3+json"}
+                    )
+                    if resp.status_code == 200:
+                        repos = resp.json()
+                        for r in repos:
+                            samples.append(f"GitHub Repo: {r.get('name')} - {r.get('description', '')}")
+            except Exception as e:
+                pass
+                
+        elif integ.provider == "notion" and integ.access_token:
+            # Attempt real fetch
+            try:
+                async with httpx.AsyncClient() as client:
+                    resp = await client.post(
+                        "https://api.notion.com/v1/search",
+                        headers={
+                            "Authorization": f"Bearer {integ.access_token}", 
+                            "Notion-Version": "2022-06-28"
+                        },
+                        json={"page_size": 3, "sort": {"direction": "descending", "timestamp": "last_edited_time"}}
+                    )
+                    if resp.status_code == 200:
+                        pages = resp.json().get("results", [])
+                        for p in pages:
+                            title = "Untitled"
+                            try:
+                                title = p["properties"]["title"]["title"][0]["plain_text"]
+                            except:
+                                pass
+                            samples.append(f"Notion Page: {title}")
+            except Exception as e:
+                pass
+
+    if not samples:
+        # Fallback if no real data could be scraped
+        samples = [
+            "GitHub Repo: atlas-core - Core infrastructure for Atlas platform.",
+            "GitHub Repo: metaphor-os - Next-gen context engine.",
+            "Notion Page: Q3 Roadmap & OKRs - Focus on integrating AI models into the workspace."
+        ]
+        
     graph = GraphService(db)
     reflection = ReflectionService(graph)
+    questions = await reflection.generate_ambiguities(samples)
     
-    event = WebhookEvent(
-        provider="metaphor_onboarding",
-        event_type="context_setup",
-        payload={
-            "content": req.content,
-            "url": "app://onboarding"
-        }
-    )
-    
-    result = await reflection.reflect_and_evolve(org.id, event)
-    return result
+    return {"questions": questions}

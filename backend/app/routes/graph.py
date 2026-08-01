@@ -6,7 +6,7 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 import uuid
 
-from app.database import get_session
+from app.database.session import get_session
 from app.config import settings
 from app.models import Node, Edge, Chunk, NodeEvidence, Clarification
 from app.provider import llm_provider

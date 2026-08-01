@@ -25,6 +25,16 @@ class Settings(BaseSettings):
     NOTION_INTEGRATION_TOKEN: str = ""
     GITHUB_PERSONAL_ACCESS_TOKEN: str = ""
     
+    # Supabase Settings
+    SUPABASE_URL: str = ""
+    SUPABASE_ANON_KEY: str = ""
+
+    # OAuth Credentials
+    GITHUB_CLIENT_ID: str = ""
+    GITHUB_CLIENT_SECRET: str = ""
+    NOTION_CLIENT_ID: str = ""
+    NOTION_CLIENT_SECRET: str = ""
+    
     # Google Service Account JSON path
     GOOGLE_SERVICE_ACCOUNT_JSON_PATH: str = ""
 

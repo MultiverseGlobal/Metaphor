@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import Node, Edge, Chunk, NodeEvidence, UniversalEvent
 from app.ingestion.normalizer import normalizer
 from app.provider import llm_provider
-from app.database import get_session
+from app.database.session import get_session
 
 logger = logging.getLogger("metaphor.reflection")
 
