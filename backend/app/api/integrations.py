@@ -1,5 +1,10 @@
 import asyncio
 import logging
+import jwt
+import httpx
+import urllib.parse
+import uuid
+from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel
@@ -136,3 +141,127 @@ async def check_integration_status(
         "status": "completed" if node else "processing",
         "has_data": node is not None
     }
+
+@router.get("/{provider}/authorize")
+async def authorize_integration(
+    provider: str,
+    user: User = Depends(get_user_via_api_key),
+    session: AsyncSession = Depends(get_session)
+):
+    from app.models.identity import OrganizationMember
+    from sqlmodel import select
+    from app.core.config import settings
+    
+    stmt = select(OrganizationMember).where(OrganizationMember.user_id == user.id)
+    result = await session.execute(stmt)
+    org_member = result.scalars().first()
+    
+    if not org_member:
+        raise HTTPException(status_code=400, detail="User does not belong to an organization")
+        
+    org_id = str(org_member.organization_id)
+    
+    # Create state token
+    state_payload = {
+        "org_id": org_id,
+        "provider": provider,
+        "exp": int(datetime.now(timezone.utc).timestamp()) + 3600
+    }
+    state_token = jwt.encode(state_payload, settings.SECRET_KEY, algorithm="HS256")
+    
+    if provider == "github":
+        client_id = settings.GITHUB_CLIENT_ID
+        redirect_uri = "http://localhost:8000/api/v1/integrations/github/callback"
+        auth_url = f"https://github.com/login/oauth/authorize?client_id={client_id}&redirect_uri={urllib.parse.quote(redirect_uri)}&state={state_token}&scope=repo"
+        return {"url": auth_url}
+        
+    elif provider == "notion":
+        client_id = settings.NOTION_CLIENT_ID
+        redirect_uri = "http://localhost:8000/api/v1/integrations/notion/callback"
+        auth_url = f"https://api.notion.com/v1/oauth/authorize?client_id={client_id}&response_type=code&owner=user&redirect_uri={urllib.parse.quote(redirect_uri)}&state={state_token}"
+        return {"url": auth_url}
+        
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported provider")
+
+
+@router.get("/{provider}/callback")
+async def integration_callback(
+    provider: str,
+    code: str,
+    state: str,
+    session: AsyncSession = Depends(get_session)
+):
+    from app.core.config import settings
+    from sqlmodel import select
+    from app.models.operations import Integration
+    from fastapi.responses import RedirectResponse
+    import base64
+    
+    try:
+        payload = jwt.decode(state, settings.SECRET_KEY, algorithms=["HS256"])
+        org_id = payload.get("org_id")
+        if not org_id or payload.get("provider") != provider:
+            raise ValueError("Invalid state payload")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid or expired state token")
+
+    access_token = None
+    
+    async with httpx.AsyncClient() as client:
+        if provider == "github":
+            resp = await client.post(
+                "https://github.com/login/oauth/access_token",
+                data={
+                    "client_id": settings.GITHUB_CLIENT_ID,
+                    "client_secret": settings.GITHUB_CLIENT_SECRET,
+                    "code": code,
+                    "redirect_uri": "http://localhost:8000/api/v1/integrations/github/callback"
+                },
+                headers={"Accept": "application/json"}
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                access_token = data.get("access_token")
+                
+        elif provider == "notion":
+            auth_str = f"{settings.NOTION_CLIENT_ID}:{settings.NOTION_CLIENT_SECRET}"
+            b64_auth = base64.b64encode(auth_str.encode()).decode()
+            resp = await client.post(
+                "https://api.notion.com/v1/oauth/token",
+                json={
+                    "grant_type": "authorization_code",
+                    "code": code,
+                    "redirect_uri": "http://localhost:8000/api/v1/integrations/notion/callback"
+                },
+                headers={
+                    "Authorization": f"Basic {b64_auth}",
+                    "Content-Type": "application/json"
+                }
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                access_token = data.get("access_token")
+
+    if access_token:
+        # Upsert integration
+        stmt = select(Integration).where(
+            Integration.organization_id == uuid.UUID(org_id),
+            Integration.provider == provider
+        )
+        result = await session.execute(stmt)
+        integration = result.scalars().first()
+        
+        if integration:
+            integration.access_token = access_token
+        else:
+            integration = Integration(
+                organization_id=uuid.UUID(org_id),
+                provider=provider,
+                access_token=access_token
+            )
+            session.add(integration)
+            
+        await session.commit()
+        
+    return RedirectResponse(url=f"http://localhost:3000/onboarding?success={provider}")

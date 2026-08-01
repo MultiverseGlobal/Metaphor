@@ -75,28 +75,28 @@ function AuthButton({ icon, label, onClick }: { icon: React.ReactNode, label: st
   );
 }
 
-function ConnectCard({ name, icon, connected, onToggle, children }: { name: string, icon: React.ReactNode, connected: boolean, onToggle: () => void, children?: React.ReactNode }) {
+function ConnectCard({ name, icon, connected, connecting, onToggle }: { name: string, icon: React.ReactNode, connected: boolean, connecting?: boolean, onToggle: () => void }) {
   return (
-    <div className={`w-full flex flex-col rounded-xl border transition-all duration-300 ${connected ? 'bg-surface-2 border-foreground' : 'bg-transparent border-border-subtle hover:border-border-strong'}`}>
+    <div className={`w-full flex flex-col group`}>
       <button 
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4"
+        disabled={connecting}
+        className="w-full flex items-center justify-between py-4 disabled:opacity-70"
       >
-        <div className="flex items-center gap-4">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${connected ? 'bg-foreground text-background' : 'bg-surface-2 text-muted'}`}>
+        <div className="flex items-center gap-6">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${connected ? 'bg-foreground text-background scale-100' : 'bg-surface-1 text-muted group-hover:bg-surface-2 group-hover:scale-105'} ${connecting ? 'animate-pulse' : ''}`}>
             {icon}
           </div>
-          <span className={`text-sm font-medium ${connected ? 'text-foreground' : 'text-muted'}`}>{name}</span>
+          <span className={`text-lg font-medium transition-colors duration-300 ${connected ? 'text-foreground' : 'text-muted group-hover:text-foreground'}`}>{name}</span>
         </div>
-        <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${connected ? 'border-foreground bg-foreground' : 'border-border-strong'}`}>
-          {connected && <CheckCircle2 className="w-3 h-3 text-background" />}
+        <div className={`transition-all duration-300 ${connected || connecting ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
+          {connecting ? (
+             <div className="w-5 h-5 rounded-full border-2 border-foreground border-t-transparent animate-spin mr-1" />
+          ) : connected ? (
+             <CheckCircle2 className="w-6 h-6 text-foreground" />
+          ) : null}
         </div>
       </button>
-      {connected && children && (
-        <div className="px-4 pb-4 animate-in slide-in-from-top-2 fade-in duration-200">
-          {children}
-        </div>
-      )}
     </div>
   );
 }
@@ -113,6 +113,7 @@ export default function OnboardingPage() {
   
   // Connect State
   const [connections, setConnections] = useState<Record<string, boolean>>({});
+  const [connecting, setConnecting] = useState<string | null>(null);
   const [githubRepo, setGithubRepo] = useState("");
   const [githubToken, setGithubToken] = useState("");
   const [notionToken, setNotionToken] = useState("");
@@ -121,6 +122,7 @@ export default function OnboardingPage() {
   const [analysisStep, setAnalysisStep] = useState(0);
   
   // Resolving State
+  const [questions, setQuestions] = useState<string[]>(AMBIGUITY_QUESTIONS);
   const [resolvingIndex, setResolvingIndex] = useState(0);
   const [currentAnswer, setCurrentAnswer] = useState("");
   const [answers, setAnswers] = useState<string[]>([]);
@@ -151,6 +153,16 @@ export default function OnboardingPage() {
             if (statusRes.has_data || statusRes.status === "completed") {
               isPolling = false;
               clearInterval(animationInterval);
+              
+              try {
+                const qRes = await fetchFromMetaphor("/context/generate-ambiguities", undefined, "POST");
+                if (qRes && qRes.questions && qRes.questions.length > 0) {
+                  setQuestions(qRes.questions);
+                }
+              } catch(e) {
+                console.warn("Failed to generate ambiguities:", e);
+              }
+
               setPhase("resolving");
               break;
             }
@@ -177,6 +189,18 @@ export default function OnboardingPage() {
         setPhase("connect");
       }
     });
+
+    // Check for successful OAuth redirects
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get("success");
+    if (success) {
+      setConnections(prev => ({ ...prev, [success]: true }));
+      // Clean up the URL to prevent re-triggering
+      window.history.replaceState({}, document.title, window.location.pathname);
+      if (phase === "auth") {
+        setPhase("connect"); // ensure we are on the connect phase if they came back authenticated
+      }
+    }
   }, []);
 
   const handleEmailAuth = async () => {
@@ -211,8 +235,32 @@ export default function OnboardingPage() {
     }
   };
 
-  const toggleConnection = (id: string) => {
-    setConnections(prev => ({ ...prev, [id]: !prev[id] }));
+  const toggleConnection = async (id: string) => {
+    if (connections[id]) {
+      setConnections(prev => ({ ...prev, [id]: false }));
+      return;
+    }
+    
+    setConnecting(id);
+    
+    if (id === "github" || id === "notion") {
+      try {
+        const res = await fetchFromMetaphor(`/integrations/${id}/authorize`, undefined, "GET");
+        if (res && res.url) {
+          window.location.href = res.url;
+        } else {
+          setConnecting(null);
+        }
+      } catch (e) {
+        console.error(`Failed to start ${id} OAuth flow:`, e);
+        setConnecting(null);
+      }
+    } else {
+      // For google drive demo fallback
+      await new Promise(r => setTimeout(r, 1200));
+      setConnections(prev => ({ ...prev, [id]: true }));
+      setConnecting(null);
+    }
   };
 
   const submitAmbiguityAnswer = async () => {
@@ -223,14 +271,14 @@ export default function OnboardingPage() {
     
     try {
       await fetchFromMetaphor("/context/lore", { 
-        content: `User prefers: ${currentAnswer.trim()} regarding '${AMBIGUITY_QUESTIONS[resolvingIndex]}'` 
+        content: `User prefers: ${currentAnswer.trim()} regarding '${questions[resolvingIndex]}'` 
       });
     } catch(e) {
       console.error("Failed to save context", e);
     }
 
     setCurrentAnswer("");
-    if (resolvingIndex < AMBIGUITY_QUESTIONS.length - 1) {
+    if (resolvingIndex < questions.length - 1) {
       setResolvingIndex(prev => prev + 1);
     } else {
       setPhase("complete");
@@ -382,49 +430,18 @@ export default function OnboardingPage() {
             </p>
           </div>
 
-          <div className="space-y-3 mb-10 text-left">
-            <ConnectCard name="Notion" icon={<NotionIcon />} connected={!!connections["notion"]} onToggle={() => toggleConnection("notion")}>
-              <div className="space-y-2 mt-1">
-                <input 
-                  type="text" 
-                  placeholder="Notion Integration Token (optional)"
-                  value={notionToken}
-                  onChange={e => setNotionToken(e.target.value)}
-                  className="w-full p-2.5 rounded-lg border border-border-strong bg-background text-foreground text-xs placeholder:text-muted focus:outline-none focus:border-foreground"
-                />
-                <p className="text-[10px] text-muted ml-1">A token is optional for this demo. Mock data will be used if omitted.</p>
-              </div>
-            </ConnectCard>
-            
-            <ConnectCard name="Google Drive" icon={<GoogleDriveIcon />} connected={!!connections["google"]} onToggle={() => toggleConnection("google")} />
-            
-            <ConnectCard name="GitHub" icon={<GithubIcon className="opacity-80" />} connected={!!connections["github"]} onToggle={() => toggleConnection("github")}>
-              <div className="space-y-2 mt-1">
-                <input 
-                  type="text" 
-                  placeholder="Repository (e.g. yourname/yourrepo)"
-                  value={githubRepo}
-                  onChange={e => setGithubRepo(e.target.value)}
-                  className="w-full p-2.5 rounded-lg border border-border-strong bg-background text-foreground text-xs placeholder:text-muted focus:outline-none focus:border-foreground"
-                />
-                <input 
-                  type="password" 
-                  placeholder="Personal Access Token (optional)"
-                  value={githubToken}
-                  onChange={e => setGithubToken(e.target.value)}
-                  className="w-full p-2.5 rounded-lg border border-border-strong bg-background text-foreground text-xs placeholder:text-muted focus:outline-none focus:border-foreground"
-                />
-                <p className="text-[10px] text-muted ml-1">Used for private repositories or avoiding rate limits.</p>
-              </div>
-            </ConnectCard>
+          <div className="space-y-2 mb-12 text-left w-full">
+            <ConnectCard name="Notion" icon={<NotionIcon />} connected={!!connections["notion"]} connecting={connecting === "notion"} onToggle={() => toggleConnection("notion")} />
+            <ConnectCard name="Google Drive" icon={<GoogleDriveIcon />} connected={!!connections["google"]} connecting={connecting === "google"} onToggle={() => toggleConnection("google")} />
+            <ConnectCard name="GitHub" icon={<GithubIcon className="opacity-80" />} connected={!!connections["github"]} connecting={connecting === "github"} onToggle={() => toggleConnection("github")} />
           </div>
 
           <button
             onClick={startIntegrationSync}
-            className={`w-full px-8 py-4 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all ${
+            className={`w-full px-8 py-4 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all duration-300 ${
               connectedCount > 0 
-                ? "bg-foreground text-background shadow-md hover:opacity-90" 
-                : "bg-surface-2 text-foreground hover:bg-surface-1"
+                ? "bg-foreground text-background shadow-md hover:scale-[1.02] active:scale-[0.98]" 
+                : "bg-surface-1 text-muted hover:text-foreground hover:bg-surface-2"
             }`}
           >
             {connectedCount > 0 ? `Import ${connectedCount} Source${connectedCount > 1 ? 's' : ''}` : "Skip for now"}
@@ -533,7 +550,7 @@ export default function OnboardingPage() {
             
             <div className="pt-8 border-t border-border-subtle">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-3">Missing Context</p>
-              <p className="text-sm text-muted">We couldn't determine {AMBIGUITY_QUESTIONS.length} specific details.</p>
+              <p className="text-sm text-muted">We couldn't determine {questions.length} specific details.</p>
             </div>
           </div>
         </div>
@@ -546,11 +563,11 @@ export default function OnboardingPage() {
               <span className="w-6 h-6 rounded-full bg-primary text-background flex items-center justify-center text-xs font-bold shadow-[0_0_10px_rgba(78,108,242,0.3)]">
                 {resolvingIndex + 1}
               </span>
-              <span className="text-xs font-bold text-muted uppercase tracking-widest">of {AMBIGUITY_QUESTIONS.length}</span>
+              <span className="text-xs font-bold text-muted uppercase tracking-widest">of {questions.length}</span>
             </div>
 
             <p className="text-3xl font-medium tracking-tight text-foreground mb-8 leading-snug">
-              {AMBIGUITY_QUESTIONS[resolvingIndex]}
+              {questions[resolvingIndex]}
             </p>
 
             <div className="flex items-center gap-4 border-b border-border-strong pb-3 transition-colors focus-within:border-foreground">
