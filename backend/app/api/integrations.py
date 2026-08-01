@@ -272,7 +272,7 @@ async def integration_callback(
                     "client_id": settings.GITHUB_CLIENT_ID,
                     "client_secret": settings.GITHUB_CLIENT_SECRET,
                     "code": code,
-                    "redirect_uri": "http://localhost:8000/api/v1/integrations/github/callback"
+                    "redirect_uri": f"{settings.BACKEND_URL}{settings.API_PREFIX}/integrations/github/callback"
                 },
                 headers={"Accept": "application/json"}
             )
@@ -288,7 +288,7 @@ async def integration_callback(
                 json={
                     "grant_type": "authorization_code",
                     "code": code,
-                    "redirect_uri": "http://localhost:8000/api/v1/integrations/notion/callback"
+                    "redirect_uri": f"{settings.BACKEND_URL}{settings.API_PREFIX}/integrations/notion/callback"
                 },
                 headers={
                     "Authorization": f"Basic {b64_auth}",
@@ -306,7 +306,7 @@ async def integration_callback(
                     "client_id": settings.LINEAR_CLIENT_ID,
                     "client_secret": settings.LINEAR_CLIENT_SECRET,
                     "code": code,
-                    "redirect_uri": "http://localhost:8000/api/v1/integrations/linear/callback",
+                    "redirect_uri": f"{settings.BACKEND_URL}{settings.API_PREFIX}/integrations/linear/callback",
                     "grant_type": "authorization_code"
                 }
             )
@@ -321,7 +321,7 @@ async def integration_callback(
                     "client_id": settings.GOOGLE_CLIENT_ID,
                     "client_secret": settings.GOOGLE_CLIENT_SECRET,
                     "code": code,
-                    "redirect_uri": "http://localhost:8000/api/v1/integrations/google/callback",
+                    "redirect_uri": f"{settings.BACKEND_URL}{settings.API_PREFIX}/integrations/google/callback",
                     "grant_type": "authorization_code"
                 }
             )
@@ -355,4 +355,4 @@ async def integration_callback(
             
         await session.commit()
         
-    return RedirectResponse(url=f"http://localhost:3000/onboarding?success={provider}")
+    return RedirectResponse(url=f"{settings.FRONTEND_URL}/onboarding?success={provider}")
