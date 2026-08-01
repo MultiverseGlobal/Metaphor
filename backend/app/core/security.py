@@ -97,8 +97,12 @@ async def get_user_via_api_key(request: Request, session: AsyncSession = Depends
                     await session.commit()
                     await session.refresh(new_user)
                     return new_user
-        except Exception:
-            pass
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Supabase auth error: {str(e)}",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
     # 2. Fall back to X-API-Key
     api_key = request.headers.get("X-API-Key", "")
