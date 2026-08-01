@@ -54,7 +54,10 @@ export default function LandingPage() {
           <Link href="#manifesto" className="hover:text-foreground transition-colors duration-200">Manifesto</Link>
         </div>
         
-        <div>
+        <div className="flex items-center gap-6">
+          <Link href="/login" className="text-sm font-medium text-muted hover:text-foreground transition-colors duration-200">
+            Sign In
+          </Link>
           <Link href="/login" className="group flex items-center gap-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity">
             Get Started
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

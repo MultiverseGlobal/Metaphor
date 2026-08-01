@@ -54,7 +54,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (user && !hasOnboarded && isProtectedRoute) {
+  if (user && !hasOnboarded && isProtectedRoute && !request.nextUrl.pathname.startsWith('/onboarding')) {
     const url = request.nextUrl.clone()
     url.pathname = '/onboarding'
     return NextResponse.redirect(url)
