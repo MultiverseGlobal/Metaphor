@@ -11,8 +11,10 @@ async def fetch_linear_workspace(api_key: str) -> str:
         return "Failed to fetch Linear workspace: No API key provided."
         
     try:
+        # OAuth tokens typically require the Bearer prefix
+        auth_header = api_key if api_key.startswith("Bearer ") else f"Bearer {api_key}"
         headers = {
-            "Authorization": api_key,
+            "Authorization": auth_header,
             "Content-Type": "application/json"
         }
         

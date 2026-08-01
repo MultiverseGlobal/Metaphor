@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: str = ""
     NOTION_CLIENT_ID: str = ""
     NOTION_CLIENT_SECRET: str = ""
+    LINEAR_CLIENT_ID: str = ""
+    LINEAR_CLIENT_SECRET: str = ""
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
     
     # Google Service Account JSON path
     GOOGLE_SERVICE_ACCOUNT_JSON_PATH: str = ""

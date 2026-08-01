@@ -149,3 +149,63 @@ async def test_arq_tenant_concurrency_lock():
                     assert False, "Should have raised an exception"
             except Retry:
                 pass
+
+import jwt
+from app.core.config import settings
+from unittest.mock import patch, AsyncMock
+
+@pytest.mark.asyncio
+async def test_oauth_callback_flow(db_session):
+    """Verify that the OAuth callback correctly processes tokens for new integrations."""
+    org_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    
+    # Prerequisites
+    db_session.add(Organization(id=org_id, name="OAuth Org", slug=f"org-{org_id.hex[:8]}"))
+    db_session.add(User(id=user_id, email=f"oauth_{user_id}@test.local", hashed_password="pw", name="OAuth User"))
+    await db_session.commit()
+    
+    # Generate state token
+    state_payload = {
+        "org_id": str(org_id),
+        "user_id": str(user_id),
+        "provider": "linear",
+        "exp": 9999999999 # never expire
+    }
+    state_token = jwt.encode(state_payload, settings.SECRET_KEY, algorithm="HS256")
+    
+    from unittest.mock import MagicMock
+    
+    # Mock httpx.AsyncClient.post
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"access_token": "linear_mock_token_123"}
+    
+    mock_post = AsyncMock(return_value=mock_response)
+    
+    from app.api.integrations import integration_callback
+    
+    with patch("httpx.AsyncClient.post", new=mock_post):
+        # Call the callback directly since we need to inject the db_session
+        response = await integration_callback(
+            provider="linear",
+            code="mock_auth_code",
+            state=state_token,
+            session=db_session
+        )
+        
+    # Verify the redirect
+    assert response.status_code == 307 or response.status_code == 302
+    assert "success=linear" in response.headers["location"]
+    
+    # Verify the token was saved securely
+    stmt = select(Integration).where(
+        Integration.organization_id == org_id,
+        Integration.user_id == user_id,
+        Integration.provider == "linear"
+    )
+    res = await db_session.execute(stmt)
+    integ = res.scalars().first()
+    
+    assert integ is not None
+    assert decrypt_token(integ.access_token) == "linear_mock_token_123"

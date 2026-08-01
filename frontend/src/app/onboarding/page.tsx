@@ -259,22 +259,15 @@ export default function OnboardingPage() {
     
     setConnecting(id);
     
-    if (id === "github" || id === "notion") {
-      try {
-        const res = await fetchFromMetaphor(`/integrations/${id}/authorize`, undefined, "GET");
-        if (res && res.url) {
-          window.location.href = res.url;
-        } else {
-          setConnecting(null);
-        }
-      } catch (e) {
-        console.error(`Failed to start ${id} OAuth flow:`, e);
+    try {
+      const res = await fetchFromMetaphor(`/integrations/${id}/authorize`, undefined, "GET");
+      if (res && res.url) {
+        window.location.href = res.url;
+      } else {
         setConnecting(null);
       }
-    } else {
-      // For google drive demo fallback
-      await new Promise(r => setTimeout(r, 1200));
-      setConnections(prev => ({ ...prev, [id]: true }));
+    } catch (e) {
+      console.error(`Failed to start ${id} OAuth flow:`, e);
       setConnecting(null);
     }
   };

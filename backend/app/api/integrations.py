@@ -217,6 +217,24 @@ async def authorize_integration(
         auth_url = f"https://api.notion.com/v1/oauth/authorize?client_id={client_id}&response_type=code&owner=user&redirect_uri={urllib.parse.quote(redirect_uri)}&state={state_token}"
         return {"url": auth_url}
         
+    elif provider == "linear":
+        client_id = settings.LINEAR_CLIENT_ID
+        redirect_uri = f"{base_url}{settings.API_PREFIX}/integrations/linear/callback"
+        if not client_id:
+            return {"url": f"{redirect_uri}?code=mock_code_linear&state={state_token}"}
+        auth_url = f"https://linear.app/oauth/authorize?client_id={client_id}&redirect_uri={urllib.parse.quote(redirect_uri)}&response_type=code&state={state_token}&scope=read"
+        return {"url": auth_url}
+        
+    elif provider == "google":
+        client_id = settings.GOOGLE_CLIENT_ID
+        redirect_uri = f"{base_url}{settings.API_PREFIX}/integrations/google/callback"
+        if not client_id:
+            return {"url": f"{redirect_uri}?code=mock_code_google&state={state_token}"}
+        # We need access to Gmail (readonly) and Calendar (readonly)
+        scopes = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly"
+        auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?client_id={client_id}&redirect_uri={urllib.parse.quote(redirect_uri)}&response_type=code&state={state_token}&scope={urllib.parse.quote(scopes)}&access_type=offline&prompt=consent"
+        return {"url": auth_url}
+        
     else:
         raise HTTPException(status_code=400, detail="Unsupported provider")
 
@@ -280,6 +298,37 @@ async def integration_callback(
             if resp.status_code == 200:
                 data = resp.json()
                 access_token = data.get("access_token")
+
+        elif provider == "linear":
+            resp = await client.post(
+                "https://api.linear.app/oauth/token",
+                data={
+                    "client_id": settings.LINEAR_CLIENT_ID,
+                    "client_secret": settings.LINEAR_CLIENT_SECRET,
+                    "code": code,
+                    "redirect_uri": "http://localhost:8000/api/v1/integrations/linear/callback",
+                    "grant_type": "authorization_code"
+                }
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                access_token = data.get("access_token")
+
+        elif provider == "google":
+            resp = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "client_id": settings.GOOGLE_CLIENT_ID,
+                    "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                    "code": code,
+                    "redirect_uri": "http://localhost:8000/api/v1/integrations/google/callback",
+                    "grant_type": "authorization_code"
+                }
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                access_token = data.get("access_token")
+                refresh_token = data.get("refresh_token") # Could store this in the future
 
     if access_token:
         # Upsert integration
