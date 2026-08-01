@@ -139,6 +139,15 @@ export default function OnboardingPage() {
     }
   }, [phase]);
 
+  // Check if already authenticated on mount
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session && phase === "auth") {
+        setPhase("connect");
+      }
+    });
+  }, []);
+
   const handleAuth = () => {
     setPhase("connect");
   };
@@ -149,7 +158,7 @@ export default function OnboardingPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
       },
     })
     if (error) {

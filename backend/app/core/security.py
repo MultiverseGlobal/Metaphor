@@ -47,6 +47,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSe
             name=name
         )
         session.add(user)
+        
+        from app.models.identity import Organization, OrganizationMember
+        org = Organization(name=f"{name}'s Workspace", slug=f"workspace-{user_id}")
+        session.add(org)
+        
+        member = OrganizationMember(user_id=user.id, organization_id=org.id, role="owner")
+        session.add(member)
+        
         await session.commit()
         await session.refresh(user)
     return user
@@ -68,13 +76,22 @@ async def get_user_via_api_key(request: Request, session: AsyncSession = Depends
                     return user
                 else:
                     # Sync user to DB
+                    name = user_res.user.user_metadata.get("full_name") or user_res.user.user_metadata.get("name") or "Supabase User"
                     new_user = User(
                         id=uuid.UUID(user_res.user.id),
                         email=user_res.user.email,
                         hashed_password="",
-                        name=user_res.user.user_metadata.get("full_name") or user_res.user.user_metadata.get("name") or "Supabase User"
+                        name=name
                     )
                     session.add(new_user)
+                    
+                    from app.models.identity import Organization, OrganizationMember
+                    org = Organization(name=f"{name}'s Workspace", slug=f"workspace-{user_res.user.id}")
+                    session.add(org)
+                    
+                    member = OrganizationMember(user_id=new_user.id, organization_id=org.id, role="owner")
+                    session.add(member)
+                    
                     await session.commit()
                     await session.refresh(new_user)
                     return new_user
