@@ -1,21 +1,40 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { User, Mail, CreditCard, LogOut, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { fetchFromMetaphor } from "../api";
 
 export default function ProfilePage() {
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const data = await fetchFromMetaphor("/auth/me");
+        setUser(data);
+      } catch (e) {
+        console.error("Failed to fetch user profile:", e);
+      }
+    }
+    fetchUser();
+  }, []);
+
+  const name = user?.name || "Metaphor Dev User";
+  const email = user?.email || "dev@metaphor.local";
+  const initial = name.charAt(0).toUpperCase();
+
   return (
     <div className="flex flex-col h-full bg-background animate-in fade-in duration-150 max-w-3xl mx-auto p-8">
       
       <header className="mb-10 flex items-end gap-6">
         <div className="w-24 h-24 rounded-2xl bg-foreground text-background flex items-center justify-center text-4xl font-bold shadow-lg">
-          W
+          {initial}
         </div>
         <div className="pb-2">
-          <h1 className="text-3xl font-semibold text-foreground tracking-tight mb-1">William</h1>
+          <h1 className="text-3xl font-semibold text-foreground tracking-tight mb-1">{name}</h1>
           <p className="text-sm text-muted flex items-center gap-2">
-            <Mail className="w-4 h-4" /> william@multiverse.global
+            <Mail className="w-4 h-4" /> {email}
           </p>
         </div>
       </header>
@@ -39,15 +58,15 @@ export default function ProfilePage() {
         <Card noPadding className="divide-y divide-border-subtle">
           <div className="p-5 flex items-center justify-between">
             <span className="text-sm font-medium text-muted">Full Name</span>
-            <span className="text-sm font-semibold text-foreground">William</span>
+            <span className="text-sm font-semibold text-foreground">{name}</span>
           </div>
           <div className="p-5 flex items-center justify-between">
             <span className="text-sm font-medium text-muted">Email Address</span>
-            <span className="text-sm font-semibold text-foreground">william@multiverse.global</span>
+            <span className="text-sm font-semibold text-foreground">{email}</span>
           </div>
           <div className="p-5 flex items-center justify-between">
             <span className="text-sm font-medium text-muted">Member Since</span>
-            <span className="text-sm font-semibold text-foreground">July 2026</span>
+            <span className="text-sm font-semibold text-foreground">August 2026</span>
           </div>
         </Card>
 

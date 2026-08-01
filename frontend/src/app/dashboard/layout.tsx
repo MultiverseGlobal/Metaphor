@@ -12,7 +12,23 @@ export default function LinearLayout({
   children: React.ReactNode;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
   const pathname = usePathname();
+
+  React.useEffect(() => {
+    async function fetchUser() {
+      try {
+        const { fetchFromMetaphor } = await import("./api");
+        const data = await fetchFromMetaphor("/auth/me");
+        if (data && data.name) {
+          setUser(data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch user in layout:", e);
+      }
+    }
+    fetchUser();
+  }, []);
 
   return (
     <div className="flex h-screen w-screen bg-background overflow-hidden text-sm">
@@ -64,7 +80,7 @@ export default function LinearLayout({
         {/* Footer Navigation */}
         <div className="p-3 space-y-0.5 mb-2 border-t border-border-subtle/50 pt-4">
           <NavItem href="/dashboard/settings" icon={<Settings />} label="Settings" shortcut="⌘," pathname={pathname} />
-          <NavItem href="/dashboard/profile" icon={<User />} label="William" pathname={pathname} />
+          <NavItem href="/dashboard/profile" icon={<User />} label={user?.name || "Developer User"} pathname={pathname} />
         </div>
       </div>
 
