@@ -53,7 +53,7 @@ const GithubIcon = ({ className = "" }: { className?: string }) => (
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Phase = "auth" | "connect" | "analyzing" | "resolving" | "complete";
+type Phase = "auth" | "email_auth" | "email_sent" | "connect" | "analyzing" | "resolving" | "complete";
 
 const AMBIGUITY_QUESTIONS = [
   "What is the most important thing you're working on?",
@@ -100,6 +100,10 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("auth");
   
+  // Email Auth State
+  const [email, setEmail] = useState("");
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
+  
   // Connect State
   const [connections, setConnections] = useState<Record<string, boolean>>({});
   
@@ -122,20 +126,37 @@ export default function OnboardingPage() {
     }
   }, [phase, resolvingIndex]);
 
-  // Handle Analysis Animation
+  // Handle Analysis Animation & Polling
   useEffect(() => {
     if (phase === "analyzing") {
-      const interval = setInterval(() => {
-        setAnalysisStep(s => {
-          if (s >= 3) {
-            clearInterval(interval);
-            setTimeout(() => setPhase("resolving"), 1200);
-            return s;
-          }
-          return s + 1;
-        });
+      const animationInterval = setInterval(() => {
+        setAnalysisStep(s => (s >= 3 ? 3 : s + 1));
       }, 1500);
-      return () => clearInterval(interval);
+
+      let isPolling = true;
+      const pollStatus = async () => {
+        while (isPolling) {
+          try {
+            const statusRes = await fetchFromMetaphor("/integrations/status", undefined, "GET");
+            if (statusRes.has_data || statusRes.status === "completed") {
+              isPolling = false;
+              clearInterval(animationInterval);
+              setPhase("resolving");
+              break;
+            }
+          } catch (e) {
+            console.warn("Polling error:", e);
+          }
+          await new Promise(r => setTimeout(r, 3000));
+        }
+      };
+      
+      pollStatus();
+
+      return () => {
+        isPolling = false;
+        clearInterval(animationInterval);
+      };
     }
   }, [phase]);
 
@@ -148,8 +169,21 @@ export default function OnboardingPage() {
     });
   }, []);
 
-  const handleAuth = () => {
-    setPhase("connect");
+  const handleEmailAuth = async () => {
+    if (!email) return;
+    setIsEmailLoading(true);
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+      },
+    });
+    setIsEmailLoading(false);
+    if (error) {
+      alert("Error sending magic link: " + error.message);
+    } else {
+      setPhase("email_sent");
+    }
   };
 
   const supabase = createClient();
@@ -171,9 +205,20 @@ export default function OnboardingPage() {
     setConnections(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const submitAmbiguityAnswer = () => {
+  const submitAmbiguityAnswer = async () => {
     if (!currentAnswer.trim()) return;
-    setAnswers(prev => [...prev, currentAnswer.trim()]);
+    
+    const newAnswers = [...answers, currentAnswer.trim()];
+    setAnswers(newAnswers);
+    
+    try {
+      await fetchFromMetaphor("/context/lore", { 
+        content: `User prefers: ${currentAnswer.trim()} regarding '${AMBIGUITY_QUESTIONS[resolvingIndex]}'` 
+      });
+    } catch(e) {
+      console.error("Failed to save context", e);
+    }
+
     setCurrentAnswer("");
     if (resolvingIndex < AMBIGUITY_QUESTIONS.length - 1) {
       setResolvingIndex(prev => prev + 1);
@@ -182,52 +227,36 @@ export default function OnboardingPage() {
     }
   };
 
-  const finalize = async () => {
-    setIsSubmitting(true);
+  const startIntegrationSync = async () => {
+    setPhase("analyzing");
     try {
-      // Generate permanent API Key for Webhooks
-      const keyData = await fetchFromMetaphor("/auth/apikeys", undefined, "POST");
-      localStorage.setItem("metaphor_api_key", keyData.raw_token);
+      let apiKey = localStorage.getItem("metaphor_api_key");
+      if (!apiKey) {
+        const keyData = await fetchFromMetaphor("/auth/apikeys", undefined, "POST");
+        localStorage.setItem("metaphor_api_key", keyData.raw_token);
+      }
 
-      // 1. Trigger the background integration sync
       const connectedSources = Object.keys(connections).filter(k => connections[k]);
-      
       const { data: { session } } = await supabase.auth.getSession();
-      const providerToken = session?.provider_token;
       
       if (connectedSources.length > 0) {
         await fetchFromMetaphor("/integrations/sync", {
           sources: connectedSources,
-          github_repo: "tiangolo/fastapi", // Example default repo
-          github_token: providerToken || undefined
+          github_repo: "tiangolo/fastapi", 
+          github_token: session?.provider_token || undefined
         });
       } else {
-        // Fallback for no sources
-        await fetchFromMetaphor("/context/lore", { content: "User has not connected any sources yet." });
+        await fetchFromMetaphor("/context/lore", { content: "User skipped source connection during onboarding." });
       }
-
-      // 2. Poll the status endpoint until the background task is complete
-      let isDone = false;
-      while (!isDone) {
-        await new Promise(r => setTimeout(r, 3000));
-        try {
-          const statusRes = await fetchFromMetaphor("/integrations/status", undefined, "GET");
-          if (statusRes.has_data || statusRes.status === "completed") {
-            isDone = true;
-          }
-        } catch (pollErr) {
-          console.warn("Polling error:", pollErr);
-        }
-      }
-
-      // 3. Mark complete and redirect
-      localStorage.setItem("metaphor_onboarded", "true");
-      router.push("/dashboard");
-    } catch (e: any) {
-      console.error("Failed to commit graph:", e);
-      setIsSubmitting(false);
-      alert("Failed to commit context. Please ensure backend is running.");
+    } catch (e) {
+      console.error("Failed to start sync:", e);
     }
+  };
+
+  const finalize = async () => {
+    setIsSubmitting(true);
+    localStorage.setItem("metaphor_onboarded", "true");
+    router.push("/dashboard");
   };
 
   // ── PHASE: AUTH (WORKSPACE CREATION) ─────────────────────────────────────────
@@ -247,7 +276,7 @@ export default function OnboardingPage() {
           <div className="space-y-4 w-full">
             <AuthButton icon={<GoogleLogo />} label="Continue with Google" onClick={() => handleOAuthLogin('google')} />
             <AuthButton icon={<GithubIcon className="opacity-80" />} label="Continue with GitHub" onClick={() => handleOAuthLogin('github')} />
-            <AuthButton icon={<AppleIcon />} label="Continue with Apple" onClick={handleAuth} />
+            <AuthButton icon={<AppleIcon />} label="Continue with Apple" onClick={() => handleOAuthLogin('apple')} />
             
             <div className="py-2 flex items-center gap-4 w-full">
               <div className="flex-1 border-t border-border-subtle"></div>
@@ -255,13 +284,70 @@ export default function OnboardingPage() {
               <div className="flex-1 border-t border-border-subtle"></div>
             </div>
 
-            <AuthButton icon={<Mail className="w-5 h-5 text-foreground opacity-80" />} label="Continue with Email" onClick={handleAuth} />
+            <AuthButton icon={<Mail className="w-5 h-5 text-foreground opacity-80" />} label="Continue with Email" onClick={() => setPhase("email_auth")} />
           </div>
 
           <p className="mt-10 text-xs text-muted max-w-[280px] text-center leading-relaxed">
             By creating a workspace, you agree to our Terms of Service and Privacy Policy. Data is encrypted and stored locally-first.
           </p>
 
+        </div>
+      </div>
+    );
+  }
+
+  // ── PHASE: EMAIL AUTH ────────────────────────────────────────────────────────
+  if (phase === "email_auth") {
+    return (
+      <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in slide-in-from-bottom-4 duration-500">
+        <div className="w-full max-w-sm flex flex-col items-center">
+          <MetaphorLogo size={48} className="mb-10 text-foreground" />
+          <div className="mb-8 text-center w-full">
+            <h1 className="text-2xl font-medium tracking-tight text-foreground mb-3">
+              Continue with Email
+            </h1>
+            <p className="text-sm text-muted">We'll send a magic link to your inbox.</p>
+          </div>
+          <div className="w-full space-y-4">
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="w-full p-4 rounded-xl border border-border-subtle bg-surface-1 text-foreground placeholder:text-muted focus:outline-none focus:border-foreground transition-colors"
+              onKeyDown={e => { if (e.key === "Enter") handleEmailAuth(); }}
+            />
+            <button
+              onClick={handleEmailAuth}
+              disabled={isEmailLoading || !email}
+              className="w-full p-4 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex justify-center items-center gap-2"
+            >
+              {isEmailLoading ? <div className="w-4 h-4 rounded-full border-2 border-background border-t-transparent animate-spin" /> : "Send Magic Link"}
+            </button>
+            <button onClick={() => setPhase("auth")} className="w-full text-xs text-muted font-medium hover:text-foreground transition-colors mt-4">
+              Back to options
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── PHASE: EMAIL SENT ────────────────────────────────────────────────────────
+  if (phase === "email_sent") {
+    return (
+      <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in fade-in duration-500">
+        <div className="w-full max-w-sm flex flex-col items-center text-center">
+          <div className="w-16 h-16 rounded-full bg-surface-2 border border-border-strong flex items-center justify-center mb-8">
+            <Mail className="w-6 h-6 text-foreground" />
+          </div>
+          <h1 className="text-2xl font-medium tracking-tight text-foreground mb-3">Check your inbox</h1>
+          <p className="text-sm text-muted mb-8 leading-relaxed">
+            We sent a secure magic link to <br/><span className="font-medium text-foreground">{email}</span>
+          </p>
+          <button onClick={() => setPhase("auth")} className="text-xs text-muted font-medium hover:text-foreground transition-colors">
+            Use a different email
+          </button>
         </div>
       </div>
     );
@@ -291,7 +377,7 @@ export default function OnboardingPage() {
           </div>
 
           <button
-            onClick={() => setPhase("analyzing")}
+            onClick={startIntegrationSync}
             className={`w-full px-8 py-4 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all ${
               connectedCount > 0 
                 ? "bg-foreground text-background shadow-md hover:opacity-90" 
