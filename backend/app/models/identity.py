@@ -26,6 +26,12 @@ class User(SQLModel, table=True):
     avatar: Optional[str] = None
     timezone: Optional[str] = None
     
+    # Persona fields
+    mission_statement: Optional[str] = None
+    writing_style: Optional[str] = None
+    preferred_terms: Optional[str] = None
+    banned_terms: Optional[str] = None
+    
     created_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
     updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
     

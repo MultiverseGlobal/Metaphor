@@ -20,6 +20,13 @@ class UserCreate(BaseModel):
     password: str
     name: str
 
+class UserUpdateProfile(BaseModel):
+    name: str
+    mission_statement: str = None
+    writing_style: str = None
+    preferred_terms: str = None
+    banned_terms: str = None
+
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -80,7 +87,24 @@ async def login_access_token(session: AsyncSession = Depends(get_session), form_
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.get("/me")
-async def read_user_me(current_user: User = Depends(get_current_user)) -> Any:
+async def read_user_me(current_user: User = Depends(get_user_via_api_key)) -> Any:
+    return current_user
+
+@router.put("/me")
+async def update_user_me(
+    profile_in: UserUpdateProfile,
+    current_user: User = Depends(get_user_via_api_key),
+    db: AsyncSession = Depends(get_session)
+) -> Any:
+    current_user.name = profile_in.name
+    current_user.mission_statement = profile_in.mission_statement
+    current_user.writing_style = profile_in.writing_style
+    current_user.preferred_terms = profile_in.preferred_terms
+    current_user.banned_terms = profile_in.banned_terms
+    
+    db.add(current_user)
+    await db.commit()
+    await db.refresh(current_user)
     return current_user
 
 @router.get("/apikeys")

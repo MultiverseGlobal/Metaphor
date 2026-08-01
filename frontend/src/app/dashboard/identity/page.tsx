@@ -5,17 +5,63 @@ import { User, Target, PenTool, Hash } from "lucide-react";
 
 export default function IdentityEnginePage() {
   const [saveState, setSaveState] = useState<"saved" | "saving">("saved");
+  const [profile, setProfile] = useState({
+    name: "",
+    mission_statement: "",
+    writing_style: "",
+    preferred_terms: "",
+    banned_terms: ""
+  });
 
-  // Mock auto-save handler
-  const handleBlur = () => {
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const { fetchFromMetaphor } = await import("@/app/api");
+        const data = await fetchFromMetaphor("/auth/me");
+        if (data) {
+          setProfile({
+            name: data.name || "",
+            mission_statement: data.mission_statement || "",
+            writing_style: data.writing_style || "",
+            preferred_terms: data.preferred_terms || "",
+            banned_terms: data.banned_terms || ""
+          });
+        }
+      } catch (e) {
+        console.error("Failed to fetch user:", e);
+      }
+    }
+    fetchUser();
+  }, []);
+
+  const handleSave = async (updatedProfile: typeof profile) => {
     setSaveState("saving");
-    setTimeout(() => {
-      setSaveState("saved");
-    }, 800);
+    try {
+      const { fetchFromMetaphor } = await import("@/app/api");
+      await fetchFromMetaphor("/auth/me", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedProfile)
+      });
+    } catch (e) {
+      console.error("Failed to save profile:", e);
+    } finally {
+      setTimeout(() => {
+        setSaveState("saved");
+      }, 500);
+    }
+  };
+
+  const handleChange = (field: keyof typeof profile, value: string) => {
+    setProfile(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleBlur = () => {
+    handleSave(profile);
   };
 
   return (
-    <div className="max-w-3xl animate-in">
+    <div className="max-w-3xl animate-in fade-in duration-150 p-8">
       <header className="mb-12">
         <h1 className="text-2xl text-foreground font-medium mb-2">Identity Engine</h1>
         <p className="text-muted text-sm leading-relaxed max-w-xl">
@@ -36,19 +82,23 @@ export default function IdentityEnginePage() {
               <label className="block text-xs font-medium text-muted mb-2 uppercase tracking-wider">Name / Alias</label>
               <input 
                 type="text"
-                defaultValue="William"
+                value={profile.name}
+                onChange={(e) => handleChange("name", e.target.value)}
                 onBlur={handleBlur}
-                className="w-full bg-surface-1 border border-subtle rounded-md px-4 py-3 text-sm text-foreground focus:outline-none focus:border-strong transition-colors"
+                placeholder="e.g. Developer"
+                className="w-full bg-surface-1 border border-border-subtle rounded-md px-4 py-3 text-sm text-foreground focus:outline-none focus:border-border-strong transition-colors"
               />
             </div>
 
             <div>
               <label className="block text-xs font-medium text-muted mb-2 uppercase tracking-wider">Mission Statement</label>
               <textarea 
-                defaultValue="Build Multiverse Global Enterprises"
+                value={profile.mission_statement}
+                onChange={(e) => handleChange("mission_statement", e.target.value)}
                 onBlur={handleBlur}
                 rows={3}
-                className="w-full bg-surface-1 border border-subtle rounded-md px-4 py-3 text-sm text-foreground focus:outline-none focus:border-strong transition-colors resize-none"
+                placeholder="e.g. Build Multiverse Global Enterprises"
+                className="w-full bg-surface-1 border border-border-subtle rounded-md px-4 py-3 text-sm text-foreground focus:outline-none focus:border-border-strong transition-colors resize-none"
               />
             </div>
           </div>
@@ -65,10 +115,12 @@ export default function IdentityEnginePage() {
             <div>
               <label className="block text-xs font-medium text-muted mb-2 uppercase tracking-wider">Writing Style</label>
               <textarea 
-                defaultValue="Direct, technical, concise. Avoids jargon unless domain-specific. Never use 'In conclusion' or 'Therefore'."
+                value={profile.writing_style}
+                onChange={(e) => handleChange("writing_style", e.target.value)}
                 onBlur={handleBlur}
                 rows={4}
-                className="w-full bg-surface-1 border border-subtle rounded-md px-4 py-3 text-sm text-foreground focus:outline-none focus:border-strong transition-colors resize-none"
+                placeholder="e.g. Direct, technical, concise. Avoids jargon unless domain-specific. Never use 'In conclusion'."
+                className="w-full bg-surface-1 border border-border-subtle rounded-md px-4 py-3 text-sm text-foreground focus:outline-none focus:border-border-strong transition-colors resize-none"
               />
             </div>
 
@@ -76,19 +128,23 @@ export default function IdentityEnginePage() {
               <div>
                 <label className="block text-xs font-medium text-muted mb-2 uppercase tracking-wider">Preferred Terms (Do Use)</label>
                 <textarea 
-                  defaultValue="Context Engine\nKnowledge Graph\nIdentity Model\nNodes"
+                  value={profile.preferred_terms}
+                  onChange={(e) => handleChange("preferred_terms", e.target.value)}
                   onBlur={handleBlur}
                   rows={4}
-                  className="w-full bg-surface-1 border border-subtle rounded-md px-4 py-3 text-sm text-foreground focus:outline-none focus:border-strong transition-colors resize-none"
+                  placeholder="Context Engine\nKnowledge Graph"
+                  className="w-full bg-surface-1 border border-border-subtle rounded-md px-4 py-3 text-sm text-foreground focus:outline-none focus:border-border-strong transition-colors resize-none"
                 />
               </div>
               <div>
                 <label className="block text-xs font-medium text-muted mb-2 uppercase tracking-wider">Banned Terms (Do Not Use)</label>
                 <textarea 
-                  defaultValue="Second Brain\nDigital Twin\nLore\nChatbot"
+                  value={profile.banned_terms}
+                  onChange={(e) => handleChange("banned_terms", e.target.value)}
                   onBlur={handleBlur}
                   rows={4}
-                  className="w-full bg-surface-1 border border-subtle rounded-md px-4 py-3 text-sm text-foreground focus:outline-none focus:border-strong transition-colors resize-none"
+                  placeholder="Second Brain\nDigital Twin"
+                  className="w-full bg-surface-1 border border-border-subtle rounded-md px-4 py-3 text-sm text-foreground focus:outline-none focus:border-border-strong transition-colors resize-none"
                 />
               </div>
             </div>
@@ -97,7 +153,7 @@ export default function IdentityEnginePage() {
       </div>
 
       {/* Fixed Save State Indicator */}
-      <div className="fixed bottom-8 right-8 flex items-center gap-2 text-xs text-muted font-medium bg-surface-1 border border-subtle px-3 py-1.5 rounded-full shadow-sm">
+      <div className="fixed bottom-8 right-8 flex items-center gap-2 text-xs text-muted font-medium bg-surface-1 border border-border-subtle px-3 py-1.5 rounded-full shadow-sm">
         {saveState === "saving" ? (
           <>
             <div className="w-2 h-2 rounded-full border-2 border-muted border-t-transparent animate-spin" />
@@ -105,7 +161,7 @@ export default function IdentityEnginePage() {
           </>
         ) : (
           <>
-            <div className="w-2 h-2 rounded-full bg-green-500/50" />
+            <div className="w-2 h-2 rounded-full bg-success/80" />
             Synchronized
           </>
         )}

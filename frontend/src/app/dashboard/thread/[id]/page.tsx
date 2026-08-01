@@ -40,7 +40,7 @@ export default function CognitiveThreadPage({ params }: { params: { id: string }
         />
         <MessageBlock 
           role="ai" 
-          content={`Welcome back, William. 
+          content={`Welcome back. 
           
 Based on your previous notes and the system architecture documents, there are two primary contradictions you need to resolve:
 
