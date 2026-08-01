@@ -199,7 +199,7 @@ async def authorize_integration(
     }
     state_token = jwt.encode(state_payload, settings.SECRET_KEY, algorithm="HS256")
     
-    base_url = str(request.base_url).rstrip('/')
+    base_url = settings.BACKEND_URL.rstrip('/')
     
     if provider == "github":
         client_id = settings.GITHUB_CLIENT_ID
