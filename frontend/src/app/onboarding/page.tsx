@@ -75,22 +75,29 @@ function AuthButton({ icon, label, onClick }: { icon: React.ReactNode, label: st
   );
 }
 
-function ConnectCard({ name, icon, connected, onToggle }: { name: string, icon: React.ReactNode, connected: boolean, onToggle: () => void }) {
+function ConnectCard({ name, icon, connected, onToggle, children }: { name: string, icon: React.ReactNode, connected: boolean, onToggle: () => void, children?: React.ReactNode }) {
   return (
-    <button 
-      onClick={onToggle}
-      className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all duration-300 ${connected ? 'bg-surface-2 border-foreground' : 'bg-transparent border-border-subtle hover:border-border-strong'}`}
-    >
-      <div className="flex items-center gap-4">
-        <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${connected ? 'bg-foreground text-background' : 'bg-surface-2 text-muted'}`}>
-          {icon}
+    <div className={`w-full flex flex-col rounded-xl border transition-all duration-300 ${connected ? 'bg-surface-2 border-foreground' : 'bg-transparent border-border-subtle hover:border-border-strong'}`}>
+      <button 
+        onClick={onToggle}
+        className="w-full flex items-center justify-between p-4"
+      >
+        <div className="flex items-center gap-4">
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${connected ? 'bg-foreground text-background' : 'bg-surface-2 text-muted'}`}>
+            {icon}
+          </div>
+          <span className={`text-sm font-medium ${connected ? 'text-foreground' : 'text-muted'}`}>{name}</span>
         </div>
-        <span className={`text-sm font-medium ${connected ? 'text-foreground' : 'text-muted'}`}>{name}</span>
-      </div>
-      <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${connected ? 'border-foreground bg-foreground' : 'border-border-strong'}`}>
-        {connected && <CheckCircle2 className="w-3 h-3 text-background" />}
-      </div>
-    </button>
+        <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${connected ? 'border-foreground bg-foreground' : 'border-border-strong'}`}>
+          {connected && <CheckCircle2 className="w-3 h-3 text-background" />}
+        </div>
+      </button>
+      {connected && children && (
+        <div className="px-4 pb-4 animate-in slide-in-from-top-2 fade-in duration-200">
+          {children}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -106,6 +113,9 @@ export default function OnboardingPage() {
   
   // Connect State
   const [connections, setConnections] = useState<Record<string, boolean>>({});
+  const [githubRepo, setGithubRepo] = useState("");
+  const [githubToken, setGithubToken] = useState("");
+  const [notionToken, setNotionToken] = useState("");
   
   // Analyzing State
   const [analysisStep, setAnalysisStep] = useState(0);
@@ -242,8 +252,9 @@ export default function OnboardingPage() {
       if (connectedSources.length > 0) {
         await fetchFromMetaphor("/integrations/sync", {
           sources: connectedSources,
-          github_repo: "tiangolo/fastapi", 
-          github_token: session?.provider_token || undefined
+          github_repo: githubRepo.trim() || undefined, 
+          github_token: githubToken.trim() || session?.provider_token || undefined,
+          notion_token: notionToken.trim() || undefined
         });
       } else {
         await fetchFromMetaphor("/context/lore", { content: "User skipped source connection during onboarding." });
@@ -371,10 +382,41 @@ export default function OnboardingPage() {
             </p>
           </div>
 
-          <div className="space-y-3 mb-10">
-            <ConnectCard name="Notion" icon={<NotionIcon />} connected={!!connections["notion"]} onToggle={() => toggleConnection("notion")} />
+          <div className="space-y-3 mb-10 text-left">
+            <ConnectCard name="Notion" icon={<NotionIcon />} connected={!!connections["notion"]} onToggle={() => toggleConnection("notion")}>
+              <div className="space-y-2 mt-1">
+                <input 
+                  type="text" 
+                  placeholder="Notion Integration Token (optional)"
+                  value={notionToken}
+                  onChange={e => setNotionToken(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-border-strong bg-background text-foreground text-xs placeholder:text-muted focus:outline-none focus:border-foreground"
+                />
+                <p className="text-[10px] text-muted ml-1">A token is optional for this demo. Mock data will be used if omitted.</p>
+              </div>
+            </ConnectCard>
+            
             <ConnectCard name="Google Drive" icon={<GoogleDriveIcon />} connected={!!connections["google"]} onToggle={() => toggleConnection("google")} />
-            <ConnectCard name="GitHub" icon={<GithubIcon className="opacity-80" />} connected={!!connections["github"]} onToggle={() => toggleConnection("github")} />
+            
+            <ConnectCard name="GitHub" icon={<GithubIcon className="opacity-80" />} connected={!!connections["github"]} onToggle={() => toggleConnection("github")}>
+              <div className="space-y-2 mt-1">
+                <input 
+                  type="text" 
+                  placeholder="Repository (e.g. yourname/yourrepo)"
+                  value={githubRepo}
+                  onChange={e => setGithubRepo(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-border-strong bg-background text-foreground text-xs placeholder:text-muted focus:outline-none focus:border-foreground"
+                />
+                <input 
+                  type="password" 
+                  placeholder="Personal Access Token (optional)"
+                  value={githubToken}
+                  onChange={e => setGithubToken(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-border-strong bg-background text-foreground text-xs placeholder:text-muted focus:outline-none focus:border-foreground"
+                />
+                <p className="text-[10px] text-muted ml-1">Used for private repositories or avoiding rate limits.</p>
+              </div>
+            </ConnectCard>
           </div>
 
           <button
