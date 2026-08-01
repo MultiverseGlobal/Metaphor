@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { User, Target, PenTool, Hash } from "lucide-react";
 
 export default function IdentityEnginePage() {
