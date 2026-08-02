@@ -27,7 +27,7 @@ async def test_mcp_oauth_protected_resource_discovery():
 @pytest.mark.asyncio
 async def test_mcp_oauth_authorize_flow():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        # 1. GET /oauth/authorize with HTML Accept header -> 307 Redirect to frontend consent page
+        # 1. GET /oauth/authorize -> 302 Redirect to frontend consent page
         res_html = await client.get(
             "/api/v1/mcp/oauth/authorize",
             params={
@@ -39,8 +39,9 @@ async def test_mcp_oauth_authorize_flow():
             },
             headers={"Accept": "text/html"}
         )
-        assert res_html.status_code == 307
+        assert res_html.status_code == 302
         assert "/oauth/authorize" in res_html.headers.get("location", "")
+
 
         # 2. POST /oauth/authorize (User Consent Submission) -> Generates auth code
         res_consent = await client.post(
