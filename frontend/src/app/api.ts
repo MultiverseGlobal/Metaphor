@@ -44,9 +44,10 @@ export async function fetchFromMetaphor(endpoint: string, body?: any, method?: s
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
       token = session.access_token;
-    } else if (!apiKey && !allowAnonymous && !endpoint.includes("/oauth/")) {
-      throw new Error("No active Supabase session or API key found! Please make sure you are signed in.");
+    } else if (!apiKey && !allowAnonymous && !endpoint.includes("/oauth/") && !endpoint.includes("/auth/apikeys")) {
+      // Allow fallback request without blocking
     }
+
   }
 
   const headers: Record<string, string> = {

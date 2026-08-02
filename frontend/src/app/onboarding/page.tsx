@@ -486,10 +486,18 @@ function OnboardingContent() {
             </div>
 
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (displayNameInput.trim()) {
                   localStorage.setItem("metaphor_user_name", displayNameInput.trim());
                   fetchFromMetaphor("/auth/me", { name: displayNameInput.trim() }, "PUT").catch(() => {});
+                }
+                try {
+                  const keyRes = await fetchFromMetaphor("/auth/apikeys", { name: "Metaphor Workspace Key" }, "POST", true);
+                  if (keyRes && keyRes.key) {
+                    localStorage.setItem("metaphor_api_key", keyRes.key);
+                  }
+                } catch (e) {
+                  // Graceful fallback if key generation endpoint fails
                 }
                 setPhase("connect");
               }}
@@ -498,6 +506,7 @@ function OnboardingContent() {
               <span>Continue to Data Sources</span>
               <ArrowRight className="w-4 h-4" />
             </button>
+
           </div>
 
           <div className="py-4 flex items-center gap-4 w-full">
