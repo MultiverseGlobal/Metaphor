@@ -5,6 +5,7 @@ from .integrations import router as integrations_router
 from .webhooks import router as webhooks_router
 from .apikeys import router as apikeys_router
 from .auth import router as auth_router
+from .mcp import router as mcp_router
 
 api_router = APIRouter()
 api_router.include_router(integrations_router, prefix="/integrations", tags=["integrations"])
@@ -13,3 +14,4 @@ api_router.include_router(graph_router, prefix="/graph", tags=["graph"])
 api_router.include_router(webhooks_router, prefix="/webhooks", tags=["webhooks"])
 api_router.include_router(apikeys_router, prefix="/auth/apikeys", tags=["API Keys"])
 api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
+api_router.include_router(mcp_router, prefix="/mcp", tags=["mcp"])

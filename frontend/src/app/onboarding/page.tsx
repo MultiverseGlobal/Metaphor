@@ -741,7 +741,7 @@ function OnboardingContent() {
       ChatGPT: {
         title: "Connect ChatGPT Custom GPT",
         instruction: "1. Open ChatGPT > Explore GPTs > Create > Actions\n2. Import OpenAPI Schema using your Metaphor URL below:",
-        snippet: "https://metaphor-three.vercel.app/api/v1/context/mcp"
+        snippet: "https://metaphor-three.vercel.app/api/v1/mcp"
       },
       Claude: {
         title: "Connect Claude Desktop MCP",
@@ -750,7 +750,7 @@ function OnboardingContent() {
           mcpServers: {
             metaphor: {
               command: "npx",
-              args: ["-y", "@metaphor/mcp-server", "--token=mtph_live_enterprise_context"]
+              args: ["-y", "@metaphor/mcp-server", "--url=https://metaphor-three.vercel.app/api/v1/mcp"]
             }
           }
         }, null, 2)
@@ -758,15 +758,23 @@ function OnboardingContent() {
       Cursor: {
         title: "Connect Cursor IDE MCP",
         instruction: "1. Open Cursor Settings > Features > MCP Servers\n2. Add a new MCP Server using command below:",
-        snippet: 'npx @metaphor/mcp-server --token="mtph_live_enterprise_context"'
+        snippet: 'npx @metaphor/mcp-server --url="https://metaphor-three.vercel.app/api/v1/mcp"'
       }
     };
 
-    const handleCopyConfig = (name: string, text: string) => {
+    const handleCopyConfig = async (name: string, text: string) => {
+      try {
+        await fetchFromMetaphor("/mcp/oauth/register", {
+          client_name: `${name} Onboarding Client`,
+          redirect_uris: ["http://localhost/callback"]
+        }, "POST");
+      } catch (e) {
+        // Fallback gracefully if offline
+      }
       navigator.clipboard.writeText(text);
       setCopiedSnippet(true);
       setAiConnected(prev => ({ ...prev, [name]: true }));
-      setToastMessage(`✓ Connected ${name}! MCP configuration copied to clipboard.`);
+      setToastMessage(`✓ Connected ${name}! Real OAuth 2.1 endpoint copied to clipboard.`);
       setTimeout(() => setCopiedSnippet(false), 2000);
     };
 
