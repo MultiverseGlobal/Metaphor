@@ -198,3 +198,47 @@ async def call_mcp_tool(name: str, arguments: Dict[str, Any], organization_id: u
 
     else:
         raise HTTPException(status_code=404, detail=f"Tool '{name}' not found.")
+
+
+# ── Tenant-Isolated Prompts Resolvers ──────────────────────────────────────────
+async def list_mcp_prompts() -> List[Dict[str, Any]]:
+    return [
+        {"name": "review_codebase", "description": "Review codebase architecture and design rules.", "arguments": [{"name": "repo_name", "description": "Repository name to review", "required": False}]},
+        {"name": "prepare_meeting", "description": "Prepare customer/team meeting context and past decisions.", "arguments": [{"name": "topic", "description": "Meeting topic or participant name", "required": True}]},
+        {"name": "explain_project", "description": "Explain active project goals, architecture, and status.", "arguments": [{"name": "project_name", "description": "Project name to explain", "required": True}]},
+        {"name": "generate_summary", "description": "Generate summary of recent workspace decisions and commits.", "arguments": []}
+    ]
+
+async def get_mcp_prompt(name: str, arguments: Dict[str, Any], organization_id: uuid.UUID, session: AsyncSession) -> Dict[str, Any]:
+    if name == "review_codebase":
+        return {
+            "description": "Codebase Architecture Review Template",
+            "messages": [
+                {"role": "user", "content": {"type": "text", "text": "Analyze the codebase architecture, design constraints, and data models for Metaphor OS."}}
+            ]
+        }
+    elif name == "prepare_meeting":
+        topic = arguments.get("topic", "")
+        return {
+            "description": f"Meeting Context Preparation for {topic}",
+            "messages": [
+                {"role": "user", "content": {"type": "text", "text": f"Gather past meeting notes, open decisions, and background context for '{topic}'."}}
+            ]
+        }
+    elif name == "explain_project":
+        proj = arguments.get("project_name", "")
+        return {
+            "description": f"Project Explanation for {proj}",
+            "messages": [
+                {"role": "user", "content": {"type": "text", "text": f"Provide an architectural overview, active sprint goals, and technical specs for '{proj}'."}}
+            ]
+        }
+    elif name == "generate_summary":
+        return {
+            "description": "Workspace Activity Summary",
+            "messages": [
+                {"role": "user", "content": {"type": "text", "text": "Summarize recent commits, document updates, and architectural decisions."}}
+            ]
+        }
+    else:
+        raise HTTPException(status_code=404, detail=f"Prompt '{name}' not found.")

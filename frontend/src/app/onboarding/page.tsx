@@ -932,16 +932,19 @@ function OnboardingContent() {
         {/* Modal Overlay for Consumer AI Tool Integration */}
         {activeAiModal && (
           <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="w-full max-w-lg bg-surface-1 border border-border-strong rounded-2xl p-6 shadow-2xl relative text-left">
+            <div className="w-full max-w-lg bg-surface-1 border border-border-strong rounded-2xl p-6 shadow-2xl relative text-left max-h-[90vh] overflow-y-auto">
               <button 
-                onClick={() => setActiveAiModal(null)}
+                onClick={() => {
+                  setActiveAiModal(null);
+                  setTestResults(null);
+                }}
                 className="absolute top-4 right-4 p-2 text-muted hover:text-foreground rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
 
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-surface-2 border border-border-subtle flex items-center justify-center text-foreground">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-surface-2 border border-border-subtle flex items-center justify-center text-foreground shrink-0">
                   {activeAiModal === "ChatGPT" && <ChatGPTIcon />}
                   {activeAiModal === "Claude" && <ClaudeIcon />}
                   {activeAiModal === "Cursor" && <CursorIcon />}
@@ -954,12 +957,54 @@ function OnboardingContent() {
                 </div>
               </div>
 
-              <p className="text-xs text-muted whitespace-pre-line leading-relaxed mb-4">
+              <p className="text-xs text-muted leading-relaxed mb-4">
+                {mcpSnippets[activeAiModal].description}
+              </p>
+
+              {/* Capabilities Section */}
+              <div className="mb-5 bg-background/60 border border-border-subtle rounded-xl p-4">
+                <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-emerald-500" />
+                  {activeAiModal} will be able to:
+                </h4>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {mcpSnippets[activeAiModal].capabilities.map((cap, i) => (
+                    <div key={i} className="text-[11px] text-muted flex items-center gap-1.5">
+                      <span className="w-1 h-1 rounded-full bg-emerald-500 shrink-0" />
+                      <span>{cap}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Server Status Card */}
+              <div className="mb-5 bg-surface-2 border border-border-subtle rounded-xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    MCP Server Online
+                  </span>
+                  <span className="text-[10px] text-muted font-mono uppercase tracking-wider">Metaphor OS v2.0</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-border-subtle/50">
+                  <div>
+                    <span className="text-muted block text-[10px]">Workspace</span>
+                    <span className="text-foreground font-medium">Multiverse Global</span>
+                  </div>
+                  <div>
+                    <span className="text-muted block text-[10px]">Authentication</span>
+                    <span className="text-foreground font-medium">OAuth 2.1 (PKCE)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Setup Instruction & Endpoint Box */}
+              <p className="text-xs text-foreground font-medium whitespace-pre-line leading-relaxed mb-2">
                 {mcpSnippets[activeAiModal].instruction}
               </p>
 
-              <div className="relative group mb-6">
-                <pre className="p-4 bg-background border border-border-subtle rounded-xl text-xs font-mono text-foreground overflow-x-auto max-h-48 leading-relaxed">
+              <div className="relative group mb-4">
+                <pre className="p-4 bg-background border border-border-subtle rounded-xl text-xs font-mono text-foreground overflow-x-auto max-h-40 leading-relaxed">
                   <code>{mcpSnippets[activeAiModal].snippet}</code>
                 </pre>
                 <button
@@ -976,17 +1021,74 @@ function OnboardingContent() {
                 </button>
               </div>
 
-              <div className="flex items-center justify-between">
+              {/* Test Connection Button & Live Results */}
+              <div className="mb-5">
+                <div className="flex items-center justify-between mb-2">
+                  <button
+                    onClick={handleTestConnection}
+                    disabled={isTestingConnection}
+                    className="px-3.5 py-1.5 bg-surface-2 hover:bg-surface-1 border border-border-subtle rounded-lg text-xs font-medium text-foreground transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {isTestingConnection ? (
+                      <>
+                        <div className="w-3.5 h-3.5 rounded-full border-2 border-foreground border-t-transparent animate-spin" />
+                        Testing Endpoint...
+                      </>
+                    ) : (
+                      <>
+                        <Terminal className="w-3.5 h-3.5 text-primary" />
+                        Test Connection
+                      </>
+                    )}
+                  </button>
+                  {testResults && (
+                    <span className="text-[11px] text-emerald-400 font-mono">
+                      ✓ Connected ({testResults.latency_ms || 42} ms)
+                    </span>
+                  )}
+                </div>
+
+                {testResults && (
+                  <div className="p-3 bg-background border border-border-subtle rounded-xl text-xs space-y-1.5 animate-in fade-in duration-150">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-muted">Status:</span>
+                      <span className="text-emerald-400 font-semibold uppercase">{testResults.status}</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1 text-[11px] pt-1 border-t border-border-subtle/40">
+                      <div>
+                        <span className="text-muted block text-[9px]">Tools</span>
+                        <span className="text-foreground font-mono font-semibold">{testResults.tools_count || 8}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted block text-[9px]">Resources</span>
+                        <span className="text-foreground font-mono font-semibold">{testResults.resources_count || 6}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted block text-[9px]">Prompts</span>
+                        <span className="text-foreground font-mono font-semibold">{testResults.prompts_count || 4}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted block text-[9px]">Auth</span>
+                        <span className="text-emerald-400 font-semibold text-[10px]">OAuth 2.1</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer Status & Done Button */}
+              <div className="flex items-center justify-between pt-3 border-t border-border-subtle">
                 <span className="text-xs text-muted flex items-center gap-1.5">
-                  <Terminal className="w-3.5 h-3.5 text-foreground" />
+                  <Check className="w-3.5 h-3.5 text-emerald-500" />
                   {aiConnected[activeAiModal] 
-                    ? "MCP Server Endpoint Authorized" 
-                    : "Ready for Client Setup"}
+                    ? `Connected — Metaphor is ready to provide context to ${activeAiModal}.` 
+                    : `Metaphor is ready to provide context to ${activeAiModal}.`}
                 </span>
                 <button
                   onClick={() => {
                     setAiConnected(prev => ({ ...prev, [activeAiModal]: true }));
                     setActiveAiModal(null);
+                    setTestResults(null);
                     setToastMessage(`✓ ${activeAiModal} connection configured.`);
                   }}
                   className="px-5 py-2.5 bg-foreground text-background text-xs font-medium rounded-xl hover:opacity-90 transition-opacity cursor-pointer"

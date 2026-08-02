@@ -26,7 +26,9 @@ from app.services.mcp_server import (
     list_mcp_resources,
     read_mcp_resource,
     list_mcp_tools,
-    call_mcp_tool
+    call_mcp_tool,
+    list_mcp_prompts,
+    get_mcp_prompt
 )
 
 logger = logging.getLogger("metaphor.api.mcp")
@@ -475,6 +477,20 @@ async def remote_mcp_jsonrpc_endpoint(
         summary = str(arguments)
         tool_res = await call_mcp_tool(tool_name, arguments, token_obj.organization_id, session)
         response_payload = {"jsonrpc": "2.0", "id": req_id, "result": tool_res}
+
+    elif method == "prompts/list":
+        call_type = "prompt"
+        prompts = await list_mcp_prompts()
+        response_payload = {"jsonrpc": "2.0", "id": req_id, "result": {"prompts": prompts}}
+
+    elif method == "prompts/get":
+        call_type = "prompt"
+        prompt_name = params.get("name", "")
+        name_called = prompt_name
+        arguments = params.get("arguments", {})
+        summary = str(arguments)
+        prompt_res = await get_mcp_prompt(prompt_name, arguments, token_obj.organization_id, session)
+        response_payload = {"jsonrpc": "2.0", "id": req_id, "result": prompt_res}
         
     else:
         response_payload = {
@@ -500,6 +516,36 @@ async def remote_mcp_jsonrpc_endpoint(
     await session.commit()
     
     return response_payload
+
+
+@router.get("/health-check")
+@router.post("/health-check")
+async def mcp_health_check(session: AsyncSession = Depends(get_session)):
+    """
+    Live connection test endpoint for Metaphor MCP Server.
+    Executes internal self-test across resources, tools, and prompts.
+    """
+    start_time = time.time()
+    tools = await list_mcp_tools()
+    resources = await list_mcp_resources()
+    prompts = await list_mcp_prompts()
+    elapsed_ms = round((time.time() - start_time) * 1000.0, 2)
+    
+    return {
+        "status": "online",
+        "version": "2.0.0",
+        "server_name": "Metaphor OS Context Engine",
+        "latency_ms": elapsed_ms,
+        "tools_count": len(tools),
+        "resources_count": len(resources),
+        "prompts_count": len(prompts),
+        "authentication": "OAuth 2.1 (PKCE & Dynamic Registration)",
+        "capabilities": {
+            "resources": [r["uri"] for r in resources],
+            "tools": [t["name"] for t in tools],
+            "prompts": [p["name"] for p in prompts]
+        }
+    }
 
 
 @router.get("/sse")
