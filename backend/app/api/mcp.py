@@ -191,121 +191,127 @@ async def oauth_token_exchange(
     request: Request,
     session: AsyncSession = Depends(get_session)
 ):
-    content_type = request.headers.get("content-type", "")
-    if "application/x-www-form-urlencoded" in content_type:
-        form = await request.form()
-        grant_type = form.get("grant_type", "authorization_code")
-        code = form.get("code")
-        redirect_uri = form.get("redirect_uri")
-        client_id = form.get("client_id")
-        code_verifier = form.get("code_verifier")
-        refresh_token = form.get("refresh_token")
-    else:
-        try:
-            body = await request.json()
-        except Exception:
-            body = {}
-        grant_type = body.get("grant_type", "authorization_code")
-        code = body.get("code")
-        redirect_uri = body.get("redirect_uri")
-        client_id = body.get("client_id")
-        code_verifier = body.get("code_verifier")
-        refresh_token = body.get("refresh_token")
-
-    if not client_id:
-        auth_header = request.headers.get("authorization", "")
-        if auth_header.startswith("Basic "):
+    try:
+        content_type = request.headers.get("content-type", "")
+        if "application/x-www-form-urlencoded" in content_type:
+            form = await request.form()
+            grant_type = form.get("grant_type", "authorization_code")
+            code = form.get("code")
+            redirect_uri = form.get("redirect_uri")
+            client_id = form.get("client_id")
+            code_verifier = form.get("code_verifier")
+            refresh_token = form.get("refresh_token")
+        else:
             try:
-                decoded = base64.b64decode(auth_header[6:]).decode("utf-8")
-                client_id = decoded.split(":")[0]
+                body = await request.json()
             except Exception:
-                pass
+                body = {}
+            grant_type = body.get("grant_type", "authorization_code")
+            code = body.get("code")
+            redirect_uri = body.get("redirect_uri")
+            client_id = body.get("client_id")
+            code_verifier = body.get("code_verifier")
+            refresh_token = body.get("refresh_token")
 
-    if grant_type == "authorization_code":
-        if not code:
-            raise HTTPException(status_code=400, detail="Missing authorization code.")
-        
-        code_h = hash_token(code)
-        code_stmt = select(MCPOAuthAuthCode).where(MCPOAuthAuthCode.code_hash == code_h, MCPOAuthAuthCode.used == False)
-        code_res = await session.execute(code_stmt)
-        auth_code_obj = code_res.scalar_one_or_none()
-        
-        if not auth_code_obj:
-            raise HTTPException(status_code=400, detail="Invalid or expired authorization code.")
-        
-        if is_expired(auth_code_obj.expires_at):
-            raise HTTPException(status_code=400, detail="Authorization code expired.")
-        
-        # Verify PKCE Verifier if code_verifier is present
-        if auth_code_obj.code_challenge and code_verifier:
-            if not verify_pkce_challenge(code_verifier, auth_code_obj.code_challenge, auth_code_obj.code_challenge_method):
-                raise HTTPException(status_code=400, detail="Invalid PKCE code_verifier.")
-        
-        # Mark code as used
-        auth_code_obj.used = True
-        session.add(auth_code_obj)
-        
-        # Mint Access Token (1h) & Refresh Token (30d)
-        raw_access_token = f"mtph_live_{secrets.token_hex(24)}"
-        raw_refresh_token = f"mtph_rf_{secrets.token_hex(24)}"
-        
-        token_obj = MCPOAuthToken(
-            token_hash=hash_token(raw_access_token),
-            refresh_token_hash=hash_token(raw_refresh_token),
-            preview=f"{raw_access_token[:12]}...{raw_access_token[-4:]}",
-            client_id=client_id or auth_code_obj.client_id,
-            organization_id=auth_code_obj.organization_id,
-            user_id=auth_code_obj.user_id,
-            scope="read:workspace",
-            expires_at=now_utc() + timedelta(hours=1),
-            refresh_expires_at=now_utc() + timedelta(days=30)
-        )
-        session.add(token_obj)
-        await session.commit()
-        
-        return {
-            "access_token": raw_access_token,
-            "token_type": "Bearer",
-            "expires_in": 3600,
-            "refresh_token": raw_refresh_token,
-            "scope": "read:workspace"
-        }
+        if not client_id:
+            auth_header = request.headers.get("authorization", "")
+            if auth_header.startswith("Basic "):
+                try:
+                    decoded = base64.b64decode(auth_header[6:]).decode("utf-8")
+                    client_id = decoded.split(":")[0]
+                except Exception:
+                    pass
 
-    elif grant_type == "refresh_token":
-        if not refresh_token:
-            raise HTTPException(status_code=400, detail="Missing refresh_token.")
-        
-        rf_hash = hash_token(refresh_token)
-        stmt = select(MCPOAuthToken).where(MCPOAuthToken.refresh_token_hash == rf_hash, MCPOAuthToken.revoked_at == None)
-        res = await session.execute(stmt)
-        token_obj = res.scalar_one_or_none()
-        
-        if not token_obj or is_expired(token_obj.refresh_expires_at):
-            raise HTTPException(status_code=400, detail="Invalid or expired refresh token.")
-        
-        # Rotate refresh token
-        new_access_token = f"mtph_live_{secrets.token_hex(24)}"
-        new_refresh_token = f"mtph_rf_{secrets.token_hex(24)}"
-        
-        token_obj.token_hash = hash_token(new_access_token)
-        token_obj.refresh_token_hash = hash_token(new_refresh_token)
-        token_obj.preview = f"{new_access_token[:12]}...{new_access_token[-4:]}"
-        token_obj.expires_at = now_utc() + timedelta(hours=1)
-        token_obj.refresh_expires_at = now_utc() + timedelta(days=30)
-        
-        session.add(token_obj)
-        await session.commit()
-        
-        return {
-            "access_token": new_access_token,
-            "token_type": "Bearer",
-            "expires_in": 3600,
-            "refresh_token": new_refresh_token,
-            "scope": token_obj.scope
-        }
+        if grant_type == "authorization_code":
+            if not code:
+                raise HTTPException(status_code=400, detail="Missing authorization code.")
+            
+            code_h = hash_token(code)
+            code_stmt = select(MCPOAuthAuthCode).where(MCPOAuthAuthCode.code_hash == code_h, MCPOAuthAuthCode.used == False)
+            code_res = await session.execute(code_stmt)
+            auth_code_obj = code_res.scalar_one_or_none()
+            
+            if not auth_code_obj:
+                raise HTTPException(status_code=400, detail="Invalid or expired authorization code.")
+            
+            if is_expired(auth_code_obj.expires_at):
+                raise HTTPException(status_code=400, detail="Authorization code expired.")
+            
+            # Verify PKCE Verifier if code_verifier is present
+            if auth_code_obj.code_challenge and code_verifier:
+                if not verify_pkce_challenge(code_verifier, auth_code_obj.code_challenge, auth_code_obj.code_challenge_method):
+                    raise HTTPException(status_code=400, detail="Invalid PKCE code_verifier.")
+            
+            # Mark code as used
+            auth_code_obj.used = True
+            session.add(auth_code_obj)
+            
+            # Mint Access Token (1h) & Refresh Token (30d)
+            raw_access_token = f"mtph_live_{secrets.token_hex(24)}"
+            raw_refresh_token = f"mtph_rf_{secrets.token_hex(24)}"
+            
+            token_obj = MCPOAuthToken(
+                token_hash=hash_token(raw_access_token),
+                refresh_token_hash=hash_token(raw_refresh_token),
+                preview=f"{raw_access_token[:12]}...{raw_access_token[-4:]}",
+                client_id=client_id or auth_code_obj.client_id,
+                organization_id=auth_code_obj.organization_id,
+                user_id=auth_code_obj.user_id,
+                scope="read:workspace",
+                expires_at=now_utc() + timedelta(hours=1),
+                refresh_expires_at=now_utc() + timedelta(days=30)
+            )
+            session.add(token_obj)
+            await session.commit()
+            
+            return {
+                "access_token": raw_access_token,
+                "token_type": "Bearer",
+                "expires_in": 3600,
+                "refresh_token": raw_refresh_token,
+                "scope": "read:workspace"
+            }
 
-    else:
-        raise HTTPException(status_code=400, detail="Unsupported grant_type.")
+        elif grant_type == "refresh_token":
+            if not refresh_token:
+                raise HTTPException(status_code=400, detail="Missing refresh_token.")
+            
+            rf_hash = hash_token(refresh_token)
+            stmt = select(MCPOAuthToken).where(MCPOAuthToken.refresh_token_hash == rf_hash, MCPOAuthToken.revoked_at == None)
+            res = await session.execute(stmt)
+            token_obj = res.scalar_one_or_none()
+            
+            if not token_obj or is_expired(token_obj.refresh_expires_at):
+                raise HTTPException(status_code=400, detail="Invalid or expired refresh token.")
+            
+            # Rotate refresh token
+            new_access_token = f"mtph_live_{secrets.token_hex(24)}"
+            new_refresh_token = f"mtph_rf_{secrets.token_hex(24)}"
+            
+            token_obj.token_hash = hash_token(new_access_token)
+            token_obj.refresh_token_hash = hash_token(new_refresh_token)
+            token_obj.preview = f"{new_access_token[:12]}...{new_access_token[-4:]}"
+            token_obj.expires_at = now_utc() + timedelta(hours=1)
+            token_obj.refresh_expires_at = now_utc() + timedelta(days=30)
+            
+            session.add(token_obj)
+            await session.commit()
+            
+            return {
+                "access_token": new_access_token,
+                "token_type": "Bearer",
+                "expires_in": 3600,
+                "refresh_token": new_refresh_token,
+                "scope": token_obj.scope
+            }
+
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported grant_type.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("OAuth token exchange error: %s", e)
+        raise HTTPException(status_code=500, detail=f"OAuth token error: {str(e)}")
 
 
 # ── OAuth 2.1 Token Revocation Endpoint ──────────────────────────────────────
