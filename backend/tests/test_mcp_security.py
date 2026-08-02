@@ -58,8 +58,9 @@ async def test_mcp_pkce_enforcement_and_flow():
         auth_res = await client.get(
             f"/api/v1/mcp/oauth/authorize?client_id={c_id}&redirect_uri=http://localhost/callback&response_type=code&code_challenge={challenge}&code_challenge_method=S256"
         )
-        assert auth_res.status_code == 200
-        code = auth_res.json()["code"]
+        assert auth_res.status_code == 302
+        redirect_location = auth_res.headers["location"]
+        code = redirect_location.split("code=")[1].split("&")[0]
 
         # 4. Token exchange with WRONG verifier -> HTTP 400
         bad_tok = await client.post(
