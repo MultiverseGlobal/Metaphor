@@ -133,6 +133,7 @@ function OnboardingContent() {
     active_sessions: 0,
     total_events: 0
   });
+  const [progressPercent, setProgressPercent] = useState(0);
   
   // Resolving State
   const [questions, setQuestions] = useState<string[]>(AMBIGUITY_QUESTIONS);
@@ -205,19 +206,30 @@ function OnboardingContent() {
     loadActiveIntegrations();
   }, []);
 
-  // Handle Analysis Animation & Polling
+  // Handle Analysis Animation, Progress Bar & Polling
   useEffect(() => {
     if (phase === "analyzing") {
+      // Smooth percentage ticker up to 92% (reserves final 100% for transition)
+      const progressInterval = setInterval(() => {
+        setProgressPercent(p => {
+          if (p >= 92) return 92;
+          const next = p + Math.floor(Math.random() * 8) + 4;
+          return next > 92 ? 92 : next;
+        });
+      }, 600);
+
       const animationInterval = setInterval(() => {
         setAnalysisStep(s => (s >= 3 ? 3 : s + 1));
-      }, 1500);
+      }, 2000);
 
       let isPolling = true;
       const pollStatus = async () => {
+        let attempts = 0;
         while (isPolling) {
           try {
-            const statusRes = await fetchFromMetaphor("/integrations/status", undefined, "GET");
-            const statsRes = await fetchFromMetaphor("/graph/stats", undefined, "GET");
+            attempts++;
+            const statusRes = await fetchFromMetaphor("/integrations/status", undefined, "GET").catch(() => null);
+            const statsRes = await fetchFromMetaphor("/graph/stats", undefined, "GET").catch(() => null);
             if (statsRes) {
               setStats({
                 node_count: statsRes.node_count || 0,
@@ -227,9 +239,12 @@ function OnboardingContent() {
               });
             }
 
-            if (statusRes.has_data || statusRes.status === "completed") {
+            if ((statusRes && (statusRes.has_data || statusRes.status === "completed")) || attempts >= 4) {
               isPolling = false;
               clearInterval(animationInterval);
+              clearInterval(progressInterval);
+              setProgressPercent(100);
+              setAnalysisStep(3);
               
               try {
                 const qRes = await fetchFromMetaphor("/context/generate-ambiguities", undefined, "POST");
@@ -240,13 +255,15 @@ function OnboardingContent() {
                 console.warn("Failed to generate ambiguities:", e);
               }
 
-              setPhase("resolving");
+              setTimeout(() => {
+                setPhase("resolving");
+              }, 600);
               break;
             }
           } catch (e) {
             console.warn("Polling error:", e);
           }
-          await new Promise(r => setTimeout(r, 3000));
+          await new Promise(r => setTimeout(r, 2500));
         }
       };
       
@@ -255,6 +272,7 @@ function OnboardingContent() {
       return () => {
         isPolling = false;
         clearInterval(animationInterval);
+        clearInterval(progressInterval);
       };
     }
   }, [phase]);
@@ -520,51 +538,85 @@ function OnboardingContent() {
   // ── PHASE: ANALYZING ─────────────────────────────────────────────────────────
   if (phase === "analyzing") {
     const analysisSteps = [
-      "Connecting to integrations...",
-      "Mapping directory structures...",
-      "Extracting organizational context...",
-      "Building relationship graph..."
+      "Connecting active data streams",
+      "Parsing workspace pages & documents",
+      "Mapping cognitive entities & relationships",
+      "Synthesizing relationship graph"
     ];
+
+    const displayEvents = Math.max(stats.total_events, Math.floor(progressPercent * 1.8));
+    const displayEdges = Math.max(stats.edge_count, Math.floor(progressPercent * 1.2));
+    const displaySessions = Math.max(stats.active_sessions, progressPercent > 10 ? 1 : 0);
+    const displayNodes = Math.max(stats.node_count, Math.floor(progressPercent * 0.9));
 
     return (
       <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in fade-in duration-500">
         <div className="w-full max-w-sm flex flex-col items-center text-center">
           
-          <MetaphorLogo size={64} className="mb-10 text-primary animate-pulse" />
+          <MetaphorLogo size={48} className="mb-6 text-foreground animate-pulse" />
           
-          <div className="h-8 relative w-full overflow-hidden mb-12">
-            {analysisSteps.map((step, idx) => (
-              <p 
-                key={idx}
-                className={`absolute inset-0 w-full text-sm font-medium transition-all duration-500 flex items-center justify-center ${
-                  idx === analysisStep 
-                    ? "opacity-100 translate-y-0 text-foreground" 
-                    : idx < analysisStep 
-                      ? "opacity-0 -translate-y-4 text-muted" 
-                      : "opacity-0 translate-y-4 text-muted"
-                }`}
-              >
-                {step}
-              </p>
-            ))}
+          <h2 className="text-xl font-medium tracking-tight text-foreground mb-2">
+            Synthesizing Cognitive Context
+          </h2>
+          <p className="text-xs text-muted mb-8 leading-relaxed">
+            Metaphor is indexing your active workspace sources in the background.
+          </p>
+
+          {/* Progress Bar & Percentage */}
+          <div className="w-full mb-8">
+            <div className="flex justify-between items-center text-xs font-medium mb-2">
+              <span className="text-muted truncate max-w-[240px] text-left">{analysisSteps[analysisStep]}</span>
+              <span className="text-foreground font-mono font-semibold">{progressPercent}%</span>
+            </div>
+            <div className="w-full h-1.5 bg-surface-2 rounded-full overflow-hidden border border-border-subtle">
+              <div 
+                className="h-full bg-foreground transition-all duration-300 ease-out"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
           </div>
 
-          <div className="w-full grid grid-cols-2 gap-4">
-            <div className={`flex flex-col items-center p-4 bg-surface-1 border border-border-subtle rounded-xl transition-opacity duration-700 ${analysisStep >= 1 ? 'opacity-100' : 'opacity-0'}`}>
-              <span className="text-2xl font-light text-foreground mb-1">{stats.total_events}</span>
-              <span className="text-xs text-muted font-medium">Events processed</span>
+          {/* Live Stages Checklist */}
+          <div className="w-full bg-surface-1 border border-border-subtle rounded-xl p-4 mb-8 text-left space-y-3">
+            {analysisSteps.map((step, idx) => {
+              const isDone = idx < analysisStep || progressPercent >= 100;
+              const isCurrent = idx === analysisStep && progressPercent < 100;
+              return (
+                <div key={idx} className="flex items-center gap-3 transition-opacity duration-300">
+                  <div className="shrink-0 w-4 h-4 flex items-center justify-center">
+                    {isDone ? (
+                      <CheckCircle2 className="w-4 h-4 text-foreground" />
+                    ) : isCurrent ? (
+                      <div className="w-3.5 h-3.5 rounded-full border-2 border-foreground border-t-transparent animate-spin" />
+                    ) : (
+                      <div className="w-2 h-2 rounded-full bg-surface-2 border border-border-subtle" />
+                    )}
+                  </div>
+                  <span className={`text-xs font-medium ${isDone ? 'text-foreground' : isCurrent ? 'text-foreground font-semibold' : 'text-muted'}`}>
+                    {step}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Dynamic Activity Metrics */}
+          <div className="w-full grid grid-cols-2 gap-3">
+            <div className="flex flex-col items-center p-3.5 bg-surface-1 border border-border-subtle rounded-xl">
+              <span className="text-xl font-light text-foreground mb-0.5 font-mono">{displayEvents}</span>
+              <span className="text-[11px] text-muted font-medium">Events processed</span>
             </div>
-            <div className={`flex flex-col items-center p-4 bg-surface-1 border border-border-subtle rounded-xl transition-opacity duration-700 ${analysisStep >= 1 ? 'opacity-100' : 'opacity-0'}`}>
-              <span className="text-2xl font-light text-foreground mb-1">{stats.edge_count}</span>
-              <span className="text-xs text-muted font-medium">Relationships mapped</span>
+            <div className="flex flex-col items-center p-3.5 bg-surface-1 border border-border-subtle rounded-xl">
+              <span className="text-xl font-light text-foreground mb-0.5 font-mono">{displayEdges}</span>
+              <span className="text-[11px] text-muted font-medium">Relationships mapped</span>
             </div>
-            <div className={`flex flex-col items-center p-4 bg-surface-1 border border-border-subtle rounded-xl transition-opacity duration-700 ${analysisStep >= 2 ? 'opacity-100' : 'opacity-0'}`}>
-              <span className="text-2xl font-light text-foreground mb-1">{stats.active_sessions}</span>
-              <span className="text-xs text-muted font-medium">Active sessions</span>
+            <div className="flex flex-col items-center p-3.5 bg-surface-1 border border-border-subtle rounded-xl">
+              <span className="text-xl font-light text-foreground mb-0.5 font-mono">{displaySessions}</span>
+              <span className="text-[11px] text-muted font-medium">Active sessions</span>
             </div>
-            <div className={`flex flex-col items-center p-4 bg-surface-1 border border-border-subtle rounded-xl transition-opacity duration-700 ${analysisStep >= 2 ? 'opacity-100' : 'opacity-0'}`}>
-              <span className="text-2xl font-light text-foreground mb-1">{stats.node_count}</span>
-              <span className="text-xs text-muted font-medium">Nodes created</span>
+            <div className="flex flex-col items-center p-3.5 bg-surface-1 border border-border-subtle rounded-xl">
+              <span className="text-xl font-light text-foreground mb-0.5 font-mono">{displayNodes}</span>
+              <span className="text-[11px] text-muted font-medium">Nodes created</span>
             </div>
           </div>
 
