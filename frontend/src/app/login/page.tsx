@@ -54,31 +54,31 @@ function LoginForm() {
 
     if (password) {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-          setError(error.message);
+        const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInErr) {
+          setError(signInErr.message);
           setLoading(false);
         } else {
           router.push(redirectTarget);
         }
-        const { error } = await supabase.auth.signUp({
+      } else {
+        const { error: signUpErr } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTarget)}`,
           },
         });
-        if (error) {
-          setError(error.message);
+        if (signUpErr) {
+          setError(signUpErr.message);
           setLoading(false);
         } else {
           setMessage("Account created! Check your email to confirm your account.");
           setLoading(false);
         }
-
       }
     } else {
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTarget)}`,
@@ -86,13 +86,14 @@ function LoginForm() {
       });
 
       setLoading(false);
-      if (error) {
-        setError(error.message);
+      if (otpErr) {
+        setError(otpErr.message);
       } else {
         setMessage(`We sent a secure sign-in link to ${email}. Check your inbox!`);
       }
     }
   };
+
 
   return (
     <div className="min-h-screen bg-background text-foreground flex items-center justify-center relative px-4 font-sans selection:bg-primary-dim">
