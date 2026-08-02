@@ -16,7 +16,7 @@ export const BACKEND_URL = getBackendUrl();
 import { createClient } from "@/utils/supabase/client";
 
 // Simple client-side API helper
-export async function fetchFromMetaphor(endpoint: string, body?: any, method?: string) {
+export async function fetchFromMetaphor(endpoint: string, body?: any, method?: string, allowAnonymous: boolean = false) {
   let apiKey = null;
   let token = null;
 
@@ -26,10 +26,11 @@ export async function fetchFromMetaphor(endpoint: string, body?: any, method?: s
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
       token = session.access_token;
-    } else if (!apiKey) {
+    } else if (!apiKey && !allowAnonymous && !endpoint.includes("/oauth/")) {
       throw new Error("No active Supabase session or API key found! Please make sure you are signed in.");
     }
   }
+
   
   const headers: Record<string, string> = {
     "Content-Type": "application/json"
