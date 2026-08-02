@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Brain, Code, PenTool, Hash, Plus, RefreshCw, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { fetchFromMetaphor } from "@/app/api";
+import { CardSkeleton } from "@/components/ui/SkeletonLoader";
 
 type ModelItem = {
   id: string;
@@ -15,6 +16,8 @@ type ModelItem = {
 };
 
 export default function ContextModelsPage() {
+
+
   const [models, setModels] = useState<ModelItem[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -90,7 +93,14 @@ export default function ContextModelsPage() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
         {models.map((model) => (
           <Card key={model.id} className="flex flex-col h-full">
             <div className="flex justify-between items-start mb-6">
@@ -116,9 +126,10 @@ export default function ContextModelsPage() {
               </span>
               <span>Synced {model.lastSync}</span>
             </div>
-          </Card>
         ))}
       </div>
+      )}
+
 
       {/* New Model Modal */}
       {isModalOpen && (

@@ -6,8 +6,9 @@ import { Card } from "@/components/ui/Card";
 import { fetchFromMetaphor } from "@/app/api";
 import { ChatGPTIcon, ClaudeIcon, CursorIcon } from "@/components/ui/BrandIcons";
 
-type McpToken = {
+import { CardSkeleton } from "@/components/ui/SkeletonLoader";
 
+type McpToken = {
   id: string;
   preview: string;
   client_id: string;
@@ -18,7 +19,7 @@ type McpToken = {
 
 type AuditLog = {
   id: string;
-  client_name: str;
+  client_name: string;
   call_type: string;
   name: string;
   query_summary: string | null;
@@ -32,12 +33,14 @@ export default function ApiAccessPage() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
+    setLoading(true);
     try {
       const tokenData = await fetchFromMetaphor("/mcp/oauth/tokens").catch(() => []);
       setTokens(tokenData || []);
@@ -45,8 +48,11 @@ export default function ApiAccessPage() {
       setAuditLogs(logsData || []);
     } catch (e) {
       console.error("Failed to load MCP tokens/audit logs", e);
+    } finally {
+      setLoading(false);
     }
   };
+
 
   const handleRegisterClient = async () => {
     setIsGenerating(true);

@@ -48,10 +48,14 @@ const PROVIDER_METADATA: Record<string, { name: string; category: string; descri
 };
 
 
+import { CardSkeleton } from "@/components/ui/SkeletonLoader";
+
 export default function IntegrationsPage() {
   const [integrations, setIntegrations] = useState<IntegrationState[]>([]);
+  const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState<Record<string, boolean>>({});
   const [apiKey, setApiKey] = useState<string>("");
+  const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
   useEffect(() => {
     loadIntegrations();
@@ -60,11 +64,14 @@ export default function IntegrationsPage() {
   }, []);
 
   const loadIntegrations = async () => {
+    setLoading(true);
     try {
       const data = await fetchFromMetaphor("/integrations");
       setIntegrations(data);
     } catch (e) {
       console.error("Failed to load integrations", e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -72,6 +79,8 @@ export default function IntegrationsPage() {
     setSyncing(prev => ({ ...prev, [provider]: true }));
     try {
       await fetchFromMetaphor(`/integrations/${provider}/sync`, undefined, "POST");
+      setFeedbackMsg(`Synced ${provider} successfully!`);
+      setTimeout(() => setFeedbackMsg(null), 3000);
       await loadIntegrations();
     } catch (e) {
       console.error(`Failed to sync ${provider}:`, e);
@@ -89,12 +98,26 @@ export default function IntegrationsPage() {
             Connect your existing tools. Metaphor uses background webhooks to passively ingest events, extract nodes, and update your Core Data Model.
           </p>
         </div>
-        <button onClick={loadIntegrations} className="p-2 text-muted hover:text-foreground bg-surface-1 border border-border-subtle rounded-lg">
+        <button onClick={loadIntegrations} className="p-2 text-muted hover:text-foreground bg-surface-1 border border-border-subtle rounded-lg cursor-pointer">
           <RefreshCw className="w-4 h-4" />
         </button>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {feedbackMsg && (
+        <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs font-medium flex items-center justify-between animate-in fade-in">
+          <span>{feedbackMsg}</span>
+          <button onClick={() => setFeedbackMsg(null)} className="text-emerald-500 hover:opacity-80">✕</button>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
         {integrations.map((item) => {
           const meta = PROVIDER_METADATA[item.provider] || {
             name: item.provider.toUpperCase(),
@@ -151,9 +174,10 @@ export default function IntegrationsPage() {
                   </button>
               </div>
             </Card>
-          );
         })}
       </div>
+      )}
+
 
       {apiKey && (
         <div className="mt-12 animate-in fade-in duration-300">
