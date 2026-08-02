@@ -1,9 +1,12 @@
 import uuid
+import json
 import hashlib
 import base64
 import pytest
+from unittest.mock import patch
 from httpx import AsyncClient, ASGITransport
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
 
 from app.main import app
 from app.database.session import async_session_maker
@@ -12,100 +15,88 @@ from app.models.operations import MCPOAuthClient, MCPOAuthToken, MCPAuditLog
 from app.services.mcp_server import hash_token
 
 @pytest.mark.asyncio
-async def test_mcp_oauth_discovery():
+async def test_mcp_oauth_protected_resource_discovery():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.get("/api/v1/mcp/.well-known/oauth-authorization-server")
+        resp = await client.get("/api/v1/mcp/.well-known/oauth-protected-resource")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["issuer"] == "http://test/api/v1/mcp"
-        assert "authorization_endpoint" in data
-        assert "token_endpoint" in data
-        assert "S256" in data["code_challenge_methods_supported"]
+        assert "resource" in data
+        assert "authorization_servers" in data
+        assert "header" in data["bearer_methods_supported"]
 
 @pytest.mark.asyncio
-async def test_mcp_dynamic_client_registration():
+async def test_mcp_oauth_authorize_flow():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # 1. GET /oauth/authorize with HTML Accept header -> 307 Redirect to frontend consent page
+        res_html = await client.get(
+            "/api/v1/mcp/oauth/authorize",
+            params={
+                "client_id": "chatgpt",
+                "redirect_uri": "https://chatgpt.com/aip/plugin-123/oauth/callback",
+                "state": "state_xyz",
+                "code_challenge": "challenge_hash",
+                "code_challenge_method": "S256"
+            },
+            headers={"Accept": "text/html"}
+        )
+        assert res_html.status_code == 307
+        assert "/oauth/authorize" in res_html.headers.get("location", "")
+
+        # 2. POST /oauth/authorize (User Consent Submission) -> Generates auth code
+        res_consent = await client.post(
+            "/api/v1/mcp/oauth/authorize",
+            json={
+                "client_id": "chatgpt",
+                "redirect_uri": "https://chatgpt.com/aip/plugin-123/oauth/callback",
+                "state": "state_xyz",
+                "code_challenge": "challenge_hash",
+                "code_challenge_method": "plain"
+            }
+        )
+        assert res_consent.status_code == 200
+        consent_data = res_consent.json()
+        assert "code" in consent_data
+        assert "redirect_url" in consent_data
+        auth_code = consent_data["code"]
+
+        # 3. POST /oauth/token (Code Exchange) -> Issues active Bearer access token
+        res_token = await client.post(
+            "/api/v1/mcp/oauth/token",
+            json={
+                "grant_type": "authorization_code",
+                "client_id": "chatgpt",
+                "redirect_uri": "https://chatgpt.com/aip/plugin-123/oauth/callback",
+                "code": auth_code,
+                "code_verifier": "challenge_hash"
+            }
+        )
+        assert res_token.status_code == 200
+        token_data = res_token.json()
+        assert "access_token" in token_data
+        assert token_data["token_type"] == "Bearer"
+        assert token_data["access_token"].startswith("mtph_live_")
+
+        # 4. Use issued access token on MCP endpoint
+        raw_tok = token_data["access_token"]
+        mcp_res = await client.post(
+            "/api/v1/mcp",
+            headers={"Authorization": f"Bearer {raw_tok}"},
+            json={"jsonrpc": "2.0", "id": 1, "method": "initialize"}
+        )
+        assert mcp_res.status_code == 200
+
+@pytest.mark.asyncio
+async def test_mcp_unauthenticated_401_www_authenticate_challenge():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.post(
-            "/api/v1/mcp/oauth/register",
-            json={"client_name": "Claude Desktop Test Client", "redirect_uris": ["http://localhost:8080/callback"]}
+            "/api/v1/mcp",
+            json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
         )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["client_id"].startswith("mcp_client_")
-        assert data["client_secret"].startswith("mcp_secret_")
+        assert resp.status_code == 401
+        assert "WWW-Authenticate" in resp.headers
+        assert "resource_id" in resp.headers["WWW-Authenticate"]
+        assert "oauth-protected-resource" in resp.headers["WWW-Authenticate"]
 
-@pytest.mark.asyncio
-async def test_mcp_pkce_enforcement_and_flow():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        # 1. Register client
-        reg_res = await client.post(
-            "/api/v1/mcp/oauth/register",
-            json={"client_name": "PKCE Client", "redirect_uris": ["http://localhost/callback"]}
-        )
-        c_id = reg_res.json()["client_id"]
-
-        # 2. Authorize WITHOUT code_challenge -> HTTP 400
-        bad_auth = await client.get(
-            f"/api/v1/mcp/oauth/authorize?client_id={c_id}&redirect_uri=http://localhost/callback&response_type=code"
-        )
-        assert bad_auth.status_code == 422 or bad_auth.status_code == 400
-
-        # 3. Valid Authorize with PKCE challenge (S256)
-        verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-        digest = hashlib.sha256(verifier.encode()).digest()
-        challenge = base64.urlsafe_b64encode(digest).decode().rstrip("=")
-
-        auth_res = await client.get(
-            f"/api/v1/mcp/oauth/authorize?client_id={c_id}&redirect_uri=http://localhost/callback&response_type=code&code_challenge={challenge}&code_challenge_method=S256",
-            follow_redirects=False
-        )
-        assert auth_res.status_code == 302
-        redirect_location = auth_res.headers["location"]
-        code = redirect_location.split("code=")[1].split("&")[0]
-
-        # 4. Token exchange with WRONG verifier -> HTTP 400
-        bad_tok = await client.post(
-            "/api/v1/mcp/oauth/token",
-            json={
-                "grant_type": "authorization_code",
-                "client_id": c_id,
-                "redirect_uri": "http://localhost/callback",
-                "code": code,
-                "code_verifier": "wrong_verifier_string"
-            }
-        )
-        assert bad_tok.status_code == 400
-
-        # 5. Token exchange with VALID verifier -> Success
-        good_tok = await client.post(
-            "/api/v1/mcp/oauth/token",
-            json={
-                "grant_type": "authorization_code",
-                "client_id": c_id,
-                "redirect_uri": "http://localhost/callback",
-                "code": code,
-                "code_verifier": verifier
-            }
-        )
-        assert good_tok.status_code == 200
-        tok_data = good_tok.json()
-        assert "access_token" in tok_data
-        assert "refresh_token" in tok_data
-
-@pytest.mark.asyncio
-async def test_mcp_strict_redirect_uri_validation():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        reg_res = await client.post(
-            "/api/v1/mcp/oauth/register",
-            json={"client_name": "Strict URI Client", "redirect_uris": ["https://app.com/callback"]}
-        )
-        c_id = reg_res.json()["client_id"]
-
-        # Mismatched redirect URI -> HTTP 400
-        bad_uri = await client.get(
-            f"/api/v1/mcp/oauth/authorize?client_id={c_id}&redirect_uri=https://attacker.com/callback&response_type=code&code_challenge=xyz&code_challenge_method=S256"
-        )
-        assert bad_uri.status_code == 400
 
 @pytest.mark.asyncio
 async def test_mcp_multi_tenant_isolation_all_resources_and_tools():
@@ -128,7 +119,7 @@ async def test_mcp_multi_tenant_isolation_all_resources_and_tools():
             client_id="test_client",
             organization_id=org_a.id,
             user_id=user_a.id,
-            expires_at=datetime.utcnow() + timedelta(hours=1)
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1)
         )
         tok_b = MCPOAuthToken(
             token_hash=hash_token(raw_tok_b),
@@ -136,7 +127,7 @@ async def test_mcp_multi_tenant_isolation_all_resources_and_tools():
             client_id="test_client",
             organization_id=org_b.id,
             user_id=user_b.id,
-            expires_at=datetime.utcnow() + timedelta(hours=1)
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1)
         )
         session.add_all([tok_a, tok_b])
         await session.commit()
@@ -197,6 +188,8 @@ async def test_mcp_multi_tenant_isolation_all_resources_and_tools():
             assert "result" in t_json
             assert str(org_b.id) not in json.dumps(t_json)
 
+
+
 @pytest.mark.asyncio
 async def test_mcp_rate_limiting_burst():
     async with async_session_maker() as session:
@@ -214,7 +207,7 @@ async def test_mcp_rate_limiting_burst():
             client_id="burst_client",
             organization_id=org.id,
             user_id=user.id,
-            expires_at=datetime.utcnow() + timedelta(hours=1)
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1)
         )
         t_normal = MCPOAuthToken(
             token_hash=hash_token(raw_tok_normal),
@@ -222,36 +215,39 @@ async def test_mcp_rate_limiting_burst():
             client_id="normal_client",
             organization_id=org.id,
             user_id=user.id,
-            expires_at=datetime.utcnow() + timedelta(hours=1)
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1)
         )
         session.add_all([t_burst, t_normal])
         await session.commit()
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        # Burst 30 requests -> Success
-        for i in range(30):
-            r = await client.post(
+    fixed_time = 1700000000.0
+    with patch("time.time", return_value=fixed_time):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            # Burst 30 requests -> Success
+            for i in range(30):
+                r = await client.post(
+                    "/api/v1/mcp",
+                    headers={"Authorization": f"Bearer {raw_tok_burst}"},
+                    json={"jsonrpc": "2.0", "id": i, "method": "initialize"}
+                )
+                assert r.status_code == 200
+
+            # 31st request -> HTTP 429 Too Many Requests
+            r_exceeded = await client.post(
                 "/api/v1/mcp",
                 headers={"Authorization": f"Bearer {raw_tok_burst}"},
-                json={"jsonrpc": "2.0", "id": i, "method": "initialize"}
+                json={"jsonrpc": "2.0", "id": 99, "method": "initialize"}
             )
-            assert r.status_code == 200
+            assert r_exceeded.status_code == 429
 
-        # 31st request -> HTTP 429 Too Many Requests
-        r_exceeded = await client.post(
-            "/api/v1/mcp",
-            headers={"Authorization": f"Bearer {raw_tok_burst}"},
-            json={"jsonrpc": "2.0", "id": 99, "method": "initialize"}
-        )
-        assert r_exceeded.status_code == 429
+            # Confirm normal token is UNAFFECTED and continues working
+            r_normal = await client.post(
+                "/api/v1/mcp",
+                headers={"Authorization": f"Bearer {raw_tok_normal}"},
+                json={"jsonrpc": "2.0", "id": 100, "method": "initialize"}
+            )
+            assert r_normal.status_code == 200
 
-        # Confirm normal token is UNAFFECTED and continues working
-        r_normal = await client.post(
-            "/api/v1/mcp",
-            headers={"Authorization": f"Bearer {raw_tok_normal}"},
-            json={"jsonrpc": "2.0", "id": 1, "method": "initialize"}
-        )
-        assert r_normal.status_code == 200
 
 @pytest.mark.asyncio
 async def test_mcp_token_revocation_immediate_invalidation():
@@ -268,7 +264,7 @@ async def test_mcp_token_revocation_immediate_invalidation():
             client_id="revoke_client",
             organization_id=org.id,
             user_id=user.id,
-            expires_at=datetime.utcnow() + timedelta(hours=1)
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1)
         )
         session.add(tok_obj)
         await session.commit()

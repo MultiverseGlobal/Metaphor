@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     
+    # WorkOS AuthKit MCP Settings
+    WORKOS_AUTHKIT_DOMAIN: str = "https://api.workos.com"
+    WORKOS_CLIENT_ID: str = ""
+    WORKOS_MCP_RESOURCE_ID: str = "https://metaphor-backend.onrender.com/api/v1/mcp"
+    
     # Google Service Account JSON path
     GOOGLE_SERVICE_ACCOUNT_JSON_PATH: str = ""
 

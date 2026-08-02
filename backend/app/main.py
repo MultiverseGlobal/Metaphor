@@ -56,21 +56,17 @@ app.add_middleware(
 
 app.include_router(api_router, prefix=settings.API_PREFIX)
 
-@app.get("/.well-known/oauth-authorization-server")
-async def root_oauth_discovery(request: Request):
+@app.get("/.well-known/oauth-protected-resource")
+async def root_oauth_protected_resource(request: Request):
     base_url = str(request.base_url).rstrip("/")
+    resource_id = getattr(settings, "WORKOS_MCP_RESOURCE_ID", None) or f"{base_url}/api/v1/mcp"
+    auth_server = getattr(settings, "WORKOS_AUTHKIT_DOMAIN", None) or "https://api.workos.com"
     return {
-        "issuer": f"{base_url}/api/v1/mcp",
-        "authorization_endpoint": f"{base_url}/api/v1/mcp/oauth/authorize",
-        "token_endpoint": f"{base_url}/api/v1/mcp/oauth/token",
-        "revocation_endpoint": f"{base_url}/api/v1/mcp/oauth/revoke",
-        "registration_endpoint": f"{base_url}/api/v1/mcp/oauth/register",
-        "response_types_supported": ["code"],
-        "grant_types_supported": ["authorization_code", "refresh_token"],
-        "code_challenge_methods_supported": ["S256", "plain"],
-        "token_endpoint_auth_methods_supported": ["client_secret_post", "client_secret_basic", "none"],
-        "scopes_supported": ["read:workspace", "read:graph", "read:docs"]
+        "resource": resource_id,
+        "authorization_servers": [auth_server],
+        "bearer_methods_supported": ["header"]
     }
+
 
 @app.get("/")
 async def root():

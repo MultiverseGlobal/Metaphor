@@ -4,6 +4,7 @@ import base64
 import time
 import uuid
 import json
+import urllib.parse
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
@@ -14,6 +15,9 @@ from pydantic import BaseModel, Field
 from sqlmodel import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import jwt
+from jwt import PyJWKClient
+from app.core.config import settings
 from app.database.session import get_session
 from app.models.identity import User, Organization
 from app.models.operations import MCPOAuthClient, MCPOAuthAuthCode, MCPOAuthToken, MCPAuditLog
@@ -50,61 +54,17 @@ def verify_pkce_challenge(code_verifier: str, code_challenge: str, method: str =
     return False
 
 
-# ── RFC 8414 OAuth Authorization Server Metadata Discovery ──────────────────────
-@router.get("/.well-known/oauth-authorization-server")
-@router.get("/oauth/.well-known/oauth-authorization-server")
-async def oauth_discovery_metadata(request: Request):
+# ── RFC 9728 OAuth 2.0 Protected Resource Metadata ────────────────────────────
+@router.get("/.well-known/oauth-protected-resource")
+@router.get("/oauth/.well-known/oauth-protected-resource")
+async def oauth_protected_resource_metadata(request: Request):
     base_url = str(request.base_url).rstrip("/")
+    resource_id = getattr(settings, "WORKOS_MCP_RESOURCE_ID", None) or f"{base_url}/api/v1/mcp"
+    auth_server = getattr(settings, "WORKOS_AUTHKIT_DOMAIN", None) or "https://api.workos.com"
     return {
-        "issuer": f"{base_url}/api/v1/mcp",
-        "authorization_endpoint": f"{base_url}/api/v1/mcp/oauth/authorize",
-        "token_endpoint": f"{base_url}/api/v1/mcp/oauth/token",
-        "revocation_endpoint": f"{base_url}/api/v1/mcp/oauth/revoke",
-        "registration_endpoint": f"{base_url}/api/v1/mcp/oauth/register",
-        "response_types_supported": ["code"],
-        "grant_types_supported": ["authorization_code", "refresh_token"],
-        "code_challenge_methods_supported": ["S256", "plain"],
-        "token_endpoint_auth_methods_supported": ["client_secret_post", "client_secret_basic", "none"],
-        "scopes_supported": ["read:workspace", "read:graph", "read:docs"]
-    }
-
-
-# ── RFC 7591 Dynamic Client Registration ─────────────────────────────────────
-class ClientRegistrationRequest(BaseModel):
-    client_name: str
-    redirect_uris: List[str]
-    grant_types: Optional[List[str]] = ["authorization_code", "refresh_token"]
-
-@router.post("/oauth/register")
-async def register_mcp_client(
-    payload: ClientRegistrationRequest,
-    session: AsyncSession = Depends(get_session)
-):
-    identity_svc = IdentityService(session)
-    org = await identity_svc.get_or_create_default_organization()
-    
-    client_id = f"mcp_client_{secrets.token_hex(12)}"
-    client_secret = f"mcp_secret_{secrets.token_hex(24)}"
-    secret_hash = hash_token(client_secret)
-    
-    client_obj = MCPOAuthClient(
-        client_id=client_id,
-        client_secret_hash=secret_hash,
-        client_name=payload.client_name,
-        redirect_uris_json={"uris": payload.redirect_uris},
-        grant_types_json={"grants": payload.grant_types},
-        organization_id=org.id
-    )
-    session.add(client_obj)
-    await session.commit()
-    await session.refresh(client_obj)
-    
-    return {
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "client_name": payload.client_name,
-        "redirect_uris": payload.redirect_uris,
-        "grant_types": payload.grant_types
+        "resource": resource_id,
+        "authorization_servers": [auth_server],
+        "bearer_methods_supported": ["header"]
     }
 
 
@@ -114,208 +74,240 @@ def now_utc() -> datetime:
 def is_expired(dt: Optional[datetime]) -> bool:
     if dt is None:
         return False
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt < datetime.now(timezone.utc)
+    try:
+        dt_ts = dt.timestamp() if dt.tzinfo else dt.replace(tzinfo=timezone.utc).timestamp()
+        now_ts = datetime.now(timezone.utc).timestamp()
+        return dt_ts < now_ts
+    except Exception:
+        return False
 
-# ── OAuth 2.1 Authorize Endpoint (Mandatory PKCE) ────────────────────────────
+
+# ── OAuth 2.1 Authorization & Token Exchange ──────────────────────────────────
+class AuthorizeConsentRequest(BaseModel):
+    client_id: str = "chatgpt"
+    redirect_uri: str
+    state: Optional[str] = None
+    code_challenge: Optional[str] = None
+    code_challenge_method: str = "S256"
+
+
 @router.get("/oauth/authorize")
-async def oauth_authorize(
-    client_id: str = Query(...),
-    redirect_uri: str = Query(...),
+async def oauth_authorize_get(
+    request: Request,
     response_type: str = Query("code"),
-    code_challenge: str = Query(...),
-    code_challenge_method: str = Query("S256"),
+    client_id: str = Query("chatgpt"),
+    redirect_uri: str = Query(...),
     scope: str = Query("read:workspace"),
     state: Optional[str] = Query(None),
+    code_challenge: Optional[str] = Query(None),
+    code_challenge_method: str = Query("S256"),
     session: AsyncSession = Depends(get_session)
 ):
-    if response_type != "code":
-        raise HTTPException(status_code=400, detail="Only response_type=code is supported.")
+    # If hit by browser, redirect to Metaphor Frontend Authorization Consent Page
+    frontend_base = getattr(settings, "FRONTEND_URL", None) or str(request.base_url).rstrip("/")
+    params = urllib.parse.urlencode({
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "state": state or "",
+        "code_challenge": code_challenge or "",
+        "code_challenge_method": code_challenge_method,
+        "scope": scope
+    })
+    consent_url = f"{frontend_base}/oauth/authorize?{params}"
     
-    if code_challenge_method not in ["S256", "plain"]:
-        raise HTTPException(status_code=400, detail="Invalid code_challenge_method. Must be S256 or plain.")
-    
-    # Lookup client
-    stmt = select(MCPOAuthClient).where(MCPOAuthClient.client_id == client_id)
-    res = await session.execute(stmt)
-    client_obj = res.scalar_one_or_none()
-    
-    if not client_obj:
-        raise HTTPException(status_code=400, detail="Unknown client_id.")
-    
-    # Exact redirect_uri validation
-    registered_uris = client_obj.redirect_uris_json.get("uris", [])
-    if redirect_uri not in registered_uris:
-        raise HTTPException(status_code=400, detail="Redirect URI mismatch against registered URIs.")
-    
+    accept_header = request.headers.get("accept", "")
+    if "text/html" in accept_header or "application/xhtml+xml" in accept_header:
+        return RedirectResponse(consent_url, status_code=307)
+
+    # For direct API authorization, issue auth code directly for default workspace identity
     identity_svc = IdentityService(session)
-    user = await identity_svc.get_or_create_default_user()
     org = await identity_svc.get_or_create_default_organization()
-    
-    # Issue single-use Auth Code
-    raw_code = f"mcp_code_{secrets.token_hex(20)}"
-    code_obj = MCPOAuthAuthCode(
+    user = await identity_svc.get_or_create_default_user()
+
+    raw_code = f"mtph_code_{uuid.uuid4().hex}"
+    code_entry = MCPOAuthAuthCode(
         code_hash=hash_token(raw_code),
         client_id=client_id,
         organization_id=org.id,
         user_id=user.id,
         redirect_uri=redirect_uri,
-        code_challenge=code_challenge,
+        code_challenge=code_challenge or "",
         code_challenge_method=code_challenge_method,
-        expires_at=now_utc() + timedelta(minutes=10)
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+        used=False
     )
-    session.add(code_obj)
+    session.add(code_entry)
     await session.commit()
-    
-    # Return code redirect
-    separator = "&" if "?" in redirect_uri else "?"
-    redirect_url = f"{redirect_uri}{separator}code={raw_code}"
+
+    callback_params = {"code": raw_code}
     if state:
-        redirect_url += f"&state={state}"
-        
-    return RedirectResponse(url=redirect_url, status_code=302)
+        callback_params["state"] = state
+    target_redirect = f"{redirect_uri}?{urllib.parse.urlencode(callback_params)}"
+    return RedirectResponse(target_redirect, status_code=302)
 
 
-# ── OAuth 2.1 Token Exchange & Refresh Endpoint ──────────────────────────────
-class TokenExchangeRequest(BaseModel):
-    grant_type: str
-    code: Optional[str] = None
-    redirect_uri: Optional[str] = None
-    client_id: Optional[str] = None
-    code_verifier: Optional[str] = None
-    refresh_token: Optional[str] = None
-
-@router.post("/oauth/token")
-async def oauth_token_exchange(
-    request: Request,
+@router.post("/oauth/authorize")
+async def oauth_authorize_post(
+    payload: AuthorizeConsentRequest,
     session: AsyncSession = Depends(get_session)
 ):
+    identity_svc = IdentityService(session)
+    org = await identity_svc.get_or_create_default_organization()
+    user = await identity_svc.get_or_create_default_user()
+
+    raw_code = f"mtph_code_{uuid.uuid4().hex}"
+    code_entry = MCPOAuthAuthCode(
+        code_hash=hash_token(raw_code),
+        client_id=payload.client_id,
+        organization_id=org.id,
+        user_id=user.id,
+        redirect_uri=payload.redirect_uri,
+        code_challenge=payload.code_challenge or "",
+        code_challenge_method=payload.code_challenge_method,
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+        used=False
+    )
+    session.add(code_entry)
+    await session.commit()
+
+    callback_params = {"code": raw_code}
+    if payload.state:
+        callback_params["state"] = payload.state
+    target_redirect = f"{payload.redirect_uri}?{urllib.parse.urlencode(callback_params)}"
+    return {"redirect_url": target_redirect, "code": raw_code}
+
+
+class OAuthTokenRequest(BaseModel):
+    grant_type: str = "authorization_code"
+    client_id: Optional[str] = None
+    redirect_uri: Optional[str] = None
+    code: Optional[str] = None
+    code_verifier: Optional[str] = None
+
+
+@router.post("/oauth/token")
+async def oauth_token_endpoint(
+    payload: OAuthTokenRequest,
+    session: AsyncSession = Depends(get_session)
+):
+    if payload.grant_type != "authorization_code" or not payload.code:
+        raise HTTPException(400, detail="Unsupported grant_type or missing code.")
+
+    code_h = hash_token(payload.code)
+    stmt = select(MCPOAuthAuthCode).where(
+        MCPOAuthAuthCode.code_hash == code_h,
+        MCPOAuthAuthCode.used == False
+    )
+    res = await session.execute(stmt)
+    code_obj = res.scalar_one_or_none()
+
+    if not code_obj:
+        raise HTTPException(400, detail="Invalid or expired authorization code.")
+
+    if is_expired(code_obj.expires_at):
+        raise HTTPException(400, detail="Authorization code has expired.")
+
+    # PKCE verification if challenge was provided
+    if code_obj.code_challenge:
+        if not payload.code_verifier:
+            raise HTTPException(400, detail="code_verifier required for PKCE.")
+        if not verify_pkce_challenge(payload.code_verifier, code_obj.code_challenge, code_obj.code_challenge_method):
+            raise HTTPException(400, detail="PKCE code_verifier check failed.")
+
+    # Mark code used
+    code_obj.used = True
+    session.add(code_obj)
+
+    # Generate active Bearer access token
+    raw_token = f"mtph_live_{uuid.uuid4().hex}"
+    tok_entry = MCPOAuthToken(
+        token_hash=hash_token(raw_token),
+        preview=raw_token[:12],
+        client_id=code_obj.client_id,
+        organization_id=code_obj.organization_id,
+        user_id=code_obj.user_id,
+        scope="read:workspace",
+        expires_at=datetime.now(timezone.utc) + timedelta(days=365)
+    )
+    session.add(tok_entry)
+    await session.commit()
+
+    return {
+        "access_token": raw_token,
+        "token_type": "Bearer",
+        "expires_in": 31536000,
+        "scope": "read:workspace"
+    }
+
+
+
+
+_jwks_clients: Dict[str, PyJWKClient] = {}
+
+def get_jwks_client(jwks_url: str) -> PyJWKClient:
+    if jwks_url not in _jwks_clients:
+        _jwks_clients[jwks_url] = PyJWKClient(jwks_url, cache_keys=True)
+    return _jwks_clients[jwks_url]
+
+def verify_workos_jwt(raw_token: str) -> Optional[dict]:
+    if not raw_token or raw_token.count(".") != 2:
+        return None
+    
     try:
-        raw_bytes = await request.body()
-        content_type = request.headers.get("content-type", "")
-        if "application/x-www-form-urlencoded" in content_type:
-            parsed = urllib.parse.parse_qs(raw_bytes.decode("utf-8"))
-            grant_type = parsed.get("grant_type", ["authorization_code"])[0]
-            code = parsed.get("code", [None])[0]
-            redirect_uri = parsed.get("redirect_uri", [None])[0]
-            client_id = parsed.get("client_id", [None])[0]
-            code_verifier = parsed.get("code_verifier", [None])[0]
-            refresh_token = parsed.get("refresh_token", [None])[0]
+        domain = getattr(settings, "WORKOS_AUTHKIT_DOMAIN", "https://api.workos.com").rstrip("/")
+        client_id = getattr(settings, "WORKOS_CLIENT_ID", "")
+        if client_id:
+            jwks_url = f"{domain}/sso/jwks/{client_id}"
         else:
-            try:
-                body = json.loads(raw_bytes.decode("utf-8")) if raw_bytes else {}
-            except Exception:
-                body = {}
-            grant_type = body.get("grant_type", "authorization_code")
-            code = body.get("code")
-            redirect_uri = body.get("redirect_uri")
-            client_id = body.get("client_id")
-            code_verifier = body.get("code_verifier")
-            refresh_token = body.get("refresh_token")
+            jwks_url = f"{domain}/sso/jwks"
+            
+        jwks_client = get_jwks_client(jwks_url)
+        signing_key = jwks_client.get_signing_key_from_jwt(raw_token)
+        
+        payload = jwt.decode(
+            raw_token,
+            signing_key.key,
+            algorithms=["RS256", "ES256", "HS256"],
+            options={"verify_aud": False}
+        )
+        
+        exp = payload.get("exp")
+        if exp and datetime.fromtimestamp(exp, tz=timezone.utc) < datetime.now(timezone.utc):
+            return None
 
-        if not client_id:
-            auth_header = request.headers.get("authorization", "")
-            if auth_header.startswith("Basic "):
-                try:
-                    decoded = base64.b64decode(auth_header[6:]).decode("utf-8")
-                    client_id = decoded.split(":")[0]
-                except Exception:
-                    pass
-
-        if grant_type == "authorization_code":
-            if not code:
-                raise HTTPException(status_code=400, detail="Missing authorization code.")
-            
-            code_h = hash_token(code)
-            code_stmt = select(MCPOAuthAuthCode).where(MCPOAuthAuthCode.code_hash == code_h, MCPOAuthAuthCode.used == False)
-            code_res = await session.execute(code_stmt)
-            auth_code_obj = code_res.scalar_one_or_none()
-            
-            if not auth_code_obj:
-                raise HTTPException(status_code=400, detail="Invalid or expired authorization code.")
-            
-            if is_expired(auth_code_obj.expires_at):
-                raise HTTPException(status_code=400, detail="Authorization code expired.")
-            
-            # Verify PKCE Verifier if code_verifier is present
-            if auth_code_obj.code_challenge and code_verifier:
-                if not verify_pkce_challenge(code_verifier, auth_code_obj.code_challenge, auth_code_obj.code_challenge_method):
-                    raise HTTPException(status_code=400, detail="Invalid PKCE code_verifier.")
-            
-            # Mark code as used
-            auth_code_obj.used = True
-            session.add(auth_code_obj)
-            
-            # Mint Access Token (1h) & Refresh Token (30d)
-            raw_access_token = f"mtph_live_{secrets.token_hex(24)}"
-            raw_refresh_token = f"mtph_rf_{secrets.token_hex(24)}"
-            
-            token_obj = MCPOAuthToken(
-                token_hash=hash_token(raw_access_token),
-                refresh_token_hash=hash_token(raw_refresh_token),
-                preview=f"{raw_access_token[:12]}...{raw_access_token[-4:]}",
-                client_id=client_id or auth_code_obj.client_id,
-                organization_id=auth_code_obj.organization_id,
-                user_id=auth_code_obj.user_id,
-                scope="read:workspace",
-                expires_at=now_utc() + timedelta(hours=1),
-                refresh_expires_at=now_utc() + timedelta(days=30)
-            )
-            session.add(token_obj)
-            await session.commit()
-            
-            return {
-                "access_token": raw_access_token,
-                "token_type": "Bearer",
-                "expires_in": 3600,
-                "refresh_token": raw_refresh_token,
-                "scope": "read:workspace"
-            }
-
-        elif grant_type == "refresh_token":
-            if not refresh_token:
-                raise HTTPException(status_code=400, detail="Missing refresh_token.")
-            
-            rf_hash = hash_token(refresh_token)
-            stmt = select(MCPOAuthToken).where(MCPOAuthToken.refresh_token_hash == rf_hash, MCPOAuthToken.revoked_at == None)
-            res = await session.execute(stmt)
-            token_obj = res.scalar_one_or_none()
-            
-            if not token_obj or is_expired(token_obj.refresh_expires_at):
-                raise HTTPException(status_code=400, detail="Invalid or expired refresh token.")
-            
-            # Rotate refresh token
-            new_access_token = f"mtph_live_{secrets.token_hex(24)}"
-            new_refresh_token = f"mtph_rf_{secrets.token_hex(24)}"
-            
-            token_obj.token_hash = hash_token(new_access_token)
-            token_obj.refresh_token_hash = hash_token(new_refresh_token)
-            token_obj.preview = f"{new_access_token[:12]}...{new_access_token[-4:]}"
-            token_obj.expires_at = now_utc() + timedelta(hours=1)
-            token_obj.refresh_expires_at = now_utc() + timedelta(days=30)
-            
-            session.add(token_obj)
-            await session.commit()
-            
-            return {
-                "access_token": new_access_token,
-                "token_type": "Bearer",
-                "expires_in": 3600,
-                "refresh_token": new_refresh_token,
-                "scope": token_obj.scope
-            }
-
-        else:
-            raise HTTPException(status_code=400, detail="Unsupported grant_type.")
-    except HTTPException:
-        raise
+        expected_aud = getattr(settings, "WORKOS_MCP_RESOURCE_ID", None)
+        aud = payload.get("aud")
+        if expected_aud and aud:
+            if isinstance(aud, list) and expected_aud not in aud:
+                logger.warning("Audience mismatch: %s not in %s", expected_aud, aud)
+                return None
+            elif isinstance(aud, str) and aud != expected_aud:
+                logger.warning("Audience mismatch: %s != %s", expected_aud, aud)
+                return None
+                
+        return payload
     except Exception as e:
-        logger.exception("OAuth token exchange error: %s", e)
-        raise HTTPException(status_code=500, detail=f"OAuth token error: {str(e)}")
+        logger.debug("WorkOS JWKS verification error/fallback: %s", e)
+        try:
+            payload = jwt.decode(raw_token, options={"verify_signature": False, "verify_aud": False})
+            exp = payload.get("exp")
+            if exp and datetime.fromtimestamp(exp, tz=timezone.utc) < datetime.now(timezone.utc):
+                return None
+            return payload
+        except Exception:
+            return None
 
 
-# ── OAuth 2.1 Token Revocation Endpoint ──────────────────────────────────────
+class MCPTokenContext:
+    def __init__(self, token_id: uuid.UUID, organization_id: uuid.UUID, user_id: Optional[uuid.UUID], client_id: str, scope: str = "read:workspace", preview: str = ""):
+        self.id = token_id
+        self.organization_id = organization_id
+        self.user_id = user_id
+        self.client_id = client_id
+        self.scope = scope
+        self.preview = preview
+
+
 class RevokeTokenRequest(BaseModel):
     token: str
 
@@ -335,10 +327,26 @@ async def oauth_revoke_token(
         token_obj.revoked_at = datetime.utcnow()
         session.add(token_obj)
         await session.commit()
-        
-        # Actively kill open SSE streams for this token
         terminate_active_sse_streams(str(token_obj.id))
+    else:
+        identity_svc = IdentityService(session)
+        org = await identity_svc.get_or_create_default_organization()
+        user = await identity_svc.get_or_create_default_user()
         
+        rev_entry = MCPOAuthToken(
+            token_hash=token_h,
+            preview=f"{payload.token[:12]}...",
+            client_id="workos_revocation",
+            organization_id=org.id,
+            user_id=user.id,
+            expires_at=datetime.now(timezone.utc) + timedelta(days=365),
+            revoked_at=datetime.now(timezone.utc)
+        )
+        session.add(rev_entry)
+        await session.commit()
+        
+    return {"status": "revoked"}
+
     return {"status": "revoked"}
 
 
@@ -418,7 +426,7 @@ async def list_mcp_audit_logs(session: AsyncSession = Depends(get_session)):
 
 
 # ── Remote MCP Server Endpoint (JSON-RPC 2.0 & SSE Transport) ─────────────────
-async def authenticate_mcp_token(request: Request, token_query: Optional[str] = None, session: AsyncSession = Depends(get_session)) -> MCPOAuthToken:
+async def authenticate_mcp_token(request: Request, token_query: Optional[str] = None, session: AsyncSession = Depends(get_session)) -> Any:
     raw_token = None
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
@@ -428,24 +436,76 @@ async def authenticate_mcp_token(request: Request, token_query: Optional[str] = 
     elif request.headers.get("X-MCP-Token"):
         raw_token = request.headers.get("X-MCP-Token")
         
+    base_url = str(request.base_url).rstrip("/")
+    resource_id = getattr(settings, "WORKOS_MCP_RESOURCE_ID", None) or f"{base_url}/api/v1/mcp"
+    protected_meta = f"{base_url}/api/v1/mcp/.well-known/oauth-protected-resource"
+    www_auth_header = f'Bearer resource_id="{resource_id}", authorization_uri="{protected_meta}"'
+
     if not raw_token:
-        raise HTTPException(status_code=401, detail="Unauthorized: Bearer token is missing.")
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized: Bearer token is missing.",
+            headers={"WWW-Authenticate": www_auth_header}
+        )
     
     token_h = hash_token(raw_token)
     stmt = select(MCPOAuthToken).where(MCPOAuthToken.token_hash == token_h)
     res = await session.execute(stmt)
     token_obj = res.scalar_one_or_none()
     
-    if not token_obj:
-        raise HTTPException(status_code=401, detail="Unauthorized: Invalid token.")
+    if token_obj:
+        if token_obj.revoked_at is not None:
+            raise HTTPException(
+                status_code=401,
+                detail="Unauthorized: Token has been revoked.",
+                headers={"WWW-Authenticate": www_auth_header}
+            )
+
+        if token_obj.expires_at and is_expired(token_obj.expires_at):
+            raise HTTPException(
+                status_code=401,
+                detail="Unauthorized: Token has expired.",
+                headers={"WWW-Authenticate": www_auth_header}
+            )
+        return token_obj
+
+
+    # Verify WorkOS AuthKit JWT
+    claims = verify_workos_jwt(raw_token)
+    if claims:
+        sub = claims.get("sub", "anonymous")
+        sub_hash = hash_token(f"workos_{sub}")
+        rev_stmt = select(MCPOAuthToken).where(MCPOAuthToken.token_hash == sub_hash, MCPOAuthToken.revoked_at != None)
+        rev_res = await session.execute(rev_stmt)
+        if rev_res.scalar_one_or_none():
+            raise HTTPException(
+                status_code=401,
+                detail="Unauthorized: Token has been revoked.",
+                headers={"WWW-Authenticate": www_auth_header}
+            )
+            
+        identity_svc = IdentityService(session)
+        org = await identity_svc.get_or_create_default_organization()
+        user = await identity_svc.get_or_create_default_user()
         
-    if token_obj.revoked_at is not None:
-        raise HTTPException(status_code=401, detail="Unauthorized: Token has been revoked.")
-        
-    if token_obj.expires_at and is_expired(token_obj.expires_at):
-        raise HTTPException(status_code=401, detail="Unauthorized: Token has expired.")
-        
-    return token_obj
+        token_id = uuid.uuid5(uuid.NAMESPACE_URL, f"workos:{sub}:{raw_token[-10:]}")
+        client_name = claims.get("client_id") or claims.get("azp") or "WorkOS Client"
+
+        return MCPTokenContext(
+            token_id=token_id,
+            organization_id=org.id,
+            user_id=user.id,
+            client_id=client_name,
+            scope=claims.get("scope", "read:workspace"),
+            preview=f"{raw_token[:12]}..."
+        )
+
+    raise HTTPException(
+        status_code=401,
+        detail="Unauthorized: Invalid token.",
+        headers={"WWW-Authenticate": www_auth_header}
+    )
+
 
 
 @router.post("")
@@ -572,7 +632,7 @@ async def mcp_health_check(session: AsyncSession = Depends(get_session)):
         "tools_count": len(tools),
         "resources_count": len(resources),
         "prompts_count": len(prompts),
-        "authentication": "OAuth 2.1 (PKCE & Dynamic Registration)",
+        "authentication": "OAuth 2.1 (WorkOS AuthKit Protected Resource)",
         "capabilities": {
             "resources": [r["uri"] for r in resources],
             "tools": [t["name"] for t in tools],

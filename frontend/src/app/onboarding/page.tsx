@@ -799,20 +799,13 @@ function OnboardingContent() {
     };
 
     const handleCopyConfig = async (name: string, text: string) => {
-      try {
-        await fetchFromMetaphor("/mcp/oauth/register", {
-          client_name: `${name} Onboarding Client`,
-          redirect_uris: ["http://localhost/callback"]
-        }, "POST");
-      } catch (e) {
-        // Fallback gracefully if offline
-      }
       navigator.clipboard.writeText(text);
       setCopiedSnippet(true);
       setAiConnected(prev => ({ ...prev, [name]: true }));
-      setToastMessage(`✓ Connected ${name}! Real OAuth 2.1 endpoint copied to clipboard.`);
+      setToastMessage(`✓ Connected ${name}! Server URL copied to clipboard.`);
       setTimeout(() => setCopiedSnippet(false), 2000);
     };
+
 
     const tools = [
       {
@@ -1043,64 +1036,68 @@ function OnboardingContent() {
                 </div>
               </div>
 
-              {/* Setup Instruction & Endpoint Box */}
-              <p className="text-xs text-foreground font-medium whitespace-pre-line leading-relaxed mb-2">
-                {mcpSnippets[activeAiModal].instruction}
-              </p>
+              {/* Direct 1-Click Action Card */}
+              <div className="mb-6 p-5 bg-surface-2 border border-border-subtle rounded-xl text-center space-y-4">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-semibold text-foreground">
+                    Connect Metaphor OS to {activeAiModal}
+                  </h4>
+                  <p className="text-xs text-muted">
+                    Metaphor will securely stream workspace knowledge & memory to your AI sessions via OAuth 2.1.
+                  </p>
+                </div>
 
-              <div className="relative group mb-6">
-                <pre className="p-4 bg-background border border-border-subtle rounded-xl text-xs font-mono text-foreground overflow-x-auto max-h-40 leading-relaxed">
-                  <code>{mcpSnippets[activeAiModal].snippet}</code>
-                </pre>
                 <button
-                  onClick={() => handleCopyConfig(activeAiModal, mcpSnippets[activeAiModal].snippet)}
-                  className="absolute top-3 right-3 px-3 py-1.5 bg-surface-2 hover:bg-foreground hover:text-background rounded-lg text-xs font-medium text-foreground transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  onClick={() => {
+                    handleCopyConfig(activeAiModal, mcpSnippets[activeAiModal].snippet);
+                    const urlMap: Record<string, string> = {
+                      ChatGPT: "https://chatgpt.com/",
+                      Claude: "https://claude.ai/",
+                      Cursor: "https://cursor.com/"
+                    };
+                    window.open(urlMap[activeAiModal] || "https://chatgpt.com/", "_blank");
+                  }}
+                  className="w-full py-3.5 px-4 bg-foreground text-background font-semibold text-xs rounded-xl hover:opacity-95 active:scale-[0.99] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  {copiedSnippet ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>
-                    {copiedSnippet 
-                      ? (activeAiModal === "Claude" ? "Copied JSON!" : "Copied URL!") 
-                      : (activeAiModal === "Claude" ? "Copy Config JSON" : "Copy Server URL")
-                    }
-                  </span>
+                  <span>Connect to {activeAiModal} Now ↗</span>
                 </button>
               </div>
 
-              {/* Footer Status & Main Action Buttons */}
-              <div className="flex items-center justify-between pt-4 border-t border-border-subtle gap-2">
-                <span className="text-xs text-muted flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  <span>Ready for {activeAiModal} setup</span>
-                </span>
-                
+              {/* Advanced Server URL Toggle */}
+              <div className="border-t border-border-subtle pt-4 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
-                  {activeAiModal === "ChatGPT" && (
-                    <button
-                      onClick={() => {
-                        handleCopyConfig("ChatGPT", mcpSnippets["ChatGPT"].snippet);
-                        window.open("https://chatgpt.com/plugins#settings/Connectors?create-connector=true", "_blank");
-                      }}
-                      className="px-4 py-2.5 bg-foreground text-background font-medium rounded-xl hover:opacity-90 text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
-                    >
-                      1-Click Connect in ChatGPT ↗
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      setAiConnected(prev => ({ ...prev, [activeAiModal]: true }));
-                      setActiveAiModal(null);
-                      setTestResults(null);
-                      setToastMessage(`✓ ${activeAiModal} connection configured.`);
-                    }}
-                    className="px-5 py-2.5 bg-foreground text-background text-xs font-medium rounded-xl hover:opacity-90 transition-opacity cursor-pointer"
-                  >
-                    Done
-                  </button>
+                  <span className="text-muted font-mono text-[11px]">Server URL:</span>
+                  <code className="text-foreground font-mono text-[11px] bg-background px-2 py-1 rounded border border-border-subtle">
+                    {mcpSnippets[activeAiModal].snippet}
+                  </code>
                 </div>
+                <button
+                  onClick={() => handleCopyConfig(activeAiModal, mcpSnippets[activeAiModal].snippet)}
+                  className="text-muted hover:text-foreground font-medium text-[11px] flex items-center gap-1 cursor-pointer"
+                >
+                  {copiedSnippet ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedSnippet ? "Copied" : "Copy"}</span>
+                </button>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end pt-4 mt-4 border-t border-border-subtle gap-2">
+                <button
+                  onClick={() => {
+                    setAiConnected(prev => ({ ...prev, [activeAiModal]: true }));
+                    setActiveAiModal(null);
+                    setTestResults(null);
+                    setToastMessage(`✓ ${activeAiModal} connection configured.`);
+                  }}
+                  className="px-4 py-2 bg-surface-2 text-foreground hover:bg-surface-3 text-xs font-medium rounded-xl transition-colors cursor-pointer"
+                >
+                  Close & Mark Connected
+                </button>
               </div>
             </div>
           </div>
         )}
+
       </div>
     );
   }

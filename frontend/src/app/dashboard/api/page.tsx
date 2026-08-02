@@ -99,20 +99,39 @@ export default function ApiAccessPage() {
             <Key className="w-6 h-6 text-primary" /> API Access & Remote MCP
           </h1>
           <p className="text-sm text-muted max-w-2xl">
-            Connect external AI Consumers (Cursor, Claude Desktop, ChatGPT) to Metaphor using OAuth 2.1 remote MCP server protocol.
+            Connect external AI consumers (ChatGPT, Claude Desktop, Cursor) to Metaphor via OAuth 2.1 Protected Resource protocol backed by WorkOS AuthKit.
           </p>
         </div>
-        <button 
-          onClick={handleRegisterClient}
-          disabled={isGenerating}
-          className="px-4 py-2 bg-foreground text-background rounded-xl text-sm font-semibold shadow-md hover:opacity-90 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-        >
-          {isGenerating ? <div className="w-4 h-4 border-2 border-background/20 border-t-background rounded-full animate-spin" /> : <Plus className="w-4 h-4" />}
-          Issue OAuth 2.1 Token
-        </button>
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 text-emerald-500 rounded-full text-xs font-semibold border border-emerald-500/20">
+          <Shield className="w-3.5 h-3.5" /> WorkOS AuthKit Protected Resource
+        </div>
       </header>
 
       <div className="space-y-8 pb-32">
+        
+        {/* Server Endpoint Card */}
+        <Card noPadding className="overflow-hidden">
+          <div className="p-6 border-b border-border-subtle bg-surface-1/50 flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-medium text-foreground mb-1">MCP Server Connection URL</h2>
+              <p className="text-xs text-muted">Paste this URL into ChatGPT, Claude Desktop, or Cursor. Clients discover WorkOS AuthKit automatically.</p>
+            </div>
+          </div>
+          <div className="p-6 bg-surface-1">
+            <div className="relative group">
+              <pre className="p-4 bg-background border border-border-subtle text-foreground rounded-xl text-xs font-mono overflow-x-auto">
+                <code>https://metaphor-backend.onrender.com/api/v1/mcp</code>
+              </pre>
+              <button 
+                onClick={() => handleCopy("mcp_url", "https://metaphor-backend.onrender.com/api/v1/mcp")}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-surface-2 hover:bg-foreground hover:text-background rounded-md text-muted transition-colors shadow-sm cursor-pointer"
+              >
+                {copiedId === "mcp_url" ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+        </Card>
+
         
         {/* Connection Tokens */}
         <Card noPadding className="overflow-hidden">
