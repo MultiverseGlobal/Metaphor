@@ -30,10 +30,12 @@ export default function LinearLayout({
         const fallbackName = sbUser?.user_metadata?.full_name || sbUser?.email?.split("@")[0] || "Developer User";
         const fallbackEmail = sbUser?.email || "workspace@metaphor.os";
 
+        const isGenericName = !data?.name || data.name === "Developer User" || data.name === "Supabase User";
         setUser({
-          name: data?.name && data.name !== "Developer User" ? data.name : fallbackName,
+          name: !isGenericName ? data.name : fallbackName,
           email: data?.email || fallbackEmail
         });
+
       } catch (e) {
         console.error("Failed to fetch user in layout:", e);
       }

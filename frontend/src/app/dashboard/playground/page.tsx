@@ -72,9 +72,32 @@ export default function PlaygroundPage() {
                 <MetaphorLogo size={40} className="text-foreground" />
               </div>
               <h2 className="text-lg font-semibold tracking-tight text-foreground mb-1">Test your Context</h2>
-              <p className="text-sm text-muted max-w-sm leading-relaxed">Ask a question. The system will retrieve relevant Graph Nodes and answer you contextually.</p>
+              <p className="text-sm text-muted max-w-sm leading-relaxed mb-6">Ask a question. The system will retrieve relevant Graph Nodes and answer you contextually.</p>
+              
+              <div className="flex flex-wrap justify-center gap-2 max-w-md">
+                {[
+                  "Who am i?",
+                  "What architectural decisions are active?",
+                  "Summarize indexed workspace context"
+                ].map((preset, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setPrompt(preset);
+                      setTimeout(() => {
+                        const sendBtn = document.getElementById("playground-send-btn");
+                        if (sendBtn) sendBtn.click();
+                      }, 50);
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-surface-1 border border-border-subtle hover:border-strong text-xs font-medium text-foreground hover:bg-surface-2 transition-all cursor-pointer shadow-sm"
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
+
 
 
           {messages.map((msg, i) => (
@@ -125,12 +148,14 @@ export default function PlaygroundPage() {
               className="w-full bg-background border border-border-strong rounded-2xl pl-4 pr-12 py-4 text-sm text-foreground focus:outline-none focus:border-primary disabled:opacity-50"
             />
             <button 
+              id="playground-send-btn"
               onClick={handleSend}
               disabled={isLoading || !prompt.trim()}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-foreground text-background rounded-xl hover:bg-primary transition-colors disabled:opacity-50"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-foreground text-background rounded-xl hover:bg-primary transition-colors disabled:opacity-50 cursor-pointer"
             >
               <Send className="w-4 h-4" />
             </button>
+
           </div>
         </div>
 

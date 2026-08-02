@@ -73,15 +73,33 @@ export default function KnowledgeGraphPage() {
           ];
         }
 
-        const flowNodes: FlowNode[] = nodesList.map((n: any, i: number) => ({
-          id: n.id,
-          type: 'custom',
-          position: { 
-            x: (i % 4) * 220 + 80, 
-            y: Math.floor(i / 4) * 160 + 80 
-          },
-          data: { label: n.name, type: (n.type || "project").toLowerCase(), summary: n.summary }
-        }));
+        const radiusStep = 160;
+        const flowNodes: FlowNode[] = nodesList.map((n: any, i: number) => {
+          if (i === 0) {
+            return {
+              id: n.id,
+              type: 'custom',
+              position: { x: 450, y: 300 },
+              data: { label: n.name, type: (n.type || "project").toLowerCase(), summary: n.summary }
+            };
+          }
+          
+          const ring = Math.floor(Math.sqrt(i));
+          const nodesInRing = Math.max(4, ring * 4);
+          const angle = ((i % nodesInRing) / nodesInRing) * 2 * Math.PI;
+          const radius = ring * radiusStep + 80;
+
+          return {
+            id: n.id,
+            type: 'custom',
+            position: { 
+              x: 450 + radius * Math.cos(angle), 
+              y: 300 + radius * Math.sin(angle) 
+            },
+            data: { label: n.name, type: (n.type || "project").toLowerCase(), summary: n.summary }
+          };
+        });
+
 
         const flowEdges: FlowEdge[] = edgesList.map((e: any) => ({
           id: e.id,

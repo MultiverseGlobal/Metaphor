@@ -15,8 +15,26 @@ export const BACKEND_URL = getBackendUrl();
 
 import { createClient } from "@/utils/supabase/client";
 
-// Simple client-side API helper
-export async function fetchFromMetaphor(endpoint: string, body?: any, method?: string, allowAnonymous: boolean = false) {
+const apiCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL_MS = 15000; // 15 seconds
+
+export function clearApiCache() {
+  apiCache.clear();
+}
+
+// Simple client-side API helper with lightweight GET caching
+export async function fetchFromMetaphor(endpoint: string, body?: any, method?: string, allowAnonymous: boolean = false, skipCache: boolean = false) {
+  const reqMethod = (method || (body ? "POST" : "GET")).toUpperCase();
+  const cacheKey = `${reqMethod}:${endpoint}`;
+
+  // In-memory cache lookup for GET requests
+  if (reqMethod === "GET" && !skipCache) {
+    const cached = apiCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data;
+    }
+  }
+
   let apiKey = null;
   let token = null;
 
@@ -31,7 +49,6 @@ export async function fetchFromMetaphor(endpoint: string, body?: any, method?: s
     }
   }
 
-  
   const headers: Record<string, string> = {
     "Content-Type": "application/json"
   };
@@ -45,21 +62,31 @@ export async function fetchFromMetaphor(endpoint: string, body?: any, method?: s
   }
 
   const options: RequestInit = {
-    method: method || (body ? "POST" : "GET"),
+    method: reqMethod,
     headers
   };
 
   if (body) {
-    options.body = JSON.stringify(body);
+    options.body = typeof body === "string" ? body : JSON.stringify(body);
   }
 
-  const baseUrl = getBackendUrl();
-  const response = await fetch(`${baseUrl}${endpoint}`, options);
+  const backendUrl = getBackendUrl();
+  const res = await fetch(`${backendUrl}${endpoint}`, options);
   
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || `HTTP Error ${response.status}`);
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Backend request failed (${res.status}): ${errText}`);
   }
 
-  return response.json();
+  // Clear cache on mutating operations
+  if (reqMethod !== "GET") {
+    apiCache.clear();
+  }
+
+  const resData = await res.json();
+  if (reqMethod === "GET") {
+    apiCache.set(cacheKey, { data: resData, timestamp: Date.now() });
+  }
+
+  return resData;
 }
