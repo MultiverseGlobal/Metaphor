@@ -301,21 +301,23 @@ function OnboardingContent() {
     }
   }, [phase]);
 
-  // Check for session and OAuth redirects
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setPhase(prev => (prev === "auth" || prev === "email_auth" || prev === "email_sent" ? "connect" : prev));
-      }
-    });
+  // Add state for Step 1 identity inputs
+  const [displayNameInput, setDisplayNameInput] = useState(
+    typeof window !== "undefined" ? localStorage.getItem("metaphor_user_name") || "Theoonim" : "Theoonim"
+  );
+  const [workspaceInput, setWorkspaceInput] = useState("Metaphor OS");
 
+  // Check URL query parameters for OAuth success redirect
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const success = params.get("success");
     if (success) {
       setConnections(prev => ({ ...prev, [success]: true }));
       window.history.replaceState({}, document.title, window.location.pathname);
+      setPhase("connect");
     }
   }, []);
+
 
   const handleEmailAuth = async () => {
     if (!email) return;
@@ -434,42 +436,82 @@ function OnboardingContent() {
     router.push("/dashboard");
   };
 
-  // ── PHASE: AUTH (WORKSPACE CREATION) ─────────────────────────────────────────
+  // ── PHASE 1: STEP 1 - WORKSPACE & IDENTITY SETUP ────────────────────────────
   if (phase === "auth") {
     return (
-      <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in fade-in duration-700">
+      <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in fade-in duration-500">
         <div className="w-full max-w-sm flex flex-col items-center">
           
-          <MetaphorLogo size={48} className="mb-10 text-foreground" />
+          <MetaphorLogo size={48} className="mb-8 text-foreground" />
 
-          <div className="mb-12 text-center w-full">
-            <h1 className="text-3xl font-medium tracking-tight text-foreground mb-4">
-              Create your private workspace
+          <div className="mb-8 text-center w-full">
+            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-muted mb-2 block">Step 1 of 4</span>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground mb-2">
+              Initialize Workspace
             </h1>
+            <p className="text-sm text-muted">
+              Configure your developer profile and workspace identity.
+            </p>
           </div>
 
-          <div className="space-y-4 w-full">
-            <AuthButton icon={<GoogleLogo />} label="Continue with Google" onClick={() => handleOAuthLogin('google')} />
-            <AuthButton icon={<GithubIcon className="opacity-80" />} label="Continue with GitHub" onClick={() => handleOAuthLogin('github')} />
-            <AuthButton icon={<AppleIcon />} label="Continue with Apple" onClick={() => handleOAuthLogin('apple')} />
-            
-            <div className="py-2 flex items-center gap-4 w-full">
-              <div className="flex-1 border-t border-border-subtle"></div>
-              <span className="text-xs text-muted font-medium">or</span>
-              <div className="flex-1 border-t border-border-subtle"></div>
+          <div className="w-full space-y-5 text-left">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-2">Display Name</label>
+              <input
+                type="text"
+                value={displayNameInput}
+                onChange={e => setDisplayNameInput(e.target.value)}
+                placeholder="e.g. Theoonim"
+                className="w-full p-3.5 rounded-xl border border-border-subtle bg-surface-1 text-foreground placeholder:text-muted focus:outline-none focus:border-foreground transition-colors text-sm"
+              />
             </div>
 
-            <AuthButton icon={<Mail className="w-5 h-5 text-foreground opacity-80" />} label="Continue with Email" onClick={() => setPhase("email_auth")} />
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-2">Workspace Name</label>
+              <input
+                type="text"
+                value={workspaceInput}
+                onChange={e => setWorkspaceInput(e.target.value)}
+                placeholder="e.g. Metaphor OS"
+                className="w-full p-3.5 rounded-xl border border-border-subtle bg-surface-1 text-foreground placeholder:text-muted focus:outline-none focus:border-foreground transition-colors text-sm"
+              />
+            </div>
+
+            <button
+              onClick={() => {
+                if (displayNameInput.trim()) {
+                  localStorage.setItem("metaphor_user_name", displayNameInput.trim());
+                  fetchFromMetaphor("/auth/me", { name: displayNameInput.trim() }, "PUT").catch(() => {});
+                }
+                setPhase("connect");
+              }}
+              className="w-full p-4 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-all flex justify-center items-center gap-2 cursor-pointer shadow-md mt-6"
+            >
+              <span>Continue to Data Sources</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
 
-          <p className="mt-10 text-xs text-muted max-w-[280px] text-center leading-relaxed">
-            By creating a workspace, you agree to our Terms of Service and Privacy Policy. Data is encrypted and stored locally-first.
+          <div className="py-4 flex items-center gap-4 w-full">
+            <div className="flex-1 border-t border-border-subtle"></div>
+            <span className="text-[11px] text-muted font-medium">or sign in with OAuth</span>
+            <div className="flex-1 border-t border-border-subtle"></div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 w-full">
+            <AuthButton icon={<GoogleLogo />} label="Google" onClick={() => handleOAuthLogin('google')} />
+            <AuthButton icon={<GithubIcon className="opacity-80" />} label="GitHub" onClick={() => handleOAuthLogin('github')} />
+          </div>
+
+          <p className="mt-8 text-[11px] text-muted max-w-[280px] text-center leading-relaxed">
+            Data is encrypted locally and stored securely in your private knowledge graph.
           </p>
 
         </div>
       </div>
     );
   }
+
 
   // ── PHASE: EMAIL AUTH ────────────────────────────────────────────────────────
   if (phase === "email_auth") {
