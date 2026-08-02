@@ -66,20 +66,38 @@ class ContextService:
         ctx_session.last_active_at = datetime.utcnow()
         self.session.add(ctx_session)
         
-        # 5. Build JSON payload
+        # 5. Build rich, semantic Context Pack JSON payload
+        node_summaries = [
+            {
+                "id": str(n.id),
+                "type": n.type,
+                "title": n.title,
+                "summary": n.summary,
+                "source": getattr(n, "source", "workspace")
+            }
+            for n in new_nodes
+        ]
+
+        if not nodes:
+            status = "no_results"
+            answer_text = "I searched your Metaphor workspace, but found no indexed nodes matching your query."
+        else:
+            status = "matched"
+            answer_text = f"Found {len(new_nodes)} relevant context items in your workspace memory."
+
         package_json = {
-            "session_id": str(ctx_session.id),
-            "objective": query,
-            "delta_nodes": [
-                {
-                    "id": str(n.id),
-                    "type": n.type,
-                    "title": n.title,
-                    "summary": n.summary
-                }
-                for n in new_nodes
-            ]
+            "status": status,
+            "query": query,
+            "answer": answer_text,
+            "workspace_summary": {
+                "total_items_found": len(nodes),
+                "new_items_in_context": len(new_nodes),
+                "categories": list(set(n.type for n in nodes))
+            },
+            "evidence": node_summaries,
+            "confidence": 0.95 if nodes else 0.0
         }
+
         
         # 6. Save the package history
         pkg = ContextPackage(

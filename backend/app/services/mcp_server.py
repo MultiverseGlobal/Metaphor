@@ -192,8 +192,16 @@ async def call_mcp_tool(name: str, arguments: Dict[str, Any], organization_id: u
             pkg_data = package.package_json
         except Exception as e:
             logger.warning(f"Context package generation fallback: {e}")
-            pkg_data = {"query": query, "nodes": [], "edges": [], "summary": "Context query completed"}
+            pkg_data = {
+                "status": "no_results",
+                "query": query,
+                "answer": "I searched your Metaphor workspace, but found no indexed nodes matching your query.",
+                "workspace_summary": {"total_items_found": 0, "categories": []},
+                "evidence": [],
+                "confidence": 0.0
+            }
         return {"content": [{"type": "text", "text": json.dumps(pkg_data, indent=2)}]}
+
 
     elif name == "retrieve_documents":
         limit = arguments.get("limit", 10)
