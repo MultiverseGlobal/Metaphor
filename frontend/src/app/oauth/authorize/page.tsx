@@ -6,6 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { Shield, Check, Lock, ExternalLink, ArrowRight, CheckCircle2 } from "lucide-react";
 import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
 import { ChatGPTIcon, ClaudeIcon, CursorIcon } from "@/components/ui/BrandIcons";
+import { fetchFromMetaphor } from "@/app/api";
+
 
 function OAuthAuthorizeContent() {
   const searchParams = useSearchParams();
