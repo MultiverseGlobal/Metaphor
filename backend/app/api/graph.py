@@ -42,6 +42,43 @@ async def get_graph(
     )
     edges = edges_res.scalars().all()
 
+    if not nodes:
+        node1 = Node(
+            id=uuid.uuid4(),
+            organization_id=org.id,
+            type="architecture",
+            title="Metaphor OS Architecture",
+            summary="Core Cognitive Operating System memory layer with Graph RAG.",
+            raw_data={"status": "active"}
+        )
+        node2 = Node(
+            id=uuid.uuid4(),
+            organization_id=org.id,
+            type="project",
+            title="Remote MCP Integration",
+            summary="OAuth 2.1 PKCE server connecting ChatGPT and Claude Desktop.",
+            raw_data={"status": "connected"}
+        )
+        node3 = Node(
+            id=uuid.uuid4(),
+            organization_id=org.id,
+            type="rule",
+            title="Linear Design System Enforcer",
+            summary="UI/UX rule enforcement with semantic design tokens and 8pt baselines.",
+            raw_data={"priority": "high"}
+        )
+        db.add_all([node1, node2, node3])
+        await db.flush()
+
+        edge1 = Edge(id=uuid.uuid4(), from_node=node1.id, to_node=node2.id, relationship="ENABLES")
+        edge2 = Edge(id=uuid.uuid4(), from_node=node1.id, to_node=node3.id, relationship="ENFORCES")
+        db.add_all([edge1, edge2])
+        await db.commit()
+
+        nodes = [node1, node2, node3]
+        edges = [edge1, edge2]
+
+
     return {
         "nodes": [
             {"id": str(n.id), "name": n.title, "type": n.type, "summary": n.summary}
@@ -52,6 +89,7 @@ async def get_graph(
             for e in edges
         ]
     }
+
 
 @router.get("/stats")
 async def get_stats(

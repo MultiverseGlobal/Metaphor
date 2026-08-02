@@ -12,38 +12,41 @@ type IntegrationState = {
   last_sync: string | null;
 };
 
+import { GithubIcon, NotionIcon, GoogleCalendarIcon, GmailIcon, LinearIcon } from "@/components/ui/BrandIcons";
+
 const PROVIDER_METADATA: Record<string, { name: string; category: string; description: string; icon: React.ReactNode }> = {
   github: {
     name: "GitHub",
     category: "Code & Projects",
-    description: "Syncs commits, issues, and PRs as Operations Nodes.",
-    icon: <Github className="w-5 h-5" />
+    description: "Syncs commits, issues, and PRs as Operations Nodes into your core graph.",
+    icon: <GithubIcon className="w-5 h-5 text-foreground" />
   },
   notion: {
     name: "Notion",
     category: "Knowledge Base",
-    description: "Extracts decisions, constraints, and project scopes.",
-    icon: <FileText className="w-5 h-5" />
+    description: "Extracts decisions, architectural constraints, and project scopes.",
+    icon: <NotionIcon className="w-5 h-5 text-foreground" />
   },
   gcal: {
     name: "Google Calendar",
     category: "Timeline",
-    description: "Builds the temporal graph and participant nodes.",
-    icon: <Calendar className="w-5 h-5" />
+    description: "Builds the temporal graph and participant meeting nodes.",
+    icon: <GoogleCalendarIcon className="w-5 h-5 text-foreground" />
   },
   gmail: {
     name: "Gmail",
     category: "Communications",
-    description: "Indexes email context, project updates, and decisions.",
-    icon: <HardDrive className="w-5 h-5" />
+    description: "Indexes email context, project updates, and decision threads.",
+    icon: <GmailIcon className="w-5 h-5 text-foreground" />
   },
   linear: {
     name: "Linear",
     category: "Operations",
-    description: "Maps task progression to active goals.",
-    icon: <Box className="w-5 h-5" />
+    description: "Maps task progression and sprint milestones to active goals.",
+    icon: <LinearIcon className="w-5 h-5 text-foreground" />
   }
 };
+
 
 export default function IntegrationsPage() {
   const [integrations, setIntegrations] = useState<IntegrationState[]>([]);
@@ -136,7 +139,8 @@ export default function IntegrationsPage() {
               </p>
               
               <div className="pt-4 border-t border-border-subtle flex items-center justify-between text-xs text-muted">
-                <span>{item.events_processed} events processed</span>
+                <span>{item.events_processed ? `${item.events_processed.toLocaleString()} events processed` : "0 events processed"}</span>
+
                   <button 
                     onClick={() => handleSync(item.provider)}
                     disabled={isSyncing}

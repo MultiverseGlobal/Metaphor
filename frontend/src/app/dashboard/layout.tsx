@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Network, Database, Key, Plug, Settings, Sidebar, User, ChevronDown, Layers, Terminal, Inbox } from "lucide-react";
+import { Network, Database, Key, Plug, Settings, Sidebar, User, ChevronDown, Layers, Terminal, Inbox, LogOut } from "lucide-react";
+
 import { Kbd } from "@/components/ui/Kbd";
 import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
 
@@ -78,11 +79,48 @@ export default function LinearLayout({
         </div>
 
         {/* Footer Navigation */}
-        <div className="p-3 space-y-0.5 mb-2 border-t border-border-subtle/50 pt-4">
+        <div className="p-3 space-y-1 mb-2 border-t border-border-subtle/50 pt-3">
           <NavItem href="/dashboard/settings" icon={<Settings />} label="Settings" shortcut="⌘," pathname={pathname} />
-          <NavItem href="/dashboard/profile" icon={<User />} label={user?.name || "Developer User"} pathname={pathname} />
+          
+          {/* Account Profile & Sign Out Controls */}
+          <div className="pt-2">
+            <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-surface-1 border border-border-subtle hover:border-strong transition-all group">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-surface-2 border border-border-subtle flex items-center justify-center text-xs font-semibold text-foreground shrink-0">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : "M"}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12px] font-medium text-foreground truncate">
+                    {user?.name || "Developer User"}
+                  </div>
+                  <div className="text-[10px] text-muted truncate">
+                    {user?.email || "workspace@metaphor.os"}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    const { createClient } = await import("@/utils/supabase/client");
+                    const supabase = createClient();
+                    await supabase.auth.signOut();
+                  } catch (e) {
+                    console.error("Sign out error:", e);
+                  }
+                  localStorage.removeItem("metaphor_api_key");
+                  document.cookie = "metaphor_onboarded=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+                  window.location.href = "/login";
+                }}
+                className="p-1 text-muted hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors cursor-pointer"
+                title="Sign Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
+
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col relative min-w-0 bg-background h-full overflow-hidden">
