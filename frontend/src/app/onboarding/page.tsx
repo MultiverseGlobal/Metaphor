@@ -346,26 +346,27 @@ function OnboardingContent() {
     }
   };
 
-  const submitAmbiguityAnswer = async () => {
-    if (!currentAnswer.trim()) return;
+  const submitAmbiguityAnswer = () => {
+    const answerText = currentAnswer.trim();
+    if (!answerText) return;
     
-    const newAnswers = [...answers, currentAnswer.trim()];
-    setAnswers(newAnswers);
-    
-    try {
-      await fetchFromMetaphor("/context/lore", { 
-        content: `User prefers: ${currentAnswer.trim()} regarding '${questions[resolvingIndex]}'` 
-      });
-    } catch(e) {
-      console.error("Failed to save context", e);
-    }
-
+    const currentQ = questions[resolvingIndex];
+    setAnswers(prev => [...prev, answerText]);
     setCurrentAnswer("");
+
+    // Instant UI transition
     if (resolvingIndex < questions.length - 1) {
       setResolvingIndex(prev => prev + 1);
     } else {
       setPhase("complete");
     }
+    
+    // Save to context lore in background asynchronously
+    fetchFromMetaphor("/context/lore", { 
+      content: `User prefers: ${answerText} regarding '${currentQ}'` 
+    }).catch(e => {
+      console.error("Failed to save context lore asynchronously:", e);
+    });
   };
 
   const startIntegrationSync = async () => {
@@ -669,7 +670,7 @@ function OnboardingContent() {
 
         {/* ── Right: Ambiguity Resolution ── */}
         <div className="flex-1 flex flex-col justify-center px-16 max-w-2xl mx-auto">
-          <div className="mb-8 animate-in slide-in-from-bottom-2 duration-500">
+          <div key={resolvingIndex} className="mb-8 animate-in fade-in slide-in-from-bottom-3 duration-300">
             
             <div className="flex items-center gap-3 mb-8">
               <span className="w-6 h-6 rounded-full bg-primary text-background flex items-center justify-center text-xs font-bold shadow-[0_0_10px_rgba(78,108,242,0.3)]">
