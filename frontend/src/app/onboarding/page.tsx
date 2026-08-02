@@ -761,7 +761,7 @@ function OnboardingContent() {
       ChatGPT: {
         title: "Connect ChatGPT",
         description: "Connect Metaphor using the Model Context Protocol (MCP). ChatGPT will securely access your workspace through your Metaphor server.",
-        instruction: "1. Open ChatGPT > Settings > Apps & Connectors (Developer Mode)\n2. Click 'Add Custom MCP Server'\n3. Enter the Metaphor MCP Server URL below:",
+        instruction: "1. Click '1-Click Connect in ChatGPT' below (copies URL & opens ChatGPT's connector modal directly).\n2. Name: Metaphor\n3. Connection: Server URL -> https://api.metaphor.ai/mcp\n4. Authentication: OAuth (auto-discovered)\n5. Check risk box & click Create.",
         snippet: "https://api.metaphor.ai/mcp",
         capabilities: [
           "Search your workspace context",
@@ -1084,11 +1084,11 @@ function OnboardingContent() {
                     <button
                       onClick={() => {
                         handleCopyConfig("ChatGPT", mcpSnippets["ChatGPT"].snippet);
-                        window.open("https://chatgpt.com", "_blank");
+                        window.open("https://chatgpt.com/plugins#settings/Connectors?create-connector=true", "_blank");
                       }}
-                      className="px-4 py-2.5 bg-surface-2 border border-border-subtle hover:bg-surface-1 text-foreground text-xs font-medium rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                      className="px-4 py-2.5 bg-foreground text-background font-medium rounded-xl hover:opacity-90 text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
                     >
-                      Open ChatGPT ↗
+                      1-Click Connect in ChatGPT ↗
                     </button>
                   )}
                   <button
