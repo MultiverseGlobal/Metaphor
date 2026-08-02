@@ -63,35 +63,38 @@ export default function LinearLayout({
           Metaphor OS
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar py-2 px-3 space-y-6">
+        <div className="flex-1 overflow-y-auto custom-scrollbar py-2 px-3 space-y-5">
           
-          {/* Action Layer */}
-          <div className="space-y-0.5 mb-6">
-            <NavItem href="/dashboard/inbox" icon={<Inbox />} label="Context Inbox" shortcut="⌘I" pathname={pathname} />
-            <NavItem href="/dashboard/playground" icon={<Terminal />} label="The Context Layer" shortcut="⌘P" pathname={pathname} />
-          </div>
-
-          {/* Infrastructure Actions */}
+          {/* Section 1: Workspace & Memory */}
           <div className="space-y-0.5">
+            <div className="px-3 py-1 text-[10px] font-bold text-muted/70 uppercase tracking-widest">
+              Workspace & Memory
+            </div>
             <NavItem href="/dashboard" icon={<Database />} label="Context Dashboard" shortcut="⌘D" pathname={pathname} exact />
             <NavItem href="/dashboard/graph" icon={<Network />} label="Knowledge Graph" shortcut="⌘G" pathname={pathname} />
+            <NavItem href="/dashboard/inbox" icon={<Inbox />} label="Context Inbox" shortcut="⌘I" pathname={pathname} />
           </div>
 
-          {/* Collapsible Section: Configuration */}
-          <div className="space-y-1">
-            <div className="px-3 py-1 flex items-center justify-between text-[11px] font-medium text-muted uppercase tracking-wider group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded" tabIndex={0}>
-              Intelligence Routing
-              <ChevronDown 
-                className="w-3 h-3 opacity-0 group-hover:opacity-100 group-focus:opacity-100" 
-                style={{ transition: 'opacity var(--transition-fast)' }} 
-              />
+          {/* Section 2: Cognitive Engine */}
+          <div className="space-y-0.5">
+            <div className="px-3 py-1 text-[10px] font-bold text-muted/70 uppercase tracking-widest">
+              Cognitive Engine
             </div>
+            <NavItem href="/dashboard/playground" icon={<Terminal />} label="The Context Layer" shortcut="⌘P" pathname={pathname} />
             <NavItem href="/dashboard/models" icon={<Layers />} label="Context Models" shortcut="⌘M" pathname={pathname} />
-            <NavItem href="/dashboard/integrations" icon={<Plug />} label="Integrations" shortcut="⌘I" pathname={pathname} />
-            <NavItem href="/dashboard/api" icon={<Key />} label="API Access" pathname={pathname} />
+          </div>
+
+          {/* Section 3: Integrations & MCP */}
+          <div className="space-y-0.5">
+            <div className="px-3 py-1 text-[10px] font-bold text-muted/70 uppercase tracking-widest">
+              Integrations & Remote MCP
+            </div>
+            <NavItem href="/dashboard/integrations" icon={<Plug />} label="Integrations" shortcut="⌘K" pathname={pathname} />
+            <NavItem href="/dashboard/api" icon={<Key />} label="API Access & MCP" shortcut="⌘A" pathname={pathname} />
           </div>
 
         </div>
+
 
         {/* Footer Navigation */}
         <div className="p-3 space-y-1 mb-2 border-t border-border-subtle/50 pt-3">

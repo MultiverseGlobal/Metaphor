@@ -24,11 +24,15 @@ export const GithubIcon = ({ className = "w-5 h-5 opacity-90" }: { className?: s
   </svg>
 );
 
-export const NotionIcon = ({ className = "w-5 h-5 opacity-90" }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className={className}>
-    <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l11.43-.84c.28-.046.373-.233.28-.466L17.203 1.97c-.373-.466-.933-.653-1.68-.606L3.992 2.39c-.373.047-.56.233-.466.606l.933 1.212zm.84 3.73v14.038c0 .653.373 1.073 1.12 1.026l14.204-.98c.653-.046 1.026-.513 1.026-1.166V6.953c0-.653-.373-.98-1.026-.933l-14.298.98c-.653.047-1.026.466-1.026 1.026zm12.39 12.55h-2.193v-6.39l-2.8 6.39h-1.446l-2.846-6.39v6.39H6.311V9.756h2.24l2.986 6.763 2.94-6.763h2.213v10.732z" />
+export const NotionIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect x="3.5" y="3.5" width="17" height="17" rx="3.5" />
+    <path d="M8.5 7.5v9" />
+    <path d="M15.5 7.5v9" />
+    <path d="M8.5 7.5l7 9" />
   </svg>
 );
+
 
 export const LinearIcon = ({ className = "w-5 h-5 opacity-90" }: { className?: string }) => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className={className}>
