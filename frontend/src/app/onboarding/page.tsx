@@ -209,18 +209,17 @@ function OnboardingContent() {
   // Handle Analysis Animation, Progress Bar & Polling
   useEffect(() => {
     if (phase === "analyzing") {
-      // Smooth percentage ticker up to 92% (reserves final 100% for transition)
+      // Smooth percentage ticker advancing to 100%
       const progressInterval = setInterval(() => {
         setProgressPercent(p => {
-          if (p >= 92) return 92;
-          const next = p + Math.floor(Math.random() * 8) + 4;
-          return next > 92 ? 92 : next;
+          if (p >= 98) return 98;
+          return p + Math.floor(Math.random() * 6) + 3;
         });
-      }, 600);
+      }, 400);
 
       const animationInterval = setInterval(() => {
         setAnalysisStep(s => (s >= 3 ? 3 : s + 1));
-      }, 2000);
+      }, 1500);
 
       let isPolling = true;
       const pollStatus = async () => {
@@ -239,7 +238,7 @@ function OnboardingContent() {
               });
             }
 
-            if ((statusRes && (statusRes.has_data || statusRes.status === "completed")) || attempts >= 4) {
+            if ((statusRes && (statusRes.has_data || statusRes.status === "completed")) || attempts >= 3) {
               isPolling = false;
               clearInterval(animationInterval);
               clearInterval(progressInterval);
@@ -257,13 +256,13 @@ function OnboardingContent() {
 
               setTimeout(() => {
                 setPhase("resolving");
-              }, 600);
+              }, 400);
               break;
             }
           } catch (e) {
             console.warn("Polling error:", e);
           }
-          await new Promise(r => setTimeout(r, 2500));
+          await new Promise(r => setTimeout(r, 1800));
         }
       };
       
@@ -544,11 +543,6 @@ function OnboardingContent() {
       "Synthesizing relationship graph"
     ];
 
-    const displayEvents = Math.max(stats.total_events, Math.floor(progressPercent * 1.8));
-    const displayEdges = Math.max(stats.edge_count, Math.floor(progressPercent * 1.2));
-    const displaySessions = Math.max(stats.active_sessions, progressPercent > 10 ? 1 : 0);
-    const displayNodes = Math.max(stats.node_count, Math.floor(progressPercent * 0.9));
-
     return (
       <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in fade-in duration-500">
         <div className="w-full max-w-sm flex flex-col items-center text-center">
@@ -600,22 +594,22 @@ function OnboardingContent() {
             })}
           </div>
 
-          {/* Dynamic Activity Metrics */}
+          {/* Real Live Graph Metrics from PostgreSQL */}
           <div className="w-full grid grid-cols-2 gap-3">
             <div className="flex flex-col items-center p-3.5 bg-surface-1 border border-border-subtle rounded-xl">
-              <span className="text-xl font-light text-foreground mb-0.5 font-mono">{displayEvents}</span>
+              <span className="text-xl font-light text-foreground mb-0.5 font-mono">{stats.total_events}</span>
               <span className="text-[11px] text-muted font-medium">Events processed</span>
             </div>
             <div className="flex flex-col items-center p-3.5 bg-surface-1 border border-border-subtle rounded-xl">
-              <span className="text-xl font-light text-foreground mb-0.5 font-mono">{displayEdges}</span>
+              <span className="text-xl font-light text-foreground mb-0.5 font-mono">{stats.edge_count}</span>
               <span className="text-[11px] text-muted font-medium">Relationships mapped</span>
             </div>
             <div className="flex flex-col items-center p-3.5 bg-surface-1 border border-border-subtle rounded-xl">
-              <span className="text-xl font-light text-foreground mb-0.5 font-mono">{displaySessions}</span>
+              <span className="text-xl font-light text-foreground mb-0.5 font-mono">{stats.active_sessions}</span>
               <span className="text-[11px] text-muted font-medium">Active sessions</span>
             </div>
             <div className="flex flex-col items-center p-3.5 bg-surface-1 border border-border-subtle rounded-xl">
-              <span className="text-xl font-light text-foreground mb-0.5 font-mono">{displayNodes}</span>
+              <span className="text-xl font-light text-foreground mb-0.5 font-mono">{stats.node_count}</span>
               <span className="text-[11px] text-muted font-medium">Nodes created</span>
             </div>
           </div>
