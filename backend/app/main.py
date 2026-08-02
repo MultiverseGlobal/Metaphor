@@ -77,6 +77,11 @@ async def root_oauth_authorization_server(request: Request):
 
 
 
+@app.get("/build-version")
+async def build_version():
+    return {"build_time": "2026-08-02T19:00:00Z", "commit": "a3724eb_v2", "mcp_auth_redirect": "enabled"}
+
 @app.get("/")
 async def root():
     return {"app": settings.APP_NAME, "status": "healthy", "version": "2.0.0"}
+
