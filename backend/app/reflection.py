@@ -109,8 +109,8 @@ class ReflectionEngine:
             
             result = json.loads(clean_response)
         except Exception as e:
-            logger.error(f"Failed to parse Claude reflection JSON: {e}. Raw response: {response_text}")
-            result = self._get_mock_reflection_results(raw_logs)
+            logger.error(f"Failed to parse LLM reflection JSON: {e}. Raw response: {response_text}")
+            raise RuntimeError(f"Failed to parse LLM reflection JSON output: {e}")
 
         # 4. Write data to DB inside transaction
         report = await self._apply_graph_updates(session, raw_logs, result, status=status)
@@ -230,75 +230,6 @@ class ReflectionEngine:
             "nodes_created": created_nodes_count,
             "edges_created": created_edges_count,
             "evidence_links_created": evidence_links_count
-        }
-
-    def _get_mock_reflection_results(self, raw_logs: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Provides high-quality structured evolution mock database objects when LLM is unavailable."""
-        logger.info("Mocking graph relationships from simulated development logs...")
-        
-        nodes = [
-            {"name": "Atlas", "type": "Project", "metadata": {"description": "Business constraints and pricing models"}},
-            {"name": "William", "type": "Project", "metadata": {"description": "Task execution coordinator"}},
-            {"name": "Metaphor", "type": "Project", "metadata": {"description": "Context and World Modeling Engine"}},
-            {"name": "Benjamin", "type": "Person", "metadata": {"role": "Technical Founder"}},
-            {"name": "Sarah", "type": "Person", "metadata": {"role": "CEO of TechFounder Inc / Customer"}},
-            {"name": "Ideal Customer Profile", "type": "Idea", "metadata": {"focus": "Technical B2B SaaS teams"}},
-            {"name": "Value-based Pricing", "type": "Idea", "metadata": {"proposed_amount": 500}},
-            {"name": "Developer Keys First", "type": "Decision", "metadata": {"rationale": "Avoid Google/Notion OAuth setup bottleneck in V1"}},
-            {"name": "Docker Local Database", "type": "Decision", "metadata": {"database": "Postgres 16 + pgvector"}},
-            {"name": "Integrate Docker DB Commit", "type": "Commit", "metadata": {"sha": "a1b2c3d4e5f6"}},
-            {"name": "Update Pricing Rules Commit", "type": "Commit", "metadata": {"sha": "f6e5d4c3b2a1"}},
-            {"name": "Sarah Client Sync", "type": "Meeting", "metadata": {"date": "2026-07-15"}},
-            {"name": "Metaphor Brainstorming session", "type": "Meeting", "metadata": {"date": "2026-07-16"}},
-        ]
-
-        edges = [
-            # Structural
-            {"source_node_name": "Atlas", "target_node_name": "Ideal Customer Profile", "dimension": "structural", "relationship_type": "contains", "description": "Atlas business plan defines the Ideal Customer Profile."},
-            {"source_node_name": "Atlas", "target_node_name": "Value-based Pricing", "dimension": "structural", "relationship_type": "contains", "description": "Atlas business plan incorporates the Value-based Pricing proposal."},
-            
-            # Semantic
-            {"source_node_name": "William", "target_node_name": "Atlas", "dimension": "semantic", "relationship_type": "relates_to", "description": "William requires Atlas budget constraints to safely execute deployments."},
-            {"source_node_name": "Metaphor", "target_node_name": "William", "dimension": "semantic", "relationship_type": "relates_to", "description": "Metaphor feeds context to William."},
-            {"source_node_name": "Metaphor", "target_node_name": "Atlas", "dimension": "semantic", "relationship_type": "relates_to", "description": "Metaphor manages relational states defined by Atlas."},
-
-            # Temporal / Causal
-            {"source_node_name": "Sarah Client Sync", "target_node_name": "Value-based Pricing", "dimension": "temporal", "relationship_type": "discussed", "description": "Sarah reviewed and supported the $500 monthly pricing during the review sync."},
-            {"source_node_name": "Sarah Client Sync", "target_node_name": "Sarah", "dimension": "structural", "relationship_type": "attendee", "description": "Sarah attended the customer call."},
-            {"source_node_name": "Sarah Client Sync", "target_node_name": "Benjamin", "dimension": "structural", "relationship_type": "attendee", "description": "Benjamin hosted the customer call."},
-            
-            {"source_node_name": "Sarah Client Sync", "target_node_name": "Metaphor Brainstorming session", "dimension": "temporal", "relationship_type": "caused", "description": "Customer feedback on a unified timeline during the sync caused the team to host a brainstorming session for Metaphor."},
-            {"source_node_name": "Metaphor Brainstorming session", "target_node_name": "Developer Keys First", "dimension": "temporal", "relationship_type": "decided", "description": "Metaphor sync session concluded that developer keys should take priority over full OAuth for V1."},
-            {"source_node_name": "Metaphor Brainstorming session", "target_node_name": "Docker Local Database", "dimension": "temporal", "relationship_type": "decided", "description": "Decided to host Postgres + pgvector inside Docker locally."},
-
-            {"source_node_name": "Docker Local Database", "target_node_name": "Integrate Docker DB Commit", "dimension": "temporal", "relationship_type": "implemented_by", "description": "Docker Local DB decision was implemented in commit a1b2c3d4e5f6."},
-            {"source_node_name": "Value-based Pricing", "target_node_name": "Update Pricing Rules Commit", "dimension": "temporal", "relationship_type": "implemented_by", "description": "Pricing tier configuration was updated in William codebase under commit f6e5d4c3b2a1."}
-        ]
-
-        evidence = []
-        # Find matching nodes for evidence links based on mock log ids
-        for log in raw_logs:
-            if "page_1" in log["id"]:
-                evidence.append({"node_name": "Ideal Customer Profile", "log_id": log["id"]})
-            elif "page_2" in log["id"]:
-                evidence.append({"node_name": "Value-based Pricing", "log_id": log["id"]})
-            elif "page_3" in log["id"]:
-                evidence.append({"node_name": "William", "log_id": log["id"]})
-            elif "commit_mock_1" in log["id"]:
-                evidence.append({"node_name": "Integrate Docker DB Commit", "log_id": log["id"]})
-            elif "commit_mock_2" in log["id"]:
-                evidence.append({"node_name": "Update Pricing Rules Commit", "log_id": log["id"]})
-            elif "drive_mock_1" in log["id"]:
-                evidence.append({"node_name": "Sarah Client Sync", "log_id": log["id"]})
-            elif "calendar_mock_1" in log["id"]:
-                evidence.append({"node_name": "Sarah Client Sync", "log_id": log["id"]})
-            elif "calendar_mock_2" in log["id"]:
-                evidence.append({"node_name": "Metaphor Brainstorming session", "log_id": log["id"]})
-
-        return {
-            "nodes_to_create": nodes,
-            "edges_to_create": edges,
-            "evidence_links": evidence
         }
 
 reflection_engine = ReflectionEngine()

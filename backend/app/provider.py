@@ -3,7 +3,7 @@ from typing import List, Optional
 import httpx
 from openai import AsyncOpenAI
 from anthropic import AsyncAnthropic
-from app.config import settings
+from app.core.config import settings
 
 logger = logging.getLogger("metaphor.provider")
 
@@ -29,10 +29,11 @@ class LLMProvider:
     async def generate_embedding(self, text: str) -> List[float]:
         """
         Generate 768-dimension embeddings using Gemini text-embedding-004.
+        Raises ValueError if GEMINI_API_KEY is not configured.
         """
         if not settings.GEMINI_API_KEY:
-            logger.warning("Mocking embedding generation because GEMINI_API_KEY is not set.")
-            return [0.0] * 768
+            logger.error("GEMINI_API_KEY is not set.")
+            raise ValueError("GEMINI_API_KEY environment variable is not configured.")
 
         try:
             import httpx
@@ -54,11 +55,12 @@ class LLMProvider:
 
     async def query_llm(self, prompt: str, system_prompt: str = "You are Metaphor, a context engine.", max_tokens: int = 4000, temperature: float = 0.0) -> str:
         """
-        Query Gemini 2.5 Flash for reasoning, parsing, and reflection tasks.
+        Query Gemini for reasoning, parsing, and reflection tasks.
+        Raises ValueError if GEMINI_API_KEY is not configured.
         """
         if not settings.GEMINI_API_KEY:
-            logger.warning("Mocking reasoning response because GEMINI_API_KEY is not set.")
-            return "{\"mock\": \"Please set GEMINI_API_KEY in backend/.env\"}"
+            logger.error("GEMINI_API_KEY is not set.")
+            raise ValueError("GEMINI_API_KEY environment variable is not configured.")
 
         try:
             import httpx

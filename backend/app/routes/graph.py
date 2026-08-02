@@ -415,23 +415,11 @@ async def resolve_clarification(
         clar.resolved_answer = req.selected_option
         session.add(clar)
 
-        # Custom logic for mock context: "Are Atlas and William related?"
-        if "Atlas" in clar.question_text and "William" in clar.question_text:
-            atlas_q = await session.exec(select(Node).where(Node.name == "Atlas"))
-            atlas_node = atlas_q.first()
-            william_q = await session.exec(select(Node).where(Node.name == "William"))
-            william_node = william_q.first()
-
-            if atlas_node and william_node and req.selected_option == "Products in one ecosystem":
-                new_edge = Edge(
-                    source_id=william_node.id,
-                    target_id=atlas_node.id,
-                    dimension="semantic",
-                    relationship_type="ecosystem_peer",
-                    metadata_json={"description": "Resolved via user clarification: Products in one ecosystem."},
-                    status="approved"
-                )
-                session.add(new_edge)
+        # Execute structural graph updates if target node IDs exist on the clarification object
+        if hasattr(clar, 'target_node_id') and clar.target_node_id:
+            from app.services.graph import GraphService
+            graph_svc = GraphService(session)
+            await graph_svc.classify_node(clar.target_node_id, req.selected_option)
 
         await session.commit()
         return {"status": "success", "message": "Clarification resolved successfully."}

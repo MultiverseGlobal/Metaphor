@@ -260,34 +260,33 @@ async def authorize_integration(
     
     if provider == "github":
         client_id = settings.GITHUB_CLIENT_ID
-        redirect_uri = f"{base_url}{settings.API_PREFIX}/integrations/github/callback"
         if not client_id:
-            return {"url": f"{redirect_uri}?code=mock_code_github&state={state_token}"}
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="GitHub OAuth Client ID is not configured on the server.")
+        redirect_uri = f"{base_url}{settings.API_PREFIX}/integrations/github/callback"
         auth_url = f"https://github.com/login/oauth/authorize?client_id={client_id}&redirect_uri={urllib.parse.quote(redirect_uri)}&state={state_token}&scope=repo"
         return {"url": auth_url}
         
     elif provider == "notion":
         client_id = settings.NOTION_CLIENT_ID
-        redirect_uri = f"{base_url}{settings.API_PREFIX}/integrations/notion/callback"
         if not client_id:
-            return {"url": f"{redirect_uri}?code=mock_code_notion&state={state_token}"}
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Notion OAuth Client ID is not configured on the server.")
+        redirect_uri = f"{base_url}{settings.API_PREFIX}/integrations/notion/callback"
         auth_url = f"https://api.notion.com/v1/oauth/authorize?client_id={client_id}&response_type=code&owner=user&redirect_uri={urllib.parse.quote(redirect_uri)}&state={state_token}"
         return {"url": auth_url}
         
     elif provider == "linear":
         client_id = settings.LINEAR_CLIENT_ID
-        redirect_uri = f"{base_url}{settings.API_PREFIX}/integrations/linear/callback"
         if not client_id:
-            return {"url": f"{redirect_uri}?code=mock_code_linear&state={state_token}"}
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Linear OAuth Client ID is not configured on the server.")
+        redirect_uri = f"{base_url}{settings.API_PREFIX}/integrations/linear/callback"
         auth_url = f"https://linear.app/oauth/authorize?client_id={client_id}&redirect_uri={urllib.parse.quote(redirect_uri)}&response_type=code&state={state_token}&scope=read"
         return {"url": auth_url}
         
     elif provider == "google":
         client_id = settings.GOOGLE_CLIENT_ID
-        redirect_uri = f"{base_url}{settings.API_PREFIX}/integrations/google/callback"
         if not client_id:
-            return {"url": f"{redirect_uri}?code=mock_code_google&state={state_token}"}
-        # We need access to Gmail (readonly) and Calendar (readonly)
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Google OAuth Client ID is not configured on the server.")
+        redirect_uri = f"{base_url}{settings.API_PREFIX}/integrations/google/callback"
         scopes = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly"
         auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?client_id={client_id}&redirect_uri={urllib.parse.quote(redirect_uri)}&response_type=code&state={state_token}&scope={urllib.parse.quote(scopes)}&access_type=offline&prompt=consent"
         return {"url": auth_url}

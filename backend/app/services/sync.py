@@ -45,24 +45,23 @@ class SyncEngine:
             # Fetch raw events
             raw_events = []
             if provider == "notion":
-                from app.integrations.notion import notion_ingestor
-                raw_events = await notion_ingestor.fetch_raw_events(limit)
-            elif provider == "gmail":
-                from app.integrations.gmail import gmail_ingestor
-                raw_events = await gmail_ingestor.fetch_raw_events(limit)
-            elif provider == "gcal":
-                from app.integrations.gcal import gcal_ingestor
-                raw_events = await gcal_ingestor.fetch_raw_events(limit)
+                from app.parsers.notion import NotionParser
+                raw_events = await NotionParser().fetch_documents()
             elif provider == "github":
-                import asyncio
-                await asyncio.sleep(1) # Simulate pulling from Github
-                raw_events = []
+                from app.parsers.github import GitHubParser
+                raw_events = await GitHubParser().fetch_documents()
+            elif provider in ["google", "gcal", "gmail"]:
+                from app.parsers.google_services import GoogleParser
+                raw_events = await GoogleParser().fetch_documents()
             elif provider == "linear":
-                import asyncio
-                await asyncio.sleep(1) # Simulate pulling from Linear
-                raw_events = []
+                from app.services.integrations.linear import fetch_linear_workspace
+                from app.config import settings
+                content = await fetch_linear_workspace(settings.LINEAR_CLIENT_SECRET)
+                if content.startswith("Failed"):
+                    raise RuntimeError(content)
+                raw_events = [{"id": str(uuid.uuid4()), "title": "Linear Sync", "content": content, "source": "linear"}]
             else:
-                raise ValueError(f"Unknown provider: {provider}")
+                raise ValueError(f"Unknown integration provider: {provider}")
 
             # Deduplicate and process
             items_processed = 0

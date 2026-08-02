@@ -67,87 +67,7 @@ interface MetaphorContextType {
 
 const MetaphorContext = createContext<MetaphorContextType | undefined>(undefined);
 
-// Initial Mock Data reflecting living context operating system (Atlas / generic terms cleaned up)
-const MOCK_CONNECTORS: MetaphorConnector[] = [
-  {
-    id: 'conn_gh',
-    name: 'GitHub',
-    source: 'github',
-    status: 'active',
-    healthScore: 100,
-    lastSync: '2 mins ago',
-    webhookStatus: 'operational',
-    pollingFrequency: 'Real-time Webhook',
-    eventsProcessedToday: 142,
-    knowledgeProduced: [
-      { label: 'Repositories', count: 8 },
-      { label: 'Commits', count: 284 },
-      { label: 'PRs Merged', count: 34 },
-      { label: 'Developers', count: 6 }
-    ]
-  },
-  {
-    id: 'conn_notion',
-    name: 'Notion Workspace',
-    source: 'notion',
-    status: 'active',
-    healthScore: 98,
-    lastSync: '5 mins ago',
-    webhookStatus: 'operational',
-    pollingFrequency: '5 mins',
-    eventsProcessedToday: 68,
-    knowledgeProduced: [
-      { label: 'Architecture Docs', count: 22 },
-      { label: 'Decision Logs', count: 14 },
-      { label: 'Roadmaps', count: 4 }
-    ]
-  },
-  {
-    id: 'conn_stripe',
-    name: 'Stripe Payments',
-    source: 'stripe',
-    status: 'active',
-    healthScore: 100,
-    lastSync: '12 mins ago',
-    webhookStatus: 'operational',
-    pollingFrequency: 'Real-time Webhook',
-    eventsProcessedToday: 89,
-    knowledgeProduced: [
-      { label: 'Revenue Events', count: 189 },
-      { label: 'Enterprise Accounts', count: 42 }
-    ]
-  },
-  {
-    id: 'conn_cal',
-    name: 'Google Calendar',
-    source: 'calendar',
-    status: 'active',
-    healthScore: 95,
-    lastSync: 'Just now',
-    webhookStatus: 'operational',
-    pollingFrequency: '1 min',
-    eventsProcessedToday: 18,
-    knowledgeProduced: [
-      { label: 'Meetings Tracked', count: 56 },
-      { label: 'Key Attendees', count: 18 }
-    ]
-  },
-  {
-    id: 'conn_gmail',
-    name: 'Gmail Communications',
-    source: 'gmail',
-    status: 'active',
-    healthScore: 92,
-    lastSync: '8 mins ago',
-    webhookStatus: 'operational',
-    pollingFrequency: '15 mins',
-    eventsProcessedToday: 31,
-    knowledgeProduced: [
-      { label: 'Partner Threads', count: 29 },
-      { label: 'Decisions Inferred', count: 7 }
-    ]
-  }
-];
+
 
 const INITIAL_ENTITIES: MetaphorEntity[] = [
   {
@@ -277,7 +197,36 @@ export const MetaphorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
   
   const [entities, setEntities] = useState<MetaphorEntity[]>(INITIAL_ENTITIES);
-  const [connectors] = useState<MetaphorConnector[]>(MOCK_CONNECTORS);
+  const [connectors, setConnectors] = useState<MetaphorConnector[]>([]);
+
+  useEffect(() => {
+    // Fetch real connected integrations from backend
+    const loadConnectors = async () => {
+      try {
+        const { fetchFromMetaphor } = await import('@/app/api');
+        const res = await fetchFromMetaphor('/integrations', undefined, 'GET');
+        if (res && res.integrations && Array.isArray(res.integrations)) {
+          const realConnectors: MetaphorConnector[] = res.integrations.map((integ: any) => ({
+            id: integ.id || `conn_${integ.provider}`,
+            name: integ.provider === 'github' ? 'GitHub' : integ.provider === 'notion' ? 'Notion Workspace' : integ.provider === 'linear' ? 'Linear' : integ.provider,
+            source: integ.provider,
+            status: integ.status || 'active',
+            healthScore: 100,
+            lastSync: 'Just now',
+            webhookStatus: 'operational',
+            pollingFrequency: 'Real-time Webhook',
+            eventsProcessedToday: 0,
+            knowledgeProduced: []
+          }));
+          setConnectors(realConnectors);
+        }
+      } catch (err) {
+        console.warn("Failed to load live connectors:", err);
+        setConnectors([]);
+      }
+    };
+    loadConnectors();
+  }, []);
   
   const [events, setEvents] = useState<ContextEvent[]>([
     EventNormalizer.normalize({

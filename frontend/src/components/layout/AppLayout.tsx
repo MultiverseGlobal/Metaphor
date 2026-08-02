@@ -15,6 +15,7 @@ import {
   ChevronDown, 
   ShieldCheck,
   Zap,
+  RefreshCw,
   Globe,
   Compass
 } from 'lucide-react';
@@ -115,14 +116,22 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Right System Health & Pulse Controls */}
         <div className="flex items-center space-x-4">
           
-          {/* Real-time Event Simulator Trigger */}
+          {/* Real-time Sync Trigger */}
           <button
-            onClick={() => addSimulatedEvent('github')}
-            className="hidden sm:flex items-center space-x-1.5 px-3 py-1 rounded-lg border border-border bg-surface-2/60 hover:bg-primary/10 hover:border-primary/40 text-xs font-mono text-muted-foreground hover:text-primary transition-all cursor-pointer"
-            title="Inject real-time living event into Layer 0 stream"
+            onClick={async () => {
+              try {
+                const { fetchFromMetaphor } = await import('@/app/api');
+                await fetchFromMetaphor('/sync/run-pull', { provider: 'github' }, 'POST');
+                alert("Triggered manual sync pull from GitHub.");
+              } catch (e) {
+                alert("Sync failed: " + e);
+              }
+            }}
+            className="hidden sm:flex items-center space-x-1.5 px-3 py-1 rounded-lg border border-subtle bg-surface-2 hover:bg-surface-1 text-xs font-mono text-muted hover:text-foreground transition-all cursor-pointer"
+            title="Trigger real-time sync pull"
           >
-            <Zap className="w-3 h-3 text-amber-400 animate-pulse" />
-            <span>Simulate Stream</span>
+            <RefreshCw className="w-3 h-3 text-foreground" />
+            <span>Sync Now</span>
           </button>
 
           {/* Living Ingestion Status */}
