@@ -112,17 +112,15 @@ export default function SynchronizationDashboard() {
               <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
               <h1 className="text-sm font-semibold text-muted uppercase tracking-widest">System Online</h1>
             </div>
-            <button 
-              onClick={handleSignOut}
-              className="flex items-center gap-2 text-xs font-medium text-muted hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-border-subtle hover:border-border-strong bg-surface-1 cursor-pointer"
-            >
-              <LogOut size={14} />
-              <span>Sign Out</span>
-            </button>
           </div>
           <p className="text-3xl text-foreground font-medium tracking-tight leading-snug mb-4">
-            {user ? `${user.name}, your knowledge model is synchronized.` : "Your knowledge model is synchronized."}
+            {user?.name && user.name !== "Supabase User" && user.name !== "Developer User"
+              ? `${user.name}, your knowledge model is synchronized.`
+              : user?.email
+              ? `${user.email.split("@")[0]}, your knowledge model is synchronized.`
+              : "Your knowledge model is synchronized."}
           </p>
+
           <p className="text-muted text-sm font-medium tracking-tight">
             Metaphor is currently maintaining {stats.node_count} nodes across {stats.edge_count} relational dimensions.
           </p>
