@@ -10,7 +10,9 @@ import { createClient } from "@/utils/supabase/client";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTarget = searchParams.get("redirect") || "/dashboard";
+  const isAlreadyOnboarded = typeof window !== "undefined" && (localStorage.getItem("metaphor_onboarded") === "true" || document.cookie.includes("metaphor_onboarded=true"));
+  const defaultTarget = isAlreadyOnboarded ? "/dashboard" : "/onboarding";
+  const redirectTarget = searchParams.get("redirect") || defaultTarget;
 
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -59,7 +61,6 @@ function LoginForm() {
         } else {
           router.push(redirectTarget);
         }
-      } else {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -74,6 +75,7 @@ function LoginForm() {
           setMessage("Account created! Check your email to confirm your account.");
           setLoading(false);
         }
+
       }
     } else {
       const { error } = await supabase.auth.signInWithOtp({

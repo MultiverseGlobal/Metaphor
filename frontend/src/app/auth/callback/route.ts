@@ -6,8 +6,11 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   
-  // if "next" is in param, use it as the redirect URL
-  const next = searchParams.get('next') ?? '/dashboard'
+  const cookieStore = await cookies()
+  const onboardedCookie = cookieStore.get('metaphor_onboarded')?.value
+  const defaultTarget = onboardedCookie === 'true' ? '/dashboard' : '/onboarding'
+  const next = searchParams.get('next') ?? defaultTarget
+
 
   if (code) {
     const cookieStore = await cookies()
