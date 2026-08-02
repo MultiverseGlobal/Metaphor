@@ -34,3 +34,20 @@ class IdentityService:
         stmt = select(Organization).join(OrganizationMember).where(OrganizationMember.user_id == user_id)
         result = await self.session.execute(stmt)
         return result.scalars().first()
+
+    async def get_or_create_default_user(self) -> User:
+        stmt = select(User).where(User.email == "dev@metaphor.local")
+        result = await self.session.execute(stmt)
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            user = User(
+                email="dev@metaphor.local",
+                name="Default Developer",
+                hashed_password="hashed_dev_password_123"
+            )
+            self.session.add(user)
+            await self.session.commit()
+            await self.session.refresh(user)
+            
+        return user

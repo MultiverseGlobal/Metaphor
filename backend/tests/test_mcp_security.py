@@ -109,10 +109,10 @@ async def test_mcp_strict_redirect_uri_validation():
 async def test_mcp_multi_tenant_isolation_all_resources_and_tools():
     async with async_session_maker() as session:
         # Create Org A & Org B
-        org_a = Organization(id=uuid.uuid4(), name="Org A")
-        org_b = Organization(id=uuid.uuid4(), name="Org B")
-        user_a = User(id=uuid.uuid4(), email="user_a@orga.com", organization_id=org_a.id)
-        user_b = User(id=uuid.uuid4(), email="user_b@orgb.com", organization_id=org_b.id)
+        org_a = Organization(id=uuid.uuid4(), name="Org A", slug=f"org-a-{uuid.uuid4().hex[:6]}")
+        org_b = Organization(id=uuid.uuid4(), name="Org B", slug=f"org-b-{uuid.uuid4().hex[:6]}")
+        user_a = User(id=uuid.uuid4(), email=f"user_a_{uuid.uuid4().hex[:6]}@orga.com", name="User A", hashed_password="pw")
+        user_b = User(id=uuid.uuid4(), email=f"user_b_{uuid.uuid4().hex[:6]}@orgb.com", name="User B", hashed_password="pw")
         session.add_all([org_a, org_b, user_a, user_b])
         await session.commit()
 
@@ -198,8 +198,8 @@ async def test_mcp_multi_tenant_isolation_all_resources_and_tools():
 @pytest.mark.asyncio
 async def test_mcp_rate_limiting_burst():
     async with async_session_maker() as session:
-        org = Organization(id=uuid.uuid4(), name="Rate Limit Org")
-        user = User(id=uuid.uuid4(), email="rl@test.com", organization_id=org.id)
+        org = Organization(id=uuid.uuid4(), name="Rate Limit Org", slug=f"rl-org-{uuid.uuid4().hex[:6]}")
+        user = User(id=uuid.uuid4(), email=f"rl_{uuid.uuid4().hex[:6]}@test.com", name="RL User", hashed_password="pw")
         session.add_all([org, user])
         await session.commit()
 
@@ -254,8 +254,8 @@ async def test_mcp_rate_limiting_burst():
 @pytest.mark.asyncio
 async def test_mcp_token_revocation_immediate_invalidation():
     async with async_session_maker() as session:
-        org = Organization(id=uuid.uuid4(), name="Revocation Org")
-        user = User(id=uuid.uuid4(), email="revoke@test.com", organization_id=org.id)
+        org = Organization(id=uuid.uuid4(), name="Revocation Org", slug=f"revoke-org-{uuid.uuid4().hex[:6]}")
+        user = User(id=uuid.uuid4(), email=f"revoke_{uuid.uuid4().hex[:6]}@test.com", name="Revoke User", hashed_password="pw")
         session.add_all([org, user])
         await session.commit()
 
