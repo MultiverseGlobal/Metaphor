@@ -8,7 +8,7 @@ from app.parsers.google_services import GoogleParser
 from app.parsers.notion import NotionParser
 from app.parsers.github import GitHubParser
 from app.provider import LLMProvider
-from app.config import settings
+from app.core.config import settings
 
 @pytest.mark.asyncio
 async def test_google_parser_raises_without_creds(monkeypatch):

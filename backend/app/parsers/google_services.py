@@ -26,11 +26,11 @@ class GoogleParser:
     async def fetch_documents(self) -> List[Dict[str, Any]]:
         """
         Fetch files from Google Drive and events from Google Calendar.
-        If service account is not configured, returns mock records.
+        Raises an explicit RuntimeError if credentials are not configured or fetching fails.
         """
         if not self.creds:
-            logger.info("Using mock Google Drive & Calendar data (credentials not configured).")
-            return self._get_mock_documents()
+            logger.error("Google Drive & Calendar integration is not configured.")
+            raise RuntimeError("Google Drive/Calendar integration is not configured or missing service account credentials.")
 
         documents = []
         try:
