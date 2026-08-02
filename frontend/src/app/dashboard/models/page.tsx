@@ -126,9 +126,12 @@ export default function ContextModelsPage() {
               </span>
               <span>Synced {model.lastSync}</span>
             </div>
+          </Card>
         ))}
-      </div>
+        </div>
       )}
+
+
 
 
       {/* New Model Modal */}

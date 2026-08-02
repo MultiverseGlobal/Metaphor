@@ -172,11 +172,12 @@ export default function IntegrationsPage() {
                     {isSyncing && <div className="w-3 h-3 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />}
                     {isSyncing ? "Syncing..." : "Sync Now"}
                   </button>
-              </div>
             </Card>
+          );
         })}
-      </div>
+        </div>
       )}
+
 
 
       {apiKey && (
