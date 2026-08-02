@@ -346,19 +346,25 @@ function OnboardingContent() {
     }
   };
 
+  const [isAnswering, setIsAnswering] = useState(false);
+
   const submitAmbiguityAnswer = () => {
+    if (isAnswering) return;
     const answerText = currentAnswer.trim();
     if (!answerText) return;
     
-    const currentQ = questions[resolvingIndex];
+    setIsAnswering(true);
+    const currentQ = questions[resolvingIndex] || "";
     setAnswers(prev => [...prev, answerText]);
     setCurrentAnswer("");
 
-    // Instant UI transition
+    // Bound check resolvingIndex strictly against questions.length
     if (resolvingIndex < questions.length - 1) {
       setResolvingIndex(prev => prev + 1);
+      setTimeout(() => setIsAnswering(false), 250);
     } else {
       setPhase("complete");
+      setIsAnswering(false);
     }
     
     // Save to context lore in background asynchronously
@@ -622,6 +628,13 @@ function OnboardingContent() {
 
   // ── PHASE: RESOLVING ────────────────────────────────────────────────────────
   if (phase === "resolving") {
+    if (resolvingIndex >= questions.length) {
+      setPhase("complete");
+      return null;
+    }
+
+    const currentQuestionText = questions[resolvingIndex] || "";
+
     return (
       <div className="min-h-screen w-full bg-background flex font-sans animate-in fade-in duration-700">
         
@@ -680,7 +693,7 @@ function OnboardingContent() {
             </div>
 
             <p className="text-3xl font-medium tracking-tight text-foreground mb-8 leading-snug">
-              {questions[resolvingIndex]}
+              {currentQuestionText}
             </p>
 
             <div className="flex items-center gap-4 border-b border-border-strong pb-3 transition-colors focus-within:border-foreground">
