@@ -253,7 +253,7 @@ async def integration_callback(
     provider: str,
     code: str,
     state: str,
-    request: Request,
+    request: Request = None,
     session: AsyncSession = Depends(get_session)
 ):
     from app.core.config import settings
