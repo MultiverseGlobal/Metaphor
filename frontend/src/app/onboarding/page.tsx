@@ -1051,10 +1051,11 @@ function OnboardingContent() {
                   onClick={() => {
                     handleCopyConfig(activeAiModal, mcpSnippets[activeAiModal].snippet);
                     const urlMap: Record<string, string> = {
-                      ChatGPT: "https://chatgpt.com/",
+                      ChatGPT: process.env.NEXT_PUBLIC_CHATGPT_GPT_URL || "https://chatgpt.com/",
                       Claude: "https://claude.ai/",
                       Cursor: "https://cursor.com/"
                     };
+
                     window.open(urlMap[activeAiModal] || "https://chatgpt.com/", "_blank");
                   }}
                   className="w-full py-3.5 px-4 bg-foreground text-background font-semibold text-xs rounded-xl hover:opacity-95 active:scale-[0.99] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
