@@ -4,7 +4,8 @@ import React, { useState, useEffect, Suspense } from "react";
 
 import { useSearchParams } from "next/navigation";
 import { Shield, Check, Lock, ExternalLink, ArrowRight, CheckCircle2 } from "lucide-react";
-import { fetchFromMetaphor } from "@/app/api";
+import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
+import { ChatGPTIcon, ClaudeIcon, CursorIcon } from "@/components/ui/BrandIcons";
 
 function OAuthAuthorizeContent() {
   const searchParams = useSearchParams();
@@ -62,14 +63,21 @@ function OAuthAuthorizeContent() {
         
         {/* Brand Header & Visual Connection */}
         <div className="flex items-center justify-center gap-4 py-2">
-          <div className="w-12 h-12 rounded-2xl bg-surface-2 border border-border-subtle flex items-center justify-center text-foreground font-semibold text-lg shadow-xs">
-            ⚡
+          <div className="w-12 h-12 rounded-2xl bg-surface-2 border border-border-subtle flex items-center justify-center text-foreground shadow-xs">
+            <MetaphorLogo size={24} />
           </div>
           <ArrowRight className="w-5 h-5 text-muted" />
-          <div className="w-12 h-12 rounded-2xl bg-foreground text-background font-semibold text-lg flex items-center justify-center shadow-xs">
-            {clientName.charAt(0)}
+          <div className="w-12 h-12 rounded-2xl bg-surface-2 border border-border-subtle flex items-center justify-center text-foreground shadow-xs">
+            {clientId.toLowerCase().includes("claude") ? (
+              <ClaudeIcon className="w-6 h-6 text-foreground" />
+            ) : clientId.toLowerCase().includes("cursor") ? (
+              <CursorIcon className="w-6 h-6 text-foreground" />
+            ) : (
+              <ChatGPTIcon className="w-6 h-6 text-foreground" />
+            )}
           </div>
         </div>
+
 
         <div className="text-center space-y-1">
           <h1 className="text-xl font-semibold tracking-tight text-foreground">
