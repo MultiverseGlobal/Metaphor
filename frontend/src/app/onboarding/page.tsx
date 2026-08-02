@@ -307,16 +307,7 @@ function OnboardingContent() {
   );
   const [workspaceInput, setWorkspaceInput] = useState("Metaphor OS");
 
-  // Check URL query parameters for OAuth success redirect
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const success = params.get("success");
-    if (success) {
-      setConnections(prev => ({ ...prev, [success]: true }));
-      window.history.replaceState({}, document.title, window.location.pathname);
-      setPhase("connect");
-    }
-  }, []);
+
 
 
   const handleEmailAuth = async () => {
