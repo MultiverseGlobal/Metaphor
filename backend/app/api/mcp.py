@@ -192,18 +192,19 @@ async def oauth_token_exchange(
     session: AsyncSession = Depends(get_session)
 ):
     try:
+        raw_bytes = await request.body()
         content_type = request.headers.get("content-type", "")
         if "application/x-www-form-urlencoded" in content_type:
-            form = await request.form()
-            grant_type = form.get("grant_type", "authorization_code")
-            code = form.get("code")
-            redirect_uri = form.get("redirect_uri")
-            client_id = form.get("client_id")
-            code_verifier = form.get("code_verifier")
-            refresh_token = form.get("refresh_token")
+            parsed = urllib.parse.parse_qs(raw_bytes.decode("utf-8"))
+            grant_type = parsed.get("grant_type", ["authorization_code"])[0]
+            code = parsed.get("code", [None])[0]
+            redirect_uri = parsed.get("redirect_uri", [None])[0]
+            client_id = parsed.get("client_id", [None])[0]
+            code_verifier = parsed.get("code_verifier", [None])[0]
+            refresh_token = parsed.get("refresh_token", [None])[0]
         else:
             try:
-                body = await request.json()
+                body = json.loads(raw_bytes.decode("utf-8")) if raw_bytes else {}
             except Exception:
                 body = {}
             grant_type = body.get("grant_type", "authorization_code")
