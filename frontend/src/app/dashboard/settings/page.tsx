@@ -20,11 +20,12 @@ export default function SettingsPage() {
   useEffect(() => {
     async function loadSettings() {
       try {
+        const storedName = localStorage.getItem("metaphor_user_name");
         const user = await fetchFromMetaphor("/auth/me", undefined, "GET", false, true);
         if (user) {
-          const cleanName = user.name && user.name !== "Supabase User" && user.name !== "Developer User"
+          const cleanName = storedName || (user.name && user.name !== "Supabase User" && user.name !== "Developer User"
             ? user.name
-            : user.email ? user.email.split("@")[0] : "multiverseglobals";
+            : user.email ? user.email.split("@")[0] : "multiverseglobals");
           setUserName(cleanName);
           setUserEmail(user.email || "");
 
@@ -93,9 +94,11 @@ export default function SettingsPage() {
   const handleSaveName = async () => {
     if (!userName.trim()) return;
     setSavingName(true);
+    const targetName = userName.trim();
+    localStorage.setItem("metaphor_user_name", targetName);
     try {
       await fetchFromMetaphor("/auth/me", {
-        name: userName.trim(),
+        name: targetName,
         settings
       }, "PUT");
       setNameSaved(true);
@@ -107,6 +110,7 @@ export default function SettingsPage() {
       setSavingName(false);
     }
   };
+
 
 
 

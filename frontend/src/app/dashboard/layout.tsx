@@ -27,14 +27,17 @@ export default function LinearLayout({
         const supabase = createClient();
         const { data: { session } } = await supabase.auth.getSession();
         const sbUser = session?.user;
-        const fallbackName = sbUser?.user_metadata?.full_name || sbUser?.email?.split("@")[0] || "Developer User";
+        const storedCustomName = typeof window !== "undefined" ? localStorage.getItem("metaphor_user_name") : null;
+        const fallbackName = sbUser?.user_metadata?.full_name || sbUser?.email?.split("@")[0] || "multiverseglobals";
         const fallbackEmail = sbUser?.email || "workspace@metaphor.os";
 
         const isGenericName = !data?.name || data.name === "Developer User" || data.name === "Supabase User";
+        const resolvedName = storedCustomName || (!isGenericName ? data.name : fallbackName);
         setUser({
-          name: !isGenericName ? data.name : fallbackName,
+          name: resolvedName,
           email: data?.email || fallbackEmail
         });
+
 
       } catch (e) {
         console.error("Failed to fetch user in layout:", e);
