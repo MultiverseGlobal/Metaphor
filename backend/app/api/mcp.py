@@ -172,10 +172,9 @@ async def oauth_authorize_get(
     state: Optional[str] = Query(None),
     code_challenge: Optional[str] = Query(None),
     code_challenge_method: str = Query("S256"),
-    session: AsyncSession = Depends(get_session)
 ):
-    # If hit by browser, redirect to Metaphor Frontend Authorization Consent Page
-    frontend_base = getattr(settings, "FRONTEND_URL", None) or str(request.base_url).rstrip("/")
+    # Always redirect user to Metaphor Frontend Authorization Consent Page
+    frontend_base = getattr(settings, "FRONTEND_URL", None) or "https://metaphor-three.vercel.app"
     params = urllib.parse.urlencode({
         "client_id": client_id,
         "redirect_uri": redirect_uri,
@@ -185,36 +184,8 @@ async def oauth_authorize_get(
         "scope": scope
     })
     consent_url = f"{frontend_base}/oauth/authorize?{params}"
-    
-    accept_header = request.headers.get("accept", "")
-    if "text/html" in accept_header or "application/xhtml+xml" in accept_header:
-        return RedirectResponse(consent_url, status_code=307)
+    return RedirectResponse(consent_url, status_code=302)
 
-    # For direct API authorization, issue auth code directly for default workspace identity
-    identity_svc = IdentityService(session)
-    org = await identity_svc.get_or_create_default_organization()
-    user = await identity_svc.get_or_create_default_user()
-
-    raw_code = f"mtph_code_{uuid.uuid4().hex}"
-    code_entry = MCPOAuthAuthCode(
-        code_hash=hash_token(raw_code),
-        client_id=client_id,
-        organization_id=org.id,
-        user_id=user.id,
-        redirect_uri=redirect_uri,
-        code_challenge=code_challenge or "",
-        code_challenge_method=code_challenge_method,
-        expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
-        used=False
-    )
-    session.add(code_entry)
-    await session.commit()
-
-    callback_params = {"code": raw_code}
-    if state:
-        callback_params["state"] = state
-    target_redirect = f"{redirect_uri}?{urllib.parse.urlencode(callback_params)}"
-    return RedirectResponse(target_redirect, status_code=302)
 
 
 @router.post("/oauth/authorize")
