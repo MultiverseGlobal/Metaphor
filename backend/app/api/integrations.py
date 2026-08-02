@@ -144,10 +144,13 @@ async def list_user_integrations(
     result = await session.execute(stmt)
     org_member = result.scalars().first()
 
-    if not org_member:
-        return []
+    if org_member:
+        stmt_int = select(Integration).where(
+            (Integration.user_id == user.id) | (Integration.organization_id == org_member.organization_id)
+        )
+    else:
+        stmt_int = select(Integration).where(Integration.user_id == user.id)
 
-    stmt_int = select(Integration).where(Integration.organization_id == org_member.organization_id)
     result_int = await session.execute(stmt_int)
     integrations = result_int.scalars().all()
 

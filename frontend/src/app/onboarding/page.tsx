@@ -153,7 +153,13 @@ export default function OnboardingPage() {
     const successProvider = searchParams?.get("success");
     if (successProvider) {
       setPhase("connect");
-      setConnections(prev => ({ ...prev, [successProvider]: true }));
+      setConnections(prev => {
+        const updated = { ...prev, [successProvider]: true };
+        if (typeof window !== "undefined") {
+          localStorage.setItem("metaphor_connected_sources", JSON.stringify(updated));
+        }
+        return updated;
+      });
       const providerName = successProvider.charAt(0).toUpperCase() + successProvider.slice(1);
       setToastMessage(`✓ ${providerName} connected successfully!`);
     }
@@ -166,8 +172,18 @@ export default function OnboardingPage() {
     }
   }, [phase, resolvingIndex]);
 
-  // Load existing active integrations on mount (so OAuth redirects preserve connected status)
+  // Load existing active integrations on mount (from localStorage + backend)
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("metaphor_connected_sources");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setConnections(prev => ({ ...parsed, ...prev }));
+        } catch (e) {}
+      }
+    }
+
     async function loadActiveIntegrations() {
       try {
         const data = await fetchFromMetaphor("/integrations");
@@ -178,7 +194,13 @@ export default function OnboardingPage() {
               map[item.provider] = true;
             }
           });
-          setConnections(prev => ({ ...map, ...prev }));
+          setConnections(prev => {
+            const updated = { ...prev, ...map };
+            if (typeof window !== "undefined") {
+              localStorage.setItem("metaphor_connected_sources", JSON.stringify(updated));
+            }
+            return updated;
+          });
         }
       } catch (e) {
         // Silent catch during initial auth check

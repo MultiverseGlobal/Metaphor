@@ -26,8 +26,8 @@ export async function fetchFromMetaphor(endpoint: string, body?: any, method?: s
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
       token = session.access_token;
-    } else {
-      throw new Error("No active Supabase session found! Please make sure you are signed in.");
+    } else if (!apiKey) {
+      throw new Error("No active Supabase session or API key found! Please make sure you are signed in.");
     }
   }
   
