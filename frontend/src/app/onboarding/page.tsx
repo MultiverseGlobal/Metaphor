@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-import { ArrowRight, CheckCircle2, ChevronRight, Database, LayoutTemplate, Zap, Mail } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronRight, Database, LayoutTemplate, Zap, Mail, Copy, Check, X, Terminal, ExternalLink } from "lucide-react";
 import { fetchFromMetaphor } from "@/app/api";
 import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
 import { createClient } from "@/utils/supabase/client";
@@ -144,6 +144,9 @@ function OnboardingContent() {
 
   // Complete State
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeAiModal, setActiveAiModal] = useState<"ChatGPT" | "Claude" | "Cursor" | null>(null);
+  const [aiConnected, setAiConnected] = useState<Record<string, boolean>>({});
+  const [copiedSnippet, setCopiedSnippet] = useState(false);
 
   // Check URL query parameters for OAuth success redirect (e.g. ?success=notion)
   useEffect(() => {
@@ -734,8 +737,41 @@ function OnboardingContent() {
 
   // ── PHASE: COMPLETE ─────────────────────────────────────────────────────────
   if (phase === "complete") {
+    const mcpSnippets: Record<string, { title: string; instruction: string; snippet: string }> = {
+      ChatGPT: {
+        title: "Connect ChatGPT Custom GPT",
+        instruction: "1. Open ChatGPT > Explore GPTs > Create > Actions\n2. Import OpenAPI Schema using your Metaphor URL below:",
+        snippet: "https://metaphor-three.vercel.app/api/v1/context/mcp"
+      },
+      Claude: {
+        title: "Connect Claude Desktop MCP",
+        instruction: "Add this MCP server configuration to your claude_desktop_config.json file:",
+        snippet: JSON.stringify({
+          mcpServers: {
+            metaphor: {
+              command: "npx",
+              args: ["-y", "@metaphor/mcp-server", "--token=mtph_live_enterprise_context"]
+            }
+          }
+        }, null, 2)
+      },
+      Cursor: {
+        title: "Connect Cursor IDE MCP",
+        instruction: "1. Open Cursor Settings > Features > MCP Servers\n2. Add a new MCP Server using command below:",
+        snippet: 'npx @metaphor/mcp-server --token="mtph_live_enterprise_context"'
+      }
+    };
+
+    const handleCopyConfig = (name: string, text: string) => {
+      navigator.clipboard.writeText(text);
+      setCopiedSnippet(true);
+      setAiConnected(prev => ({ ...prev, [name]: true }));
+      setToastMessage(`✓ Connected ${name}! MCP configuration copied to clipboard.`);
+      setTimeout(() => setCopiedSnippet(false), 2000);
+    };
+
     return (
-      <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in fade-in duration-700">
+      <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in fade-in duration-700 relative">
         <div className="w-full max-w-xl flex flex-col text-center items-center">
 
           <MetaphorLogo size={48} className="mb-8 text-foreground" />
@@ -743,29 +779,51 @@ function OnboardingContent() {
           <h1 className="text-3xl font-medium tracking-tight text-foreground mb-4">
             Your workspace is ready.
           </h1>
-          <p className="text-muted text-sm mb-16 max-w-md">
-            Metaphor has mapped your entire digital workspace. You can now inject this understanding into your AI consumers.
+          <p className="text-muted text-sm mb-12 max-w-md">
+            Metaphor has mapped your entire digital workspace. Connect your preferred AI tools to inject this understanding directly into your workflow.
           </p>
 
-          <div className="flex items-center gap-6 mb-16 w-full justify-center">
+          <div className="flex items-center gap-6 mb-12 w-full justify-center">
             {[
               { name: "ChatGPT", icon: <ChatGPTIcon /> },
               { name: "Claude", icon: <ClaudeIcon /> },
               { name: "Cursor", icon: <CursorIcon /> }
-            ].map((ai) => (
-              <div key={ai.name} className="flex flex-col items-center gap-3">
-                <button className="w-16 h-16 rounded-2xl bg-surface-1 border border-border-subtle hover:border-border-strong hover:bg-surface-2 transition-all flex items-center justify-center">
-                  <div className="text-muted">{ai.icon}</div>
-                </button>
-                <span className="text-xs font-medium text-foreground">Connect {ai.name}</span>
-              </div>
-            ))}
+            ].map((ai) => {
+              const isConn = !!aiConnected[ai.name];
+              return (
+                <div key={ai.name} className="flex flex-col items-center gap-3">
+                  <button 
+                    onClick={() => setActiveAiModal(ai.name as any)}
+                    className={`w-16 h-16 rounded-2xl border transition-all flex items-center justify-center relative group cursor-pointer ${
+                      isConn 
+                        ? "bg-surface-2 border-foreground/40 shadow-sm" 
+                        : "bg-surface-1 border-border-subtle hover:border-border-strong hover:bg-surface-2"
+                    }`}
+                  >
+                    <div className={isConn ? "text-foreground" : "text-muted group-hover:text-foreground transition-colors"}>
+                      {ai.icon}
+                    </div>
+                    {isConn && (
+                      <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center shadow-xs">
+                        <Check className="w-3 h-3 stroke-[3]" />
+                      </div>
+                    )}
+                  </button>
+                  <button 
+                    onClick={() => setActiveAiModal(ai.name as any)}
+                    className="text-xs font-medium text-foreground hover:underline cursor-pointer flex items-center gap-1"
+                  >
+                    {isConn ? "Connected" : `Connect ${ai.name}`}
+                  </button>
+                </div>
+              );
+            })}
           </div>
 
           <button
             onClick={finalize}
             disabled={isSubmitting}
-            className="px-8 py-4 bg-foreground text-background text-sm font-medium rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm flex items-center gap-2"
+            className="px-8 py-4 bg-foreground text-background text-sm font-medium rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm flex items-center gap-2 cursor-pointer"
           >
             {isSubmitting ? (
               <>
@@ -777,6 +835,67 @@ function OnboardingContent() {
             )}
           </button>
         </div>
+
+        {/* Modal Overlay for Consumer AI Tool Integration */}
+        {activeAiModal && (
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="w-full max-w-lg bg-surface-1 border border-border-strong rounded-2xl p-6 shadow-2xl relative text-left">
+              <button 
+                onClick={() => setActiveAiModal(null)}
+                className="absolute top-4 right-4 p-2 text-muted hover:text-foreground rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-surface-2 border border-border-subtle flex items-center justify-center text-foreground">
+                  {activeAiModal === "ChatGPT" && <ChatGPTIcon />}
+                  {activeAiModal === "Claude" && <ClaudeIcon />}
+                  {activeAiModal === "Cursor" && <CursorIcon />}
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-foreground">
+                    {mcpSnippets[activeAiModal].title}
+                  </h3>
+                  <p className="text-xs text-muted">Model Context Protocol (MCP) Integration</p>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted whitespace-pre-line leading-relaxed mb-4">
+                {mcpSnippets[activeAiModal].instruction}
+              </p>
+
+              <div className="relative group mb-6">
+                <pre className="p-4 bg-background border border-border-subtle rounded-xl text-xs font-mono text-foreground overflow-x-auto max-h-48 leading-relaxed">
+                  <code>{mcpSnippets[activeAiModal].snippet}</code>
+                </pre>
+                <button
+                  onClick={() => handleCopyConfig(activeAiModal, mcpSnippets[activeAiModal].snippet)}
+                  className="absolute top-3 right-3 px-3 py-1.5 bg-surface-2 hover:bg-foreground hover:text-background rounded-lg text-xs font-medium text-foreground transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  {copiedSnippet ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedSnippet ? "Copied!" : "Copy Config"}</span>
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted flex items-center gap-1.5">
+                  <Terminal className="w-3.5 h-3.5" /> Ready for live querying
+                </span>
+                <button
+                  onClick={() => {
+                    setAiConnected(prev => ({ ...prev, [activeAiModal]: true }));
+                    setActiveAiModal(null);
+                    setToastMessage(`✓ ${activeAiModal} connected to Metaphor workspace.`);
+                  }}
+                  className="px-5 py-2.5 bg-foreground text-background text-xs font-medium rounded-xl hover:opacity-90 transition-opacity cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
