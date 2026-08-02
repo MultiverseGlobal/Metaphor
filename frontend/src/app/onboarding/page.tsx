@@ -148,6 +148,15 @@ function OnboardingContent() {
 
   // Check URL query parameters for OAuth success redirect (e.g. ?success=notion)
   useEffect(() => {
+    async function checkAuthSession() {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setPhase("connect");
+      }
+    }
+    checkAuthSession();
+
     const successProvider = searchParams?.get("success");
     if (successProvider) {
       setPhase("connect");
@@ -162,6 +171,7 @@ function OnboardingContent() {
       setToastMessage(`✓ ${providerName} connected successfully!`);
     }
   }, [searchParams]);
+
 
   // Focus input when resolving starts
   useEffect(() => {
