@@ -75,8 +75,17 @@ export async function fetchFromMetaphor(endpoint: string, body?: any, method?: s
   
   if (!res.ok) {
     const errText = await res.text();
+    if (res.status === 401 && (errText.includes("JWT does not exist") || errText.includes("validation error") || errText.includes("invalid or user not found"))) {
+      if (typeof window !== 'undefined') {
+        const supabase = createClient();
+        await supabase.auth.signOut().catch(() => {});
+        localStorage.clear();
+        document.cookie = "metaphor_onboarded=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+      }
+    }
     throw new Error(`Backend request failed (${res.status}): ${errText}`);
   }
+
 
   // Clear cache on mutating operations
   if (reqMethod !== "GET") {

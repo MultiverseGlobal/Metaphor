@@ -368,10 +368,16 @@ function OnboardingContent() {
       }
     } catch (e: any) {
       console.error(`Failed to start ${id} OAuth flow:`, e);
-      alert(`Error starting ${id} integration: ${e.message || e}`);
+      if (e.message?.includes("401") || e.message?.includes("JWT does not exist") || e.message?.includes("validation error")) {
+        setToastMessage("Session expired or user deleted. Please sign in to connect sources.");
+        setPhase("auth");
+      } else {
+        setToastMessage(`Error starting ${id} integration. Please try again.`);
+      }
       setConnecting(null);
     }
   };
+
 
   const [isAnswering, setIsAnswering] = useState(false);
 
