@@ -11,14 +11,22 @@ export default function SettingsPage() {
     passiveIngestion: true,
     clarificationNotifications: false
   });
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [savingName, setSavingName] = useState(false);
+  const [nameSaved, setNameSaved] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadSettings() {
       try {
         const user = await fetchFromMetaphor("/auth/me");
-        if (user.settings) {
-          setSettings(prev => ({ ...prev, ...user.settings }));
+        if (user) {
+          setUserName(user.name || "");
+          setUserEmail(user.email || "");
+          if (user.settings) {
+            setSettings(prev => ({ ...prev, ...user.settings }));
+          }
         }
       } catch (e) {
         console.error("Failed to load settings", e);
@@ -38,7 +46,7 @@ export default function SettingsPage() {
       await fetchFromMetaphor("/auth/me", {
         name: user.name,
         settings: newSettings
-      });
+      }, "PUT");
     } catch (e) {
       console.error("Failed to save settings", e);
     }
@@ -53,10 +61,63 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-2 flex items-center gap-2">
           <Settings className="w-6 h-6 text-primary" /> Settings
         </h1>
-        <p className="text-sm text-muted">Manage your OS preferences and ingestion behaviors.</p>
+        <p className="text-sm text-muted">Manage your OS preferences and profile identity.</p>
       </header>
 
-      <div className="space-y-8">
+      <div className="space-y-8 mb-12">
+        
+        {/* Profile & Identity */}
+        <section>
+          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 border-b border-border-subtle pb-2">Profile & Identity</h2>
+          <Card className="p-6 space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">
+                Display Name
+              </label>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  placeholder="Enter your display name (e.g. SUDO)"
+                  className="flex-1 px-3.5 py-2 rounded-xl bg-surface-1 border border-border-subtle focus:border-primary text-sm text-foreground focus:outline-none transition-colors"
+                />
+                <button
+                  onClick={async () => {
+                    setSavingName(true);
+                    try {
+                      await fetchFromMetaphor("/auth/me", { name: userName }, "PUT");
+                      setNameSaved(true);
+                      setTimeout(() => setNameSaved(false), 2000);
+                      window.location.reload();
+                    } catch (e) {
+                      console.error("Failed to save name:", e);
+                    } finally {
+                      setSavingName(false);
+                    }
+                  }}
+                  disabled={savingName}
+                  className="px-4 py-2 bg-foreground text-background hover:opacity-90 font-medium text-xs rounded-xl transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {savingName ? "Saving..." : nameSaved ? "Saved!" : "Save Name"}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">
+                Account Email
+              </label>
+              <input
+                type="text"
+                value={userEmail}
+                disabled
+                className="w-full px-3.5 py-2 rounded-xl bg-surface-2 border border-border-subtle text-sm text-muted cursor-not-allowed opacity-75"
+              />
+            </div>
+          </Card>
+        </section>
+
         
         {/* Appearance */}
         <section>

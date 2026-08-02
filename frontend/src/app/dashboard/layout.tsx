@@ -22,15 +22,25 @@ export default function LinearLayout({
       try {
         const { fetchFromMetaphor } = await import("@/app/api");
         const data = await fetchFromMetaphor("/auth/me");
-        if (data && data.name) {
-          setUser(data);
-        }
+        
+        const { createClient } = await import("@/utils/supabase/client");
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        const sbUser = session?.user;
+        const fallbackName = sbUser?.user_metadata?.full_name || sbUser?.email?.split("@")[0] || "Developer User";
+        const fallbackEmail = sbUser?.email || "workspace@metaphor.os";
+
+        setUser({
+          name: data?.name && data.name !== "Developer User" ? data.name : fallbackName,
+          email: data?.email || fallbackEmail
+        });
       } catch (e) {
         console.error("Failed to fetch user in layout:", e);
       }
     }
     fetchUser();
   }, []);
+
 
   return (
     <div className="flex h-screen w-screen bg-background overflow-hidden text-sm">
