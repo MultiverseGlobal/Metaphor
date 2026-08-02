@@ -75,6 +75,9 @@ class Settings(BaseSettings):
         frontend_url = os.getenv("FRONTEND_URL")
         if frontend_url and "localhost" not in frontend_url:
             return frontend_url.rstrip("/")
+        # Production deployment on Render / Vercel fallback
+        if os.getenv("RENDER") or os.getenv("VERCEL") or os.getenv("PORT"):
+            return "https://metaphor-backend.onrender.com"
         return v
 
     model_config = SettingsConfigDict(

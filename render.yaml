@@ -14,5 +14,7 @@ services:
         sync: false
       - key: API_PREFIX
         value: "/api/v1"
+      - key: BACKEND_URL
+        value: "https://metaphor-backend.onrender.com"
       - key: PYTHON_VERSION
         value: "3.10.12"

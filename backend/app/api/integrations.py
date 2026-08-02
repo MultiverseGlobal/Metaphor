@@ -172,11 +172,23 @@ async def check_integration_status(
 
 def get_base_url(request: Request | None = None) -> str:
     from app.core.config import settings
+    # 1. If BACKEND_URL in settings is valid and not localhost, use it
+    if settings.BACKEND_URL and "localhost" not in settings.BACKEND_URL and "127.0.0.1" not in settings.BACKEND_URL:
+        return settings.BACKEND_URL.rstrip('/')
+    
+    # 2. Check incoming request headers
     if request:
         forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host")
         forwarded_proto = request.headers.get("x-forwarded-proto", "https")
-        if forwarded_host and not ("localhost" in forwarded_host or "127.0.0.1" in forwarded_host):
-            return f"{forwarded_proto}://{forwarded_host}".rstrip('/')
+        if forwarded_host:
+            clean_host = forwarded_host.split(":")[0]
+            if clean_host not in ("localhost", "127.0.0.1", "0.0.0.0"):
+                return f"{forwarded_proto}://{forwarded_host}".rstrip('/')
+    
+    # 3. Cloud fallback for Render / Vercel
+    if os.getenv("RENDER") or os.getenv("VERCEL") or os.getenv("PORT"):
+        return "https://metaphor-backend.onrender.com"
+        
     return settings.BACKEND_URL.rstrip('/')
 
 @router.get("/{provider}/authorize")
