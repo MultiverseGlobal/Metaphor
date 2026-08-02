@@ -967,19 +967,27 @@ function OnboardingContent() {
                   className="absolute top-3 right-3 px-3 py-1.5 bg-surface-2 hover:bg-foreground hover:text-background rounded-lg text-xs font-medium text-foreground transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                 >
                   {copiedSnippet ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedSnippet ? "Copied!" : "Copy Config"}</span>
+                  <span>
+                    {copiedSnippet 
+                      ? (activeAiModal === "Claude" ? "Copied JSON!" : "Copied URL!") 
+                      : (activeAiModal === "Claude" ? "Copy Config JSON" : "Copy Server URL")
+                    }
+                  </span>
                 </button>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted flex items-center gap-1.5">
-                  <Terminal className="w-3.5 h-3.5" /> Ready for live querying
+                  <Terminal className="w-3.5 h-3.5 text-foreground" />
+                  {aiConnected[activeAiModal] 
+                    ? "MCP Server Endpoint Authorized" 
+                    : "Ready for Client Setup"}
                 </span>
                 <button
                   onClick={() => {
                     setAiConnected(prev => ({ ...prev, [activeAiModal]: true }));
                     setActiveAiModal(null);
-                    setToastMessage(`✓ ${activeAiModal} connected to Metaphor workspace.`);
+                    setToastMessage(`✓ ${activeAiModal} connection configured.`);
                   }}
                   className="px-5 py-2.5 bg-foreground text-background text-xs font-medium rounded-xl hover:opacity-90 transition-opacity cursor-pointer"
                 >
