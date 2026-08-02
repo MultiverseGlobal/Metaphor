@@ -4,8 +4,10 @@ import React, { useEffect, useState } from "react";
 import { Key, Copy, Check, Terminal, ExternalLink, Shield, Plus, Lock, Trash2, Activity } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { fetchFromMetaphor } from "@/app/api";
+import { ChatGPTIcon, ClaudeIcon, CursorIcon } from "@/components/ui/BrandIcons";
 
 type McpToken = {
+
   id: string;
   preview: string;
   client_id: string;
@@ -108,7 +110,90 @@ export default function ApiAccessPage() {
       </header>
 
       <div className="space-y-8 pb-32">
-        
+        {/* 1-Click AI Client Connectors */}
+
+        <Card noPadding className="overflow-hidden">
+          <div className="p-6 border-b border-border-subtle bg-surface-1/50 flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-medium text-foreground mb-1">Connect External AI Assistants</h2>
+              <p className="text-xs text-muted">Add Metaphor OS as a Remote MCP server to any AI client after onboarding.</p>
+            </div>
+          </div>
+          
+          <div className="p-6 bg-surface-1 grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            {/* ChatGPT */}
+            <div className="p-4 rounded-xl border border-border-subtle bg-surface-2/40 flex flex-col justify-between space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-surface-1 border border-border-subtle text-foreground">
+                  <ChatGPTIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">ChatGPT</h3>
+                  <span className="text-[11px] text-muted">Custom MCP Connector</span>
+                </div>
+              </div>
+              <p className="text-xs text-muted leading-relaxed">
+                In ChatGPT Settings &rarr; Plugins &rarr; Add Custom Connector, paste:
+              </p>
+              <button
+                onClick={() => handleCopy("chatgpt_copy", "https://metaphor-backend.onrender.com/api/v1/mcp")}
+                className="w-full py-2 bg-surface-1 border border-border-subtle hover:border-strong text-foreground text-xs font-medium rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                {copiedId === "chatgpt_copy" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedId === "chatgpt_copy" ? "Copied URL!" : "Copy ChatGPT URL"}</span>
+              </button>
+            </div>
+
+            {/* Claude Desktop */}
+            <div className="p-4 rounded-xl border border-border-subtle bg-surface-2/40 flex flex-col justify-between space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-surface-1 border border-border-subtle text-foreground">
+                  <ClaudeIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Claude Desktop</h3>
+                  <span className="text-[11px] text-muted">claude_desktop_config.json</span>
+                </div>
+              </div>
+              <p className="text-xs text-muted leading-relaxed">
+                Add to your Claude config file under `mcpServers.metaphor`:
+              </p>
+              <button
+                onClick={() => handleCopy("claude_copy", JSON.stringify({ mcpServers: { metaphor: { url: "https://metaphor-backend.onrender.com/api/v1/mcp" } } }, null, 2))}
+                className="w-full py-2 bg-surface-1 border border-border-subtle hover:border-strong text-foreground text-xs font-medium rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                {copiedId === "claude_copy" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedId === "claude_copy" ? "Copied Config!" : "Copy Claude Config"}</span>
+              </button>
+            </div>
+
+            {/* Cursor IDE */}
+            <div className="p-4 rounded-xl border border-border-subtle bg-surface-2/40 flex flex-col justify-between space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-surface-1 border border-border-subtle text-foreground">
+                  <CursorIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Cursor IDE</h3>
+                  <span className="text-[11px] text-muted">.cursor/mcp.json</span>
+                </div>
+              </div>
+              <p className="text-xs text-muted leading-relaxed">
+                Add to Cursor Features &rarr; MCP Servers setting:
+              </p>
+              <button
+                onClick={() => handleCopy("cursor_copy", "https://metaphor-backend.onrender.com/api/v1/mcp")}
+                className="w-full py-2 bg-surface-1 border border-border-subtle hover:border-strong text-foreground text-xs font-medium rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                {copiedId === "cursor_copy" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedId === "cursor_copy" ? "Copied URL!" : "Copy Cursor URL"}</span>
+              </button>
+            </div>
+
+          </div>
+        </Card>
+
         {/* Server Endpoint Card */}
         <Card noPadding className="overflow-hidden">
           <div className="p-6 border-b border-border-subtle bg-surface-1/50 flex items-center justify-between">
@@ -131,6 +216,7 @@ export default function ApiAccessPage() {
             </div>
           </div>
         </Card>
+
 
         
         {/* Connection Tokens */}

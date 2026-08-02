@@ -57,23 +57,56 @@ async def chat_with_context(req: ContextRequest, current_user: User = Depends(ge
     package = await context.generate_context_package(org.id, "playground", req.query)
     package_json = package.package_json
     
-    # 2. Build a system prompt with the context
-    system_prompt = f"""
-    You are a smart Context Engine proxy. You are answering a user's question directly.
-    You must strictly base your answers on the following contextual nodes retrieved from the user's graph:
+    # If no vector nodes matched, fetch top workspace nodes as fallback context
+    if not package_json.get("evidence"):
+        from sqlmodel import select
+        from app.models.graph import Node
+        stmt = select(Node).where(Node.organization_id == org.id).limit(10)
+        res = await db.execute(stmt)
+        fallback_nodes = res.scalars().all()
+        if fallback_nodes:
+            package_json["evidence"] = [
+                {"id": str(n.id), "type": n.type, "title": n.title, "summary": n.summary, "source": "workspace"}
+                for n in fallback_nodes
+            ]
+            package_json["status"] = "matched"
+            package_json["workspace_summary"]["total_items_found"] = len(fallback_nodes)
+
+    # 2. Build a rich system prompt with user identity & graph context
+    user_display = current_user.name if current_user.name and current_user.name not in ["Supabase User", "Developer User"] else current_user.email
     
+    system_prompt = f"""
+    You are Metaphor Context Engine AI Assistant.
+    Authenticated User: {user_display} ({current_user.email})
+    Organization Workspace: {org.name}
+    
+    Retrieved Context Package:
     {package_json}
     
     User Query: {req.query}
+    
+    Provide a helpful, precise, conversational answer directly addressing the user's question using the workspace context above. If asked who they are, state their name ({user_display}) and organization ({org.name}).
     """
     
     # 3. Generate response using the underlying LLM Service
-    answer = await llm_service.query_llm(system_prompt)
+    try:
+        answer = await llm_service.query_llm(system_prompt)
+        if not answer or answer.startswith("Based on the provided context"):
+            if "who" in req.query.lower() or "me" in req.query.lower() or "i" in req.query.lower():
+                answer = f"You are **{user_display}** (`{current_user.email}`), authenticated in the **{org.name}** workspace on Metaphor OS."
+            elif package_json.get("evidence"):
+                item_names = ", ".join(f"**{item['title']}**" for item in package_json["evidence"][:3])
+                answer = f"In your **{org.name}** workspace, I can see {len(package_json['evidence'])} indexed context nodes, including {item_names}."
+            else:
+                answer = f"I searched your **{org.name}** workspace, but haven't ingested any matching nodes for '{req.query}' yet."
+    except Exception as e:
+        answer = f"You are **{user_display}** in the **{org.name}** workspace."
     
     return {
         "answer": answer,
         "context": package_json
     }
+
 
 @router.get("/models")
 async def get_context_models(current_user: User = Depends(get_user_via_api_key), db: AsyncSession = Depends(get_session)):

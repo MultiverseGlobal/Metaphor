@@ -56,7 +56,8 @@ export default function ContextModelsPage() {
         name: newName,
         description: newDesc,
         node_types: newTypes
-      });
+      }, "POST");
+
       setIsModalOpen(false);
       setNewName("");
       setNewDesc("");
