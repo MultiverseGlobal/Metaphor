@@ -55,13 +55,22 @@ export default function LinearLayout({
   return (
     <div className="flex h-screen w-screen bg-background overflow-hidden text-sm">
       
-      {/* Polished Sidebar */}
+      {/* Mobile Backdrop Overlay */}
+      {isSidebarOpen && (
+        <div 
+          onClick={() => setIsSidebarOpen(false)}
+          className="md:hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
+        />
+      )}
+
+      {/* Responsive Sidebar Drawer */}
       <div 
-        className={`flex flex-col bg-surface-2/30 border-r border-border-subtle ease-in-out ${
-          isSidebarOpen ? "w-64" : "w-0 opacity-0 overflow-hidden"
+        className={`flex flex-col bg-surface-1 border-r border-border-subtle ease-in-out z-50 fixed md:static inset-y-0 left-0 h-full ${
+          isSidebarOpen ? "w-64 opacity-100 translate-x-0" : "w-0 opacity-0 -translate-x-full md:translate-x-0 overflow-hidden"
         }`}
         style={{ transition: 'all var(--transition-fast)' }}
       >
+
         {/* Workspace Header */}
         <div className="h-14 flex items-center px-6 mt-2 mb-2 font-semibold text-foreground tracking-tight">
           <MetaphorLogo size={20} className="mr-3" />

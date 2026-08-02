@@ -364,7 +364,7 @@ function OnboardingContent() {
       if (res && res.url) {
         window.location.href = res.url;
       } else {
-        setConnecting(null);
+        setToastMessage(`Connecting ${id}... (Redirecting to OAuth)`);
       }
     } catch (e: any) {
       console.error(`Failed to start ${id} OAuth flow:`, e);
@@ -374,9 +374,11 @@ function OnboardingContent() {
       } else {
         setToastMessage(`Error starting ${id} integration. Please try again.`);
       }
-      setConnecting(null);
+    } finally {
+      setTimeout(() => setConnecting(null), 1200);
     }
   };
+
 
 
   const [isAnswering, setIsAnswering] = useState(false);
