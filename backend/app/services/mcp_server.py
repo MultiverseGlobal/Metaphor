@@ -130,15 +130,56 @@ async def read_mcp_resource(uri: str, organization_id: uuid.UUID, session: Async
 # ── Tenant-Isolated Read-Only Tools Resolvers ──────────────────────────────────
 async def list_mcp_tools() -> List[Dict[str, Any]]:
     return [
-        {"name": "search_context", "description": "Semantic context search across workspace memory.", "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}},
-        {"name": "retrieve_documents", "description": "Lookup workspace documentation.", "inputSchema": {"type": "object", "properties": {"limit": {"type": "integer", "default": 10}}}},
-        {"name": "find_related", "description": "Find connected graph relationships for an entity.", "inputSchema": {"type": "object", "properties": {"entity_name": {"type": "string"}}, "required": ["entity_name"]}},
-        {"name": "explain_architecture", "description": "Retrieve architectural decisions & design rules.", "inputSchema": {"type": "object", "properties": {}}},
-        {"name": "answer_from_workspace", "description": "High-confidence workspace answer using Context Engine.", "inputSchema": {"type": "object", "properties": {"question": {"type": "string"}}, "required": ["question"]}},
-        {"name": "get_project", "description": "Get detailed breakdown of a workspace project.", "inputSchema": {"type": "object", "properties": {"project_name": {"type": "string"}}, "required": ["project_name"]}},
-        {"name": "resolve_entity", "description": "Disambiguate an ambiguous entity in the workspace.", "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}},
-        {"name": "list_recent_changes", "description": "List latest commits, decisions, and ingested events.", "inputSchema": {"type": "object", "properties": {}}},
+        {
+            "name": "search_context",
+            "description": "Semantic context search across workspace memory.",
+            "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
+            "annotations": {"readOnly": True, "destructive": False}
+        },
+        {
+            "name": "retrieve_documents",
+            "description": "Lookup workspace documentation.",
+            "inputSchema": {"type": "object", "properties": {"limit": {"type": "integer", "default": 10}}},
+            "annotations": {"readOnly": True, "destructive": False}
+        },
+        {
+            "name": "find_related",
+            "description": "Find connected graph relationships for an entity.",
+            "inputSchema": {"type": "object", "properties": {"entity_name": {"type": "string"}}, "required": ["entity_name"]},
+            "annotations": {"readOnly": True, "destructive": False}
+        },
+        {
+            "name": "explain_architecture",
+            "description": "Retrieve architectural decisions & design rules.",
+            "inputSchema": {"type": "object", "properties": {}},
+            "annotations": {"readOnly": True, "destructive": False}
+        },
+        {
+            "name": "answer_from_workspace",
+            "description": "High-confidence workspace answer using Context Engine.",
+            "inputSchema": {"type": "object", "properties": {"question": {"type": "string"}}, "required": ["question"]},
+            "annotations": {"readOnly": True, "destructive": False}
+        },
+        {
+            "name": "get_project",
+            "description": "Get detailed breakdown of a workspace project.",
+            "inputSchema": {"type": "object", "properties": {"project_name": {"type": "string"}}, "required": ["project_name"]},
+            "annotations": {"readOnly": True, "destructive": False}
+        },
+        {
+            "name": "resolve_entity",
+            "description": "Disambiguate an ambiguous entity in the workspace.",
+            "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
+            "annotations": {"readOnly": True, "destructive": False}
+        },
+        {
+            "name": "list_recent_changes",
+            "description": "List latest commits, decisions, and ingested events.",
+            "inputSchema": {"type": "object", "properties": {}},
+            "annotations": {"readOnly": True, "destructive": False}
+        },
     ]
+
 
 async def call_mcp_tool(name: str, arguments: Dict[str, Any], organization_id: uuid.UUID, session: AsyncSession) -> Dict[str, Any]:
     # Every tool query strictly filters by organization_id

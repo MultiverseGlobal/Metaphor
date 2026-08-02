@@ -68,6 +68,60 @@ async def oauth_protected_resource_metadata(request: Request):
     }
 
 
+# ── RFC 7591 Dynamic Client Registration (DCR) & CIMD ──────────────────────────
+class RegisterClientRequest(BaseModel):
+    client_name: str = "Consumer AI Client"
+    redirect_uris: List[str] = ["https://chatgpt.com/aip/plugin-123/oauth/callback", "https://claude.ai/oauth/callback"]
+    grant_types: List[str] = ["authorization_code"]
+    response_types: List[str] = ["code"]
+    token_endpoint_auth_method: str = "none"
+
+
+@router.post("/oauth/register")
+async def oauth_register_client(
+    payload: RegisterClientRequest,
+    session: AsyncSession = Depends(get_session)
+):
+    identity_svc = IdentityService(session)
+    org = await identity_svc.get_or_create_default_organization()
+
+    client_id = f"mcp_client_{uuid.uuid4().hex}"
+    client_obj = MCPOAuthClient(
+        client_id=client_id,
+        client_name=payload.client_name,
+        redirect_uris_json={"uris": payload.redirect_uris},
+        grant_types_json={"types": payload.grant_types},
+        organization_id=org.id
+    )
+    session.add(client_obj)
+    await session.commit()
+
+    return {
+        "client_id": client_id,
+        "client_name": payload.client_name,
+        "redirect_uris": payload.redirect_uris,
+        "grant_types": payload.grant_types,
+        "response_types": payload.response_types,
+        "token_endpoint_auth_method": payload.token_endpoint_auth_method
+    }
+
+
+@router.get("/client-metadata.json")
+async def client_id_metadata_document(request: Request):
+    base_url = str(request.base_url).rstrip("/")
+    return {
+        "client_id": f"{base_url}/client-metadata.json",
+        "client_name": "Metaphor OS Remote MCP",
+        "client_uri": base_url,
+        "logo_uri": f"{base_url}/logo.png",
+        "redirect_uris": ["https://chatgpt.com/aip/plugin-123/oauth/callback", "https://claude.ai/oauth/callback"],
+        "grant_types": ["authorization_code"],
+        "response_types": ["code"],
+        "token_endpoint_auth_method": "none"
+    }
+
+
+
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
