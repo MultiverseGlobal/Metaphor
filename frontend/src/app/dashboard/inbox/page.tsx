@@ -27,40 +27,33 @@ export default function InboxPage() {
     fetchInbox();
   }, []);
 
+  const getProcessedNodeIds = (): string[] => {
+    if (typeof window === "undefined") return [];
+    try {
+      return JSON.parse(localStorage.getItem("metaphor_processed_nodes") || "[]");
+    } catch {
+      return [];
+    }
+  };
+
+  const markNodesAsProcessed = (items: (string | undefined)[]) => {
+    if (typeof window === "undefined") return;
+    const valid = items.filter(Boolean) as string[];
+    const existing = getProcessedNodeIds();
+    const updated = Array.from(new Set([...existing, ...valid]));
+    localStorage.setItem("metaphor_processed_nodes", JSON.stringify(updated));
+  };
+
   const fetchInbox = async () => {
     setLoading(true);
     try {
       const data = await fetchFromMetaphor("/graph/inbox");
-      if (data && data.nodes && data.nodes.length > 0) {
-        setNodes(data.nodes);
+      const processed = getProcessedNodeIds();
+      if (data && Array.isArray(data.nodes)) {
+        const remaining = data.nodes.filter((n: any) => !processed.includes(n.id) && !processed.includes(n.title));
+        setNodes(remaining);
       } else {
-        // High-signal baseline inbox items if empty
-        setNodes([
-          {
-            id: "inbox-1",
-            title: "Atlas Platform Architecture",
-            type: "PROJECT",
-            summary: "A software platform developed to assist business operations and intelligence routing. Integrates with Metaphor Context Engine.",
-            confidence: 0.98,
-            created_at: new Date().toISOString()
-          },
-          {
-            id: "inbox-2",
-            title: "Metaphor-OS Remote MCP Server",
-            type: "CONCEPT",
-            summary: "A next-gen context engine operating system component connecting external LLM clients via OAuth 2.1 PKCE.",
-            confidence: 0.95,
-            created_at: new Date().toISOString()
-          },
-          {
-            id: "inbox-3",
-            title: "Linear Design Tokens Enforcement",
-            type: "RULE",
-            summary: "System design constraint enforcing 8pt spatial baseline grid and semantic design token lockdown across all components.",
-            confidence: 0.88,
-            created_at: new Date().toISOString()
-          }
-        ]);
+        setNodes([]);
       }
     } catch (e) {
       console.error("Failed to fetch inbox:", e);
@@ -71,8 +64,11 @@ export default function InboxPage() {
 
   // Optimistic UI mutation for fast 0ms feel
   const handleAction = async (nodeId: string, action: "approve" | "reject") => {
+    const nodeObj = nodes.find(n => n.id === nodeId);
     setActionLoading(nodeId);
     setNodes((prev) => prev.filter((n) => n.id !== nodeId));
+    markNodesAsProcessed([nodeId, nodeObj?.title]);
+
     try {
       await fetchFromMetaphor(`/graph/nodes/${nodeId}/${action}`, undefined, "POST");
     } catch (e) {
@@ -86,8 +82,10 @@ export default function InboxPage() {
   const handleBatchAction = async (action: "approve" | "reject") => {
     setBatching(true);
     const targetIds = filteredNodes.map(n => n.id);
+    const targetTitles = filteredNodes.map(n => n.title);
     setNodes(prev => prev.filter(n => !targetIds.includes(n.id)));
-    
+    markNodesAsProcessed([...targetIds, ...targetTitles]);
+
     try {
       await Promise.all(
         targetIds.map(id => fetchFromMetaphor(`/graph/nodes/${id}/${action}`, undefined, "POST").catch(() => {}))
@@ -98,6 +96,7 @@ export default function InboxPage() {
       setBatching(false);
     }
   };
+
 
   const filteredNodes = useMemo(() => {
     return nodes.filter(n => {
