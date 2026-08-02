@@ -271,16 +271,16 @@ async def oauth_token_exchange(
             "scope": "read:workspace"
         }
 
-    elif payload.grant_type == "refresh_token":
-        if not payload.refresh_token:
+    elif grant_type == "refresh_token":
+        if not refresh_token:
             raise HTTPException(status_code=400, detail="Missing refresh_token.")
         
-        rf_hash = hash_token(payload.refresh_token)
+        rf_hash = hash_token(refresh_token)
         stmt = select(MCPOAuthToken).where(MCPOAuthToken.refresh_token_hash == rf_hash, MCPOAuthToken.revoked_at == None)
         res = await session.execute(stmt)
         token_obj = res.scalar_one_or_none()
         
-        if not token_obj or (token_obj.refresh_expires_at and token_obj.refresh_expires_at < datetime.utcnow()):
+        if not token_obj or is_expired(token_obj.refresh_expires_at):
             raise HTTPException(status_code=400, detail="Invalid or expired refresh token.")
         
         # Rotate refresh token
@@ -290,8 +290,8 @@ async def oauth_token_exchange(
         token_obj.token_hash = hash_token(new_access_token)
         token_obj.refresh_token_hash = hash_token(new_refresh_token)
         token_obj.preview = f"{new_access_token[:12]}...{new_access_token[-4:]}"
-        token_obj.expires_at = datetime.utcnow() + timedelta(hours=1)
-        token_obj.refresh_expires_at = datetime.utcnow() + timedelta(days=30)
+        token_obj.expires_at = now_utc() + timedelta(hours=1)
+        token_obj.refresh_expires_at = now_utc() + timedelta(days=30)
         
         session.add(token_obj)
         await session.commit()

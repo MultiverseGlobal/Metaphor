@@ -47,10 +47,14 @@ token_payload = urllib.parse.urlencode({
     "code_verifier": "test_challenge"
 }).encode()
 
-r_tok = urllib.request.Request(f"{base}/oauth/token", data=token_payload, headers={"Content-Type": "application/x-www-form-urlencoded"})
-tok_res = json.loads(urllib.request.urlopen(r_tok).read())
-access_token = tok_res["access_token"]
-print("[4/5] Token Exchange OK. Access Token Minted:", access_token[:24] + "...")
+try:
+    r_tok = urllib.request.Request(f"{base}/oauth/token", data=token_payload, headers={"Content-Type": "application/x-www-form-urlencoded"})
+    tok_res = json.loads(urllib.request.urlopen(r_tok).read())
+    access_token = tok_res["access_token"]
+    print("[4/5] Token Exchange OK. Access Token Minted:", access_token[:24] + "...")
+except urllib.error.HTTPError as e:
+    print("[4/5] Token Exchange Failed:", e.code, e.read().decode("utf-8"))
+    exit(1)
 
 # 5. Execute MCP Initialize call with Bearer token
 mcp_payload = json.dumps({
