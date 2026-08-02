@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header, status
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, RedirectResponse
 from pydantic import BaseModel, Field
 from sqlmodel import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -164,7 +164,7 @@ async def oauth_authorize(
     if state:
         redirect_url += f"&state={state}"
         
-    return JSONResponse(status_code=200, content={"redirect_to": redirect_url, "code": raw_code})
+    return RedirectResponse(url=redirect_url, status_code=302)
 
 
 # ── OAuth 2.1 Token Exchange & Refresh Endpoint ──────────────────────────────
