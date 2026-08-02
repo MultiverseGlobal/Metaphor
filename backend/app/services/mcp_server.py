@@ -124,7 +124,7 @@ async def read_mcp_resource(uri: str, organization_id: uuid.UUID, session: Async
         return {"uri": uri, "contents": [{"text": json.dumps([{"id": str(n.id), "title": n.title, "summary": n.summary, "properties": n.properties} for n in nodes], indent=2)}]}
 
     else:
-        raise HTTPException(status_code=404, detail=f"Resource '{uri}' not found.")
+        raise HTTPException(404, detail=f"Resource '{uri}' not found.")
 
 
 # ── Tenant-Isolated Read-Only Tools Resolvers ──────────────────────────────────
@@ -197,7 +197,7 @@ async def call_mcp_tool(name: str, arguments: Dict[str, Any], organization_id: u
         return {"content": [{"type": "text", "text": json.dumps([{"title": n.title, "updated_at": str(n.updated_at)} for n in nodes], indent=2)}]}
 
     else:
-        raise HTTPException(status_code=404, detail=f"Tool '{name}' not found.")
+        raise HTTPException(404, detail=f"Tool '{name}' not found.")
 
 
 # ── Tenant-Isolated Prompts Resolvers ──────────────────────────────────────────
@@ -241,4 +241,4 @@ async def get_mcp_prompt(name: str, arguments: Dict[str, Any], organization_id: 
             ]
         }
     else:
-        raise HTTPException(status_code=404, detail=f"Prompt '{name}' not found.")
+        raise HTTPException(404, detail=f"Prompt '{name}' not found.")
