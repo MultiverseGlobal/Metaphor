@@ -26,6 +26,9 @@ export default function SettingsPage() {
           setUserEmail(user.email || "");
           if (user.settings) {
             setSettings(prev => ({ ...prev, ...user.settings }));
+            if (user.settings.theme) {
+              applyTheme(user.settings.theme);
+            }
           }
         }
       } catch (e) {
@@ -37,20 +40,63 @@ export default function SettingsPage() {
     loadSettings();
   }, []);
 
+  const applyTheme = (themeName: string) => {
+    const root = document.documentElement;
+    if (themeName === "dark") {
+      root.classList.add("dark");
+      root.setAttribute("data-theme", "dark");
+    } else if (themeName === "light") {
+      root.classList.remove("dark");
+      root.setAttribute("data-theme", "light");
+    } else {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (prefersDark) {
+        root.classList.add("dark");
+        root.setAttribute("data-theme", "dark");
+      } else {
+        root.classList.remove("dark");
+        root.setAttribute("data-theme", "light");
+      }
+    }
+    localStorage.setItem("metaphor_theme", themeName);
+  };
+
   const updateSetting = async (key: string, value: any) => {
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
+
+    if (key === "theme") {
+      applyTheme(value);
+    }
     
     try {
-      const user = await fetchFromMetaphor("/auth/me");
       await fetchFromMetaphor("/auth/me", {
-        name: user.name,
+        name: userName,
         settings: newSettings
       }, "PUT");
     } catch (e) {
       console.error("Failed to save settings", e);
     }
   };
+
+  const handleSaveName = async () => {
+    if (!userName.trim()) return;
+    setSavingName(true);
+    try {
+      await fetchFromMetaphor("/auth/me", {
+        name: userName.trim(),
+        settings
+      }, "PUT");
+      setNameSaved(true);
+      setTimeout(() => setNameSaved(false), 2000);
+      window.dispatchEvent(new Event("user-profile-updated"));
+    } catch (e) {
+      console.error("Failed to save name:", e);
+    } finally {
+      setSavingName(false);
+    }
+  };
+
 
   if (loading) return null;
 
@@ -83,24 +129,13 @@ export default function SettingsPage() {
                   className="flex-1 px-3.5 py-2 rounded-xl bg-surface-1 border border-border-subtle focus:border-primary text-sm text-foreground focus:outline-none transition-colors"
                 />
                 <button
-                  onClick={async () => {
-                    setSavingName(true);
-                    try {
-                      await fetchFromMetaphor("/auth/me", { name: userName }, "PUT");
-                      setNameSaved(true);
-                      setTimeout(() => setNameSaved(false), 2000);
-                      window.location.reload();
-                    } catch (e) {
-                      console.error("Failed to save name:", e);
-                    } finally {
-                      setSavingName(false);
-                    }
-                  }}
+                  onClick={handleSaveName}
                   disabled={savingName}
                   className="px-4 py-2 bg-foreground text-background hover:opacity-90 font-medium text-xs rounded-xl transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {savingName ? "Saving..." : nameSaved ? "Saved!" : "Save Name"}
                 </button>
+
               </div>
             </div>
 

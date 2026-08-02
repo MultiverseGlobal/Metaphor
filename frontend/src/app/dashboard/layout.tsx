@@ -39,7 +39,12 @@ export default function LinearLayout({
       }
     }
     fetchUser();
+
+    const handleProfileUpdate = () => fetchUser();
+    window.addEventListener("user-profile-updated", handleProfileUpdate);
+    return () => window.removeEventListener("user-profile-updated", handleProfileUpdate);
   }, []);
+
 
 
   return (
