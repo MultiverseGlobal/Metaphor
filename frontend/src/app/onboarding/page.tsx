@@ -773,16 +773,10 @@ function OnboardingContent() {
         ]
       },
       Claude: {
-        title: "Connect Claude Desktop",
-        description: "Connect Claude Desktop via Remote MCP to reason over your complete workspace graph.",
-        instruction: "1. Open Claude Desktop > Settings > Developer\n2. Add Remote MCP Server configuration to your claude_desktop_config.json file:",
-        snippet: JSON.stringify({
-          mcpServers: {
-            metaphor: {
-              url: "https://metaphor-backend.onrender.com/api/v1/mcp"
-            }
-          }
-        }, null, 2),
+        title: "Connect Claude",
+        description: "Connect Claude via Remote MCP to reason over your complete workspace context graph.",
+        instruction: "1. Open Claude Settings > Connectors > Add custom connector.\n2. Name: Metaphor\n3. Remote MCP server URL: https://metaphor-backend.onrender.com/api/v1/mcp\n4. Advanced settings: Leave Client ID & Secret blank (auto-discovered).\n5. Click Add.",
+        snippet: "https://metaphor-backend.onrender.com/api/v1/mcp",
         capabilities: [
           "Perform architectural reviews",
           "Search documentation and decisions",
