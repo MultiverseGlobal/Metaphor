@@ -56,6 +56,22 @@ app.add_middleware(
 
 app.include_router(api_router, prefix=settings.API_PREFIX)
 
+@app.get("/.well-known/oauth-authorization-server")
+async def root_oauth_discovery(request: Request):
+    base_url = str(request.base_url).rstrip("/")
+    return {
+        "issuer": f"{base_url}/api/v1/mcp",
+        "authorization_endpoint": f"{base_url}/api/v1/mcp/oauth/authorize",
+        "token_endpoint": f"{base_url}/api/v1/mcp/oauth/token",
+        "revocation_endpoint": f"{base_url}/api/v1/mcp/oauth/revoke",
+        "registration_endpoint": f"{base_url}/api/v1/mcp/oauth/register",
+        "response_types_supported": ["code"],
+        "grant_types_supported": ["authorization_code", "refresh_token"],
+        "code_challenge_methods_supported": ["S256", "plain"],
+        "token_endpoint_auth_methods_supported": ["client_secret_post", "client_secret_basic", "none"],
+        "scopes_supported": ["read:workspace", "read:graph", "read:docs"]
+    }
+
 @app.get("/")
 async def root():
     return {"app": settings.APP_NAME, "status": "healthy", "version": "2.0.0"}

@@ -88,7 +88,7 @@ export default function ApiAccessPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const getMcpCommand = (preview: string) => `npx @metaphor/mcp-server --url="https://metaphor-three.vercel.app/api/v1/mcp"`;
+  const getMcpCommand = (preview: string) => `https://metaphor-backend.onrender.com/api/v1/mcp`;
 
   return (
     <div className="flex flex-col h-full bg-background animate-in fade-in duration-150 max-w-4xl mx-auto p-8 overflow-y-auto">

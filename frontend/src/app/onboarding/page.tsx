@@ -739,26 +739,25 @@ function OnboardingContent() {
   if (phase === "complete") {
     const mcpSnippets: Record<string, { title: string; instruction: string; snippet: string }> = {
       ChatGPT: {
-        title: "Connect ChatGPT Custom GPT",
-        instruction: "1. Open ChatGPT > Explore GPTs > Create > Actions\n2. Import OpenAPI Schema using your Metaphor URL below:",
-        snippet: "https://metaphor-three.vercel.app/api/v1/mcp"
+        title: "Connect ChatGPT via Remote MCP",
+        instruction: "1. Open ChatGPT > Settings > Apps & Connectors (Developer Mode)\n2. Click 'Add Custom MCP Server'\n3. Enter the Metaphor Remote MCP Server URL below:",
+        snippet: "https://metaphor-backend.onrender.com/api/v1/mcp"
       },
       Claude: {
-        title: "Connect Claude Desktop MCP",
-        instruction: "Add this MCP server configuration to your claude_desktop_config.json file:",
+        title: "Connect Claude Desktop via Remote MCP",
+        instruction: "1. Open Claude Desktop > Settings > Developer\n2. Add Remote MCP Server configuration to your claude_desktop_config.json file:",
         snippet: JSON.stringify({
           mcpServers: {
             metaphor: {
-              command: "npx",
-              args: ["-y", "@metaphor/mcp-server", "--url=https://metaphor-three.vercel.app/api/v1/mcp"]
+              url: "https://metaphor-backend.onrender.com/api/v1/mcp"
             }
           }
         }, null, 2)
       },
       Cursor: {
-        title: "Connect Cursor IDE MCP",
-        instruction: "1. Open Cursor Settings > Features > MCP Servers\n2. Add a new MCP Server using command below:",
-        snippet: 'npx @metaphor/mcp-server --url="https://metaphor-three.vercel.app/api/v1/mcp"'
+        title: "Connect Cursor IDE via Remote MCP",
+        instruction: "1. Open Cursor Settings > Features > MCP Servers\n2. Click '+ Add New MCP Server'\n3. Set Name: Metaphor, Type: SSE, Server URL:",
+        snippet: "https://metaphor-backend.onrender.com/api/v1/mcp/sse"
       }
     };
 
