@@ -770,70 +770,156 @@ function OnboardingContent() {
       setTimeout(() => setCopiedSnippet(false), 2000);
     };
 
+    const tools = [
+      {
+        name: "ChatGPT",
+        icon: <ChatGPTIcon />,
+        headline: "Bring your workspace into every conversation",
+        description: "Access project knowledge, documentation, and code context directly inside ChatGPT.",
+        benefits: ["Workspace Search", "Automatic Context", "Project References"]
+      },
+      {
+        name: "Claude",
+        icon: <ClaudeIcon />,
+        headline: "Deep reasoning with your workspace",
+        description: "Give Claude access to the same context graph for planning, writing, and analysis.",
+        benefits: ["Long-form Analysis", "Architecture Reviews", "Document Reasoning"]
+      },
+      {
+        name: "Cursor",
+        icon: <CursorIcon />,
+        headline: "Code with full project context",
+        description: "Surface architecture, documentation, and related repositories while you build.",
+        benefits: ["Code Context", "Architecture Lookup", "Related Documentation"]
+      }
+    ];
+
+    const upcomingTools = ["Gemini", "Windsurf", "VS Code", "Raycast", "Warp", "Obsidian"];
+
     return (
-      <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in fade-in duration-700 relative">
-        <div className="w-full max-w-xl flex flex-col text-center items-center">
+      <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-6 py-12 animate-in fade-in duration-700 relative">
+        <div className="w-full max-w-4xl flex flex-col items-center text-center">
 
-          <MetaphorLogo size={48} className="mb-8 text-foreground" />
+          <MetaphorLogo size={44} className="mb-6 text-foreground" />
 
-          <h1 className="text-3xl font-medium tracking-tight text-foreground mb-4">
+          <h1 className="text-3xl md:text-4xl font-medium tracking-tight text-foreground mb-3">
             Your workspace is ready.
           </h1>
-          <p className="text-muted text-sm mb-12 max-w-md">
-            Metaphor has mapped your entire digital workspace. Connect your preferred AI tools to inject this understanding directly into your workflow.
+          <p className="text-muted text-sm md:text-base max-w-xl leading-relaxed mb-12">
+            Metaphor has indexed and understood your workspace. Connect your AI tools to bring this context wherever you work — your projects, documentation, code, and decisions will be available without manually searching for them.
           </p>
 
-          <div className="flex items-center gap-6 mb-12 w-full justify-center">
-            {[
-              { name: "ChatGPT", icon: <ChatGPTIcon /> },
-              { name: "Claude", icon: <ClaudeIcon /> },
-              { name: "Cursor", icon: <CursorIcon /> }
-            ].map((ai) => {
+          {/* Section Heading */}
+          <div className="w-full text-left mb-6 flex items-center justify-between border-b border-border-subtle pb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground tracking-tight">Connect your AI workspace</h2>
+              <p className="text-xs text-muted">Bring Metaphor to your favorite tools to automatically inject project memory.</p>
+            </div>
+            <span className="text-[11px] font-mono text-muted uppercase tracking-wider bg-surface-1 px-3 py-1 rounded-full border border-border-subtle">
+              Optional Step
+            </span>
+          </div>
+
+          {/* 3 Benefit Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 w-full text-left">
+            {tools.map((ai) => {
               const isConn = !!aiConnected[ai.name];
               return (
-                <div key={ai.name} className="flex flex-col items-center gap-3">
-                  <button 
+                <div 
+                  key={ai.name} 
+                  className={`flex flex-col justify-between p-6 rounded-2xl border transition-all ${
+                    isConn 
+                      ? "bg-surface-2 border-foreground/30 shadow-sm" 
+                      : "bg-surface-1 border-border-subtle hover:border-border-strong"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-background border border-border-subtle flex items-center justify-center text-foreground">
+                        {ai.icon}
+                      </div>
+                      {isConn ? (
+                        <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                          <Check className="w-3 h-3 stroke-[2.5]" /> Connected
+                        </span>
+                      ) : (
+                        <span className="text-xs font-semibold text-foreground">{ai.name}</span>
+                      )}
+                    </div>
+
+                    <h3 className="text-sm font-semibold text-foreground mb-2 leading-snug">
+                      {ai.headline}
+                    </h3>
+                    <p className="text-xs text-muted leading-relaxed mb-6">
+                      {ai.description}
+                    </p>
+
+                    {/* Enablement Checklist */}
+                    <ul className="space-y-2 mb-6">
+                      {ai.benefits.map((b, idx) => (
+                        <li key={idx} className="flex items-center gap-2 text-xs text-foreground font-medium">
+                          <Check className="w-3.5 h-3.5 text-foreground shrink-0 stroke-[2.5]" />
+                          <span>{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <button
                     onClick={() => setActiveAiModal(ai.name as any)}
-                    className={`w-16 h-16 rounded-2xl border transition-all flex items-center justify-center relative group cursor-pointer ${
+                    className={`w-full py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                       isConn 
-                        ? "bg-surface-2 border-foreground/40 shadow-sm" 
-                        : "bg-surface-1 border-border-subtle hover:border-border-strong hover:bg-surface-2"
+                        ? "bg-surface-1 border border-border-subtle text-foreground hover:bg-background" 
+                        : "bg-foreground text-background hover:opacity-90 shadow-xs"
                     }`}
                   >
-                    <div className={isConn ? "text-foreground" : "text-muted group-hover:text-foreground transition-colors"}>
-                      {ai.icon}
-                    </div>
-                    {isConn && (
-                      <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center shadow-xs">
-                        <Check className="w-3 h-3 stroke-[3]" />
-                      </div>
-                    )}
-                  </button>
-                  <button 
-                    onClick={() => setActiveAiModal(ai.name as any)}
-                    className="text-xs font-medium text-foreground hover:underline cursor-pointer flex items-center gap-1"
-                  >
-                    {isConn ? "Connected" : `Connect ${ai.name}`}
+                    {isConn ? "Manage Connection" : `Connect ${ai.name}`}
                   </button>
                 </div>
               );
             })}
           </div>
 
-          <button
-            onClick={finalize}
-            disabled={isSubmitting}
-            className="px-8 py-4 bg-foreground text-background text-sm font-medium rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm flex items-center gap-2 cursor-pointer"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="w-4 h-4 rounded-full border-2 border-background border-t-transparent animate-spin" />
-                Synchronizing...
-              </>
-            ) : (
-              "Enter Workspace"
-            )}
-          </button>
+          {/* Upcoming Integrations Section */}
+          <div className="w-full bg-surface-1/60 border border-border-subtle rounded-2xl p-6 mb-10 text-left">
+            <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-4">
+              More integrations coming soon
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {upcomingTools.map((t) => (
+                <span 
+                  key={t} 
+                  className="px-3 py-1.5 bg-background border border-border-subtle rounded-xl text-xs text-muted font-medium flex items-center gap-1.5"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted/40" />
+                  {t}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom helper & Main CTA */}
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-xs text-muted">
+              You can connect additional tools later from <span className="text-foreground font-medium">Settings</span>.
+            </p>
+
+            <button
+              onClick={finalize}
+              disabled={isSubmitting}
+              className="px-10 py-4 bg-foreground text-background text-sm font-medium rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 rounded-full border-2 border-background border-t-transparent animate-spin" />
+                  Synchronizing...
+                </>
+              ) : (
+                "Enter Workspace"
+              )}
+            </button>
+          </div>
+
         </div>
 
         {/* Modal Overlay for Consumer AI Tool Integration */}
