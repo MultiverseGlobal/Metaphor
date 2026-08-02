@@ -247,8 +247,19 @@ function OnboardingContent() {
               
               try {
                 const qRes = await fetchFromMetaphor("/context/generate-ambiguities", undefined, "POST");
-                if (qRes && qRes.questions && qRes.questions.length > 0) {
-                  setQuestions(qRes.questions);
+                if (qRes && Array.isArray(qRes.questions)) {
+                  if (qRes.questions.length > 0) {
+                    setQuestions(qRes.questions);
+                    setTimeout(() => {
+                      setPhase("resolving");
+                    }, 400);
+                  } else {
+                    // Graph is 100% structurally confident (0 questions needed)
+                    setTimeout(() => {
+                      setPhase("complete");
+                    }, 400);
+                  }
+                  break;
                 }
               } catch(e) {
                 console.warn("Failed to generate ambiguities:", e);

@@ -129,3 +129,49 @@ class GraphService:
         stmt = select(Node).where(Node.organization_id == org_id).order_by(Node.created_at.desc()).limit(limit)
         result = await self.session.execute(stmt)
         return result.scalars().all()
+
+    async def merge_nodes(self, primary_node_id: uuid.UUID, duplicate_node_id: uuid.UUID) -> Optional[Node]:
+        """Merges duplicate_node into primary_node, re-pointing all edges and archiving duplicate_node."""
+        primary = await self.get_node(primary_node_id)
+        duplicate = await self.get_node(duplicate_node_id)
+        if not primary or not duplicate or primary.id == duplicate.id:
+            return primary
+            
+        # Redirect all edges pointing to or from duplicate
+        stmt_from = select(Edge).where(Edge.from_node == duplicate.id)
+        res_from = await self.session.execute(stmt_from)
+        for edge in res_from.scalars().all():
+            edge.from_node = primary.id
+            self.session.add(edge)
+            
+        stmt_to = select(Edge).where(Edge.to_node == duplicate.id)
+        res_to = await self.session.execute(stmt_to)
+        for edge in res_to.scalars().all():
+            edge.to_node = primary.id
+            self.session.add(edge)
+            
+        # Archive duplicate node
+        duplicate.status = "archived"
+        duplicate.summary = (duplicate.summary or "") + f" [Merged into {primary.title}]"
+        self.session.add(duplicate)
+        
+        await self.session.commit()
+        await self.session.refresh(primary)
+        return primary
+
+    async def classify_node(self, node_id: uuid.UUID, new_type: str) -> Optional[Node]:
+        """Updates the structural entity classification type of a node."""
+        return await self.update_node(node_id, type=new_type)
+
+    async def set_authoritative_source(self, node_id: uuid.UUID, is_authoritative: bool = True) -> Optional[Node]:
+        """Marks a node as authoritative in the graph."""
+        node = await self.get_node(node_id)
+        if not node:
+            return None
+        md = NodeMetadata(node_id=node.id, key="is_authoritative", value=str(is_authoritative).lower())
+        self.session.add(md)
+        node.confidence = 1.0 if is_authoritative else node.confidence
+        self.session.add(node)
+        await self.session.commit()
+        await self.session.refresh(node)
+        return node
