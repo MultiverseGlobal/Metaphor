@@ -144,6 +144,27 @@ export default function OnboardingPage() {
     }
   }, [phase, resolvingIndex]);
 
+  // Load existing active integrations on mount (so OAuth redirects preserve connected status)
+  useEffect(() => {
+    async function loadActiveIntegrations() {
+      try {
+        const data = await fetchFromMetaphor("/integrations");
+        if (Array.isArray(data)) {
+          const map: Record<string, boolean> = {};
+          data.forEach((item: any) => {
+            if (item.status === "active" || item.status === "connected") {
+              map[item.provider] = true;
+            }
+          });
+          setConnections(prev => ({ ...map, ...prev }));
+        }
+      } catch (e) {
+        // Silent catch during initial auth check
+      }
+    }
+    loadActiveIntegrations();
+  }, []);
+
   // Handle Analysis Animation & Polling
   useEffect(() => {
     if (phase === "analyzing") {
