@@ -146,16 +146,16 @@ function OnboardingContent() {
     }
   }, [activeAiModal]);
 
-  // Check URL query parameters for OAuth success redirect (e.g. ?success=notion)
+  // Check URL query parameters & ensure onboarding starts at Step 1
   useEffect(() => {
-    async function checkAuthSession() {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setPhase("connect");
-      }
+    // If starting fresh onboarding, purge stale old account keys
+    const isReset = searchParams?.get("reset") === "true";
+    if (isReset && typeof window !== "undefined") {
+      localStorage.removeItem("metaphor_user_name");
+      localStorage.removeItem("metaphor_connected_sources");
+      localStorage.removeItem("metaphor_processed_nodes");
+      localStorage.removeItem("metaphor_onboarded");
     }
-    checkAuthSession();
 
     const successProvider = searchParams?.get("success");
     if (successProvider) {
@@ -169,8 +169,11 @@ function OnboardingContent() {
       });
       const providerName = successProvider.charAt(0).toUpperCase() + successProvider.slice(1);
       setToastMessage(`✓ ${providerName} connected successfully!`);
+    } else {
+      setPhase("auth");
     }
   }, [searchParams]);
+
 
 
   // Focus input when resolving starts

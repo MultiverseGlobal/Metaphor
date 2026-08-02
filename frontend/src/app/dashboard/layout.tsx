@@ -130,10 +130,13 @@ export default function LinearLayout({
                   } catch (e) {
                     console.error("Sign out error:", e);
                   }
-                  localStorage.removeItem("metaphor_api_key");
+                  if (typeof window !== "undefined") {
+                    localStorage.clear();
+                  }
                   document.cookie = "metaphor_onboarded=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
                   window.location.href = "/login";
                 }}
+
                 className="p-1 text-muted hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors cursor-pointer"
                 title="Sign Out"
               >
