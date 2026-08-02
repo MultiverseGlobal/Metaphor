@@ -127,6 +127,39 @@ async def context_drop(
     
     return {"status": "success", "message": "Context drop processed."}
 
+@router.get("", response_model=List[dict])
+@router.get("/", response_model=List[dict])
+async def list_user_integrations(
+    user: User = Depends(get_user_via_api_key),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Lists all active integrations for the authenticated user's organization.
+    """
+    from sqlmodel import select
+    from app.models.identity import OrganizationMember
+    from app.models.operations import Integration
+
+    stmt = select(OrganizationMember).where(OrganizationMember.user_id == user.id)
+    result = await session.execute(stmt)
+    org_member = result.scalars().first()
+
+    if not org_member:
+        return []
+
+    stmt_int = select(Integration).where(Integration.organization_id == org_member.organization_id)
+    result_int = await session.execute(stmt_int)
+    integrations = result_int.scalars().all()
+
+    return [
+        {
+            "id": str(i.id),
+            "provider": i.provider,
+            "status": i.status or "active"
+        }
+        for i in integrations
+    ]
+
 @router.get("/status")
 async def check_integration_status(
     user: User = Depends(get_user_via_api_key),
