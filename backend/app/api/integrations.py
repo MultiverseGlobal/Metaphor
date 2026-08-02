@@ -170,6 +170,15 @@ async def check_integration_status(
         "has_data": node is not None
     }
 
+def get_base_url(request: Request | None = None) -> str:
+    from app.core.config import settings
+    if request:
+        forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+        forwarded_proto = request.headers.get("x-forwarded-proto", "https")
+        if forwarded_host and not ("localhost" in forwarded_host or "127.0.0.1" in forwarded_host):
+            return f"{forwarded_proto}://{forwarded_host}".rstrip('/')
+    return settings.BACKEND_URL.rstrip('/')
+
 @router.get("/{provider}/authorize")
 async def authorize_integration(
     provider: str,
@@ -199,7 +208,7 @@ async def authorize_integration(
     }
     state_token = jwt.encode(state_payload, settings.SECRET_KEY, algorithm="HS256")
     
-    base_url = settings.BACKEND_URL.rstrip('/')
+    base_url = get_base_url(request)
     
     if provider == "github":
         client_id = settings.GITHUB_CLIENT_ID
@@ -244,6 +253,7 @@ async def integration_callback(
     provider: str,
     code: str,
     state: str,
+    request: Request,
     session: AsyncSession = Depends(get_session)
 ):
     from app.core.config import settings
@@ -263,6 +273,7 @@ async def integration_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state token")
 
     access_token = None
+    base_url = get_base_url(request)
     
     async with httpx.AsyncClient() as client:
         if provider == "github":
@@ -272,7 +283,7 @@ async def integration_callback(
                     "client_id": settings.GITHUB_CLIENT_ID,
                     "client_secret": settings.GITHUB_CLIENT_SECRET,
                     "code": code,
-                    "redirect_uri": f"{settings.BACKEND_URL}{settings.API_PREFIX}/integrations/github/callback"
+                    "redirect_uri": f"{base_url}{settings.API_PREFIX}/integrations/github/callback"
                 },
                 headers={"Accept": "application/json"}
             )
@@ -288,7 +299,7 @@ async def integration_callback(
                 json={
                     "grant_type": "authorization_code",
                     "code": code,
-                    "redirect_uri": f"{settings.BACKEND_URL}{settings.API_PREFIX}/integrations/notion/callback"
+                    "redirect_uri": f"{base_url}{settings.API_PREFIX}/integrations/notion/callback"
                 },
                 headers={
                     "Authorization": f"Basic {b64_auth}",
@@ -306,7 +317,7 @@ async def integration_callback(
                     "client_id": settings.LINEAR_CLIENT_ID,
                     "client_secret": settings.LINEAR_CLIENT_SECRET,
                     "code": code,
-                    "redirect_uri": f"{settings.BACKEND_URL}{settings.API_PREFIX}/integrations/linear/callback",
+                    "redirect_uri": f"{base_url}{settings.API_PREFIX}/integrations/linear/callback",
                     "grant_type": "authorization_code"
                 }
             )
@@ -321,7 +332,7 @@ async def integration_callback(
                     "client_id": settings.GOOGLE_CLIENT_ID,
                     "client_secret": settings.GOOGLE_CLIENT_SECRET,
                     "code": code,
-                    "redirect_uri": f"{settings.BACKEND_URL}{settings.API_PREFIX}/integrations/google/callback",
+                    "redirect_uri": f"{base_url}{settings.API_PREFIX}/integrations/google/callback",
                     "grant_type": "authorization_code"
                 }
             )

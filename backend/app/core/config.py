@@ -61,9 +61,20 @@ class Settings(BaseSettings):
     @field_validator("BACKEND_URL", mode="after")
     @classmethod
     def auto_detect_backend_url(cls, v: str) -> str:
+        if v and v != "http://localhost:8000":
+            return v.rstrip("/")
         render_url = os.getenv("RENDER_EXTERNAL_URL")
-        if render_url and (v == "http://localhost:8000" or not v):
+        if render_url:
             return render_url.rstrip("/")
+        vercel_prod = os.getenv("VERCEL_PROJECT_PRODUCTION_URL")
+        if vercel_prod:
+            return f"https://{vercel_prod}".rstrip("/")
+        vercel_url = os.getenv("VERCEL_URL")
+        if vercel_url:
+            return f"https://{vercel_url}".rstrip("/")
+        frontend_url = os.getenv("FRONTEND_URL")
+        if frontend_url and "localhost" not in frontend_url:
+            return frontend_url.rstrip("/")
         return v
 
     model_config = SettingsConfigDict(
