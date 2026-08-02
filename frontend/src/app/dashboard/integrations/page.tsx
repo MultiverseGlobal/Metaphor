@@ -164,19 +164,21 @@ export default function IntegrationsPage() {
               <div className="pt-4 border-t border-border-subtle flex items-center justify-between text-xs text-muted">
                 <span>{item.events_processed ? `${item.events_processed.toLocaleString()} events processed` : "0 events processed"}</span>
 
-                  <button 
-                    onClick={() => handleSync(item.provider)}
-                    disabled={isSyncing}
-                    className="px-3 py-1 bg-surface-2 border border-border-subtle hover:border-primary rounded text-xs font-medium text-foreground disabled:opacity-50 flex items-center gap-1.5"
-                  >
-                    {isSyncing && <div className="w-3 h-3 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />}
-                    {isSyncing ? "Syncing..." : "Sync Now"}
-                  </button>
+                <button 
+                  onClick={() => handleSync(item.provider)}
+                  disabled={isSyncing}
+                  className="px-3 py-1 bg-surface-2 border border-border-subtle hover:border-primary rounded text-xs font-medium text-foreground disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {isSyncing && <div className="w-3 h-3 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />}
+                  {isSyncing ? "Syncing..." : "Sync Now"}
+                </button>
+              </div>
             </Card>
           );
         })}
         </div>
       )}
+
 
 
 
