@@ -148,6 +148,12 @@ function OnboardingContent() {
 
   // Check URL query parameters & ensure onboarding starts at Step 1
   useEffect(() => {
+    const stepParam = searchParams?.get("step");
+    if (stepParam === "1" || stepParam === "auth" || stepParam === "identity") {
+      setPhase("auth");
+      return;
+    }
+
     // If starting fresh onboarding, purge stale old account keys
     const isReset = searchParams?.get("reset") === "true";
     if (isReset && typeof window !== "undefined") {
@@ -155,6 +161,8 @@ function OnboardingContent() {
       localStorage.removeItem("metaphor_connected_sources");
       localStorage.removeItem("metaphor_processed_nodes");
       localStorage.removeItem("metaphor_onboarded");
+      setPhase("auth");
+      return;
     }
 
     const successProvider = searchParams?.get("success");
@@ -173,6 +181,7 @@ function OnboardingContent() {
       setPhase("auth");
     }
   }, [searchParams]);
+
 
 
 
