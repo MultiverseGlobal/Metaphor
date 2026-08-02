@@ -88,27 +88,15 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight text-foreground leading-[1.15] mb-6"
+            className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-foreground leading-tight mb-6"
           >
-            Every AI should remember <br />
-            <span className="text-muted flex flex-wrap items-center justify-center gap-2 mt-1">
-              everything about
-              <span className="relative inline-block w-[190px] text-left text-foreground">
-                <AnimatePresence mode="popLayout">
-                  <motion.span
-                    key={wordIndex}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.35 }}
-                    className="absolute left-0 top-0 whitespace-nowrap"
-                  >
-                    {words[wordIndex]}
-                  </motion.span>
-                </AnimatePresence>
-              </span>
+            Every AI should remember <br className="hidden sm:inline" />
+            <span className="text-muted">everything about </span>
+            <span className="text-foreground border-b-2 border-primary/40 pb-0.5 inline-block transition-all">
+              {words[wordIndex]}
             </span>
           </motion.h1>
+
 
           <motion.p 
             initial={{ opacity: 0, y: 15 }}
