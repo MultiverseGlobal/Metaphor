@@ -56,7 +56,8 @@ async def test_mcp_pkce_enforcement_and_flow():
         challenge = base64.urlsafe_b64encode(digest).decode().rstrip("=")
 
         auth_res = await client.get(
-            f"/api/v1/mcp/oauth/authorize?client_id={c_id}&redirect_uri=http://localhost/callback&response_type=code&code_challenge={challenge}&code_challenge_method=S256"
+            f"/api/v1/mcp/oauth/authorize?client_id={c_id}&redirect_uri=http://localhost/callback&response_type=code&code_challenge={challenge}&code_challenge_method=S256",
+            follow_redirects=False
         )
         assert auth_res.status_code == 302
         redirect_location = auth_res.headers["location"]
