@@ -37,14 +37,14 @@ const ChatGPTIcon = () => (
 );
 
 const ClaudeIcon = () => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className="opacity-80">
-    <path d="M12 2l1.6 6.4L20 10l-6.4 1.6L12 18l-1.6-6.4L4 10l6.4-1.6L12 2zm-6 12l.8 3.2L10 18l-3.2.8L6 22l-.8-3.2L2 18l3.2-.8L6 14zm12 0l.8 3.2L22 18l-3.2.8L18 22l-.8-3.2L14 18l3.2-.8L18 14z" />
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className="opacity-90">
+    <path d="M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z" />
   </svg>
 );
 
 const CursorIcon = () => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className="opacity-80">
-    <path d="M12 2L2 7.5v9L12 22l10-5.5v-9L12 2zm0 2.3l7.5 4.1-7.5 4.1-7.5-4.1L12 4.3zM4 10l7 3.9v7.6l-7-3.9V10zm16 7.6l-7 3.9V13.9l7-3.9v7.6z" />
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className="opacity-90">
+    <path d="M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23" />
   </svg>
 );
 
