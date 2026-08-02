@@ -8,6 +8,7 @@ from app.services.graph import GraphService
 from app.services.identity import IdentityService
 from app.services.reflection import ReflectionService
 from app.core.security import get_user_via_api_key
+from app.core.rate_limiter import llm_rate_limiter
 from app.models.identity import User
 from app.models.operations import WebhookEvent
 from app.services.llm import llm_service
@@ -26,7 +27,7 @@ class AnalyzeDraftRequest(BaseModel):
 
 
 @router.post("/query")
-async def query_context(req: ContextRequest, current_user: User = Depends(get_user_via_api_key), db: AsyncSession = Depends(get_session)):
+async def query_context(req: ContextRequest, current_user: User = Depends(get_user_via_api_key), db: AsyncSession = Depends(get_session), _rate_limit: bool = Depends(llm_rate_limiter)):
     identity = IdentityService(db)
     org = await identity.get_user_organization(current_user.id) or await identity.get_or_create_default_organization()
     
@@ -37,14 +38,14 @@ async def query_context(req: ContextRequest, current_user: User = Depends(get_us
     return package.package_json
 
 @router.post("/analyze-draft")
-async def analyze_draft(req: AnalyzeDraftRequest, current_user: User = Depends(get_user_via_api_key), db: AsyncSession = Depends(get_session)):
+async def analyze_draft(req: AnalyzeDraftRequest, current_user: User = Depends(get_user_via_api_key), db: AsyncSession = Depends(get_session), _rate_limit: bool = Depends(llm_rate_limiter)):
     graph = GraphService(db)
     reflection = ReflectionService(graph)
     result = await reflection.analyze_interview(req.answers)
     return result
 
 @router.post("/chat")
-async def chat_with_context(req: ContextRequest, current_user: User = Depends(get_user_via_api_key), db: AsyncSession = Depends(get_session)):
+async def chat_with_context(req: ContextRequest, current_user: User = Depends(get_user_via_api_key), db: AsyncSession = Depends(get_session), _rate_limit: bool = Depends(llm_rate_limiter)):
     """Powers the Playground UI by simulating a Consumer AI that uses Metaphor Context."""
     identity = IdentityService(db)
     org = await identity.get_user_organization(current_user.id) or await identity.get_or_create_default_organization()
