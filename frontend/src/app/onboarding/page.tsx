@@ -80,30 +80,24 @@ function AuthButton({ icon, label, onClick }: { icon: React.ReactNode, label: st
 
 function ConnectCard({ name, icon, connected, connecting, onToggle }: { name: string, icon: React.ReactNode, connected: boolean, connecting?: boolean, onToggle: () => void }) {
   return (
-    <div className={`w-full flex flex-col group`}>
+    <div className="w-full flex flex-col group">
       <button 
         onClick={onToggle}
         disabled={connecting}
-        className="w-full flex items-center justify-between py-4 disabled:opacity-70"
+        className="w-full flex items-center justify-between py-3 disabled:opacity-70"
       >
-        <div className="flex items-center gap-6">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${connected ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 scale-100' : 'bg-surface-1 text-muted group-hover:bg-surface-2 group-hover:scale-105'} ${connecting ? 'animate-pulse' : ''}`}>
+        <div className="flex items-center gap-4">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${connected ? 'bg-surface-2 text-foreground border border-border-subtle' : 'bg-surface-1 text-muted group-hover:bg-surface-2 group-hover:text-foreground'} ${connecting ? 'animate-pulse' : ''}`}>
             {icon}
           </div>
-          <div className="flex flex-col items-start">
-            <span className={`text-lg font-medium transition-colors duration-300 ${connected ? 'text-foreground' : 'text-muted group-hover:text-foreground'}`}>{name}</span>
-            {connected && (
-              <span className="text-xs font-medium text-emerald-500">Connected & Synced</span>
-            )}
-          </div>
+          <span className={`text-base font-medium transition-colors duration-200 ${connected ? 'text-foreground' : 'text-muted group-hover:text-foreground'}`}>{name}</span>
         </div>
-        <div className={`transition-all duration-300 ${connected || connecting ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
+        <div className={`transition-all duration-200 ${connected || connecting ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
           {connecting ? (
-             <div className="w-5 h-5 rounded-full border-2 border-foreground border-t-transparent animate-spin mr-1" />
+             <div className="w-4 h-4 rounded-full border-2 border-foreground border-t-transparent animate-spin mr-1" />
           ) : connected ? (
-             <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
-               <span className="text-xs font-medium text-emerald-500">Connected</span>
-               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+             <div className="w-6 h-6 rounded-full bg-surface-2 border border-border-subtle flex items-center justify-center text-foreground">
+               <CheckCircle2 className="w-4 h-4 text-foreground" />
              </div>
           ) : null}
         </div>
@@ -492,12 +486,6 @@ function OnboardingContent() {
     return (
       <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in fade-in duration-700">
         <div className="w-full max-w-sm flex flex-col">
-
-          {toastMessage && (
-            <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-sm font-medium text-center animate-in fade-in duration-300">
-              {toastMessage}
-            </div>
-          )}
 
           <div className="mb-10 w-full">
             <h1 className="text-2xl font-medium tracking-tight text-foreground mb-3">
