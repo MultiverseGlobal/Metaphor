@@ -761,8 +761,8 @@ function OnboardingContent() {
       ChatGPT: {
         title: "Connect ChatGPT",
         description: "Connect Metaphor using the Model Context Protocol (MCP). ChatGPT will securely access your workspace through your Metaphor server.",
-        instruction: "1. Click '1-Click Connect in ChatGPT' below (copies URL & opens ChatGPT's connector modal directly).\n2. Name: Metaphor\n3. Connection: Server URL -> https://api.metaphor.ai/mcp\n4. Authentication: OAuth (auto-discovered)\n5. Check risk box & click Create.",
-        snippet: "https://api.metaphor.ai/mcp",
+        instruction: "1. Click '1-Click Connect in ChatGPT' below (copies URL & opens ChatGPT's connector modal directly).\n2. Name: Metaphor\n3. Connection: Server URL -> https://metaphor-backend.onrender.com/api/v1/mcp\n4. Authentication: OAuth (auto-discovered)\n5. Check risk box & click Create.",
+        snippet: "https://metaphor-backend.onrender.com/api/v1/mcp",
         capabilities: [
           "Search your workspace context",
           "Retrieve project documentation",
@@ -779,7 +779,7 @@ function OnboardingContent() {
         snippet: JSON.stringify({
           mcpServers: {
             metaphor: {
-              url: "https://api.metaphor.ai/mcp"
+              url: "https://metaphor-backend.onrender.com/api/v1/mcp"
             }
           }
         }, null, 2),
@@ -794,7 +794,7 @@ function OnboardingContent() {
         title: "Connect Cursor IDE",
         description: "Surface workspace architecture, decisions, and documentation inline while building in Cursor.",
         instruction: "1. Open Cursor Settings > Features > MCP Servers\n2. Click '+ Add New MCP Server'\n3. Set Name: Metaphor, Type: SSE, Server URL:",
-        snippet: "https://api.metaphor.ai/mcp/sse",
+        snippet: "https://metaphor-backend.onrender.com/api/v1/mcp/sse",
         capabilities: [
           "Access code context & design rules",
           "Search project documentation",
