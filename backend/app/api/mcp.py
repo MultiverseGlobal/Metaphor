@@ -229,13 +229,39 @@ class OAuthTokenRequest(BaseModel):
 
 @router.post("/oauth/token")
 async def oauth_token_endpoint(
-    payload: OAuthTokenRequest,
+    request: Request,
     session: AsyncSession = Depends(get_session)
 ):
-    if payload.grant_type != "authorization_code" or not payload.code:
+    content_type = request.headers.get("content-type", "")
+    
+    grant_type = None
+    client_id = None
+    redirect_uri = None
+    code = None
+    code_verifier = None
+
+    if "application/x-www-form-urlencoded" in content_type:
+        form_data = await request.form()
+        grant_type = form_data.get("grant_type")
+        client_id = form_data.get("client_id")
+        redirect_uri = form_data.get("redirect_uri")
+        code = form_data.get("code")
+        code_verifier = form_data.get("code_verifier")
+    else:
+        try:
+            body = await request.json()
+            grant_type = body.get("grant_type") or "authorization_code"
+            client_id = body.get("client_id")
+            redirect_uri = body.get("redirect_uri")
+            code = body.get("code")
+            code_verifier = body.get("code_verifier")
+        except Exception:
+            raise HTTPException(400, detail="Invalid request payload format.")
+
+    if grant_type != "authorization_code" or not code:
         raise HTTPException(400, detail="Unsupported grant_type or missing code.")
 
-    code_h = hash_token(payload.code)
+    code_h = hash_token(code)
     stmt = select(MCPOAuthAuthCode).where(
         MCPOAuthAuthCode.code_hash == code_h,
         MCPOAuthAuthCode.used == False
@@ -251,14 +277,15 @@ async def oauth_token_endpoint(
 
     # PKCE verification if challenge was provided
     if code_obj.code_challenge:
-        if not payload.code_verifier:
+        if not code_verifier:
             raise HTTPException(400, detail="code_verifier required for PKCE.")
-        if not verify_pkce_challenge(payload.code_verifier, code_obj.code_challenge, code_obj.code_challenge_method):
+        if not verify_pkce_challenge(code_verifier, code_obj.code_challenge, code_obj.code_challenge_method):
             raise HTTPException(400, detail="PKCE code_verifier check failed.")
 
     # Mark code used
     code_obj.used = True
     session.add(code_obj)
+
 
     # Generate active Bearer access token
     raw_token = f"mtph_live_{uuid.uuid4().hex}"
