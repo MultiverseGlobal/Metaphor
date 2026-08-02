@@ -59,18 +59,22 @@ async def chat_with_context(req: ContextRequest, current_user: User = Depends(ge
     
     # If no vector nodes matched, fetch top workspace nodes as fallback context
     if not package_json.get("evidence"):
-        from sqlmodel import select
-        from app.models.graph import Node
-        stmt = select(Node).where(Node.organization_id == org.id).limit(10)
-        res = await db.execute(stmt)
-        fallback_nodes = res.scalars().all()
-        if fallback_nodes:
-            package_json["evidence"] = [
-                {"id": str(n.id), "type": n.type, "title": n.title, "summary": n.summary, "source": "workspace"}
-                for n in fallback_nodes
-            ]
-            package_json["status"] = "matched"
-            package_json["workspace_summary"]["total_items_found"] = len(fallback_nodes)
+        try:
+            from sqlmodel import select
+            from app.models.graph import Node
+            stmt = select(Node).where(Node.organization_id == org.id).limit(10)
+            res = await db.execute(stmt)
+            fallback_nodes = res.scalars().all()
+            if fallback_nodes:
+                package_json["evidence"] = [
+                    {"id": str(n.id), "type": n.type, "title": n.title, "summary": n.summary, "source": "workspace"}
+                    for n in fallback_nodes
+                ]
+                package_json["status"] = "matched"
+                package_json["workspace_summary"]["total_items_found"] = len(fallback_nodes)
+        except Exception as e:
+            print("Fallback node query error:", e)
+
 
     # 2. Build a rich system prompt with user identity & graph context
     user_display = current_user.name if current_user.name and current_user.name not in ["Supabase User", "Developer User"] else current_user.email

@@ -12,6 +12,7 @@ from typing import Optional
 class UpdateUserProfileRequest(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
+    settings: Optional[dict] = None
 
 @router.get("/me")
 async def get_current_user_info(
@@ -24,7 +25,8 @@ async def get_current_user_info(
     return {
         "id": str(current_user.id),
         "name": current_user.name,
-        "email": current_user.email
+        "email": current_user.email,
+        "settings": current_user.settings or {}
     }
 
 @router.put("/me")
@@ -40,6 +42,8 @@ async def update_current_user_info(
         current_user.name = payload.name.strip()
     if payload.email and payload.email.strip():
         current_user.email = payload.email.strip()
+    if payload.settings is not None:
+        current_user.settings = payload.settings
     
     session.add(current_user)
     await session.commit()
@@ -48,6 +52,8 @@ async def update_current_user_info(
     return {
         "id": str(current_user.id),
         "name": current_user.name,
-        "email": current_user.email
+        "email": current_user.email,
+        "settings": current_user.settings or {}
     }
+
 
