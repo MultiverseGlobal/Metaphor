@@ -60,12 +60,29 @@ def verify_pkce_challenge(code_verifier: str, code_challenge: str, method: str =
 async def oauth_protected_resource_metadata(request: Request):
     base_url = str(request.base_url).rstrip("/")
     resource_id = getattr(settings, "WORKOS_MCP_RESOURCE_ID", None) or f"{base_url}/api/v1/mcp"
-    auth_server = getattr(settings, "WORKOS_AUTHKIT_DOMAIN", None) or "https://api.workos.com"
     return {
         "resource": resource_id,
-        "authorization_servers": [auth_server],
+        "authorization_servers": [base_url],
         "bearer_methods_supported": ["header"]
     }
+
+
+@router.get("/.well-known/oauth-authorization-server")
+@router.get("/oauth/.well-known/oauth-authorization-server")
+async def oauth_authorization_server_metadata(request: Request):
+    base_url = str(request.base_url).rstrip("/")
+    return {
+        "issuer": base_url,
+        "authorization_endpoint": f"{base_url}/api/v1/mcp/oauth/authorize",
+        "token_endpoint": f"{base_url}/api/v1/mcp/oauth/token",
+        "registration_endpoint": f"{base_url}/api/v1/mcp/oauth/register",
+        "revocation_endpoint": f"{base_url}/api/v1/mcp/oauth/revoke",
+        "response_types_supported": ["code"],
+        "grant_types_supported": ["authorization_code"],
+        "code_challenge_methods_supported": ["S256", "plain"],
+        "token_endpoint_auth_methods_supported": ["none"]
+    }
+
 
 
 # ── RFC 7591 Dynamic Client Registration (DCR) & CIMD ──────────────────────────

@@ -35,16 +35,7 @@ app.add_middleware(GZipMiddleware, minimum_size=500)
 
 import os
 
-allowed_origins = [
-    "https://metaphor-three.vercel.app",
-    "http://localhost:3000",
-    "http://localhost:8000",
-    "http://127.0.0.1:3000",
-]
-if settings.FRONTEND_URL and settings.FRONTEND_URL not in allowed_origins:
-    allowed_origins.append(settings.FRONTEND_URL)
-if os.getenv("ALLOWED_ORIGINS"):
-    allowed_origins.extend([o.strip() for o in os.getenv("ALLOWED_ORIGINS").split(",") if o.strip()])
+allowed_origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -57,15 +48,33 @@ app.add_middleware(
 app.include_router(api_router, prefix=settings.API_PREFIX)
 
 @app.get("/.well-known/oauth-protected-resource")
+@app.get("/api/v1/mcp/.well-known/oauth-protected-resource")
 async def root_oauth_protected_resource(request: Request):
     base_url = str(request.base_url).rstrip("/")
     resource_id = getattr(settings, "WORKOS_MCP_RESOURCE_ID", None) or f"{base_url}/api/v1/mcp"
-    auth_server = getattr(settings, "WORKOS_AUTHKIT_DOMAIN", None) or "https://api.workos.com"
     return {
         "resource": resource_id,
-        "authorization_servers": [auth_server],
+        "authorization_servers": [base_url],
         "bearer_methods_supported": ["header"]
     }
+
+
+@app.get("/.well-known/oauth-authorization-server")
+@app.get("/api/v1/mcp/.well-known/oauth-authorization-server")
+async def root_oauth_authorization_server(request: Request):
+    base_url = str(request.base_url).rstrip("/")
+    return {
+        "issuer": base_url,
+        "authorization_endpoint": f"{base_url}/api/v1/mcp/oauth/authorize",
+        "token_endpoint": f"{base_url}/api/v1/mcp/oauth/token",
+        "registration_endpoint": f"{base_url}/api/v1/mcp/oauth/register",
+        "revocation_endpoint": f"{base_url}/api/v1/mcp/oauth/revoke",
+        "response_types_supported": ["code"],
+        "grant_types_supported": ["authorization_code"],
+        "code_challenge_methods_supported": ["S256", "plain"],
+        "token_endpoint_auth_methods_supported": ["none"]
+    }
+
 
 
 @app.get("/")
