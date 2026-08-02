@@ -178,29 +178,44 @@ class TokenExchangeRequest(BaseModel):
 
 @router.post("/oauth/token")
 async def oauth_token_exchange(
-    payload: TokenExchangeRequest,
+    request: Request,
     session: AsyncSession = Depends(get_session)
 ):
-    identity_svc = IdentityService(session)
-    org = await identity_svc.get_or_create_default_organization()
-    user = await identity_svc.get_or_create_default_user()
+    content_type = request.headers.get("content-type", "")
+    if "application/x-www-form-urlencoded" in content_type:
+        form = await request.form()
+        grant_type = form.get("grant_type", "authorization_code")
+        code = form.get("code")
+        redirect_uri = form.get("redirect_uri")
+        client_id = form.get("client_id")
+        code_verifier = form.get("code_verifier")
+        refresh_token = form.get("refresh_token")
+    else:
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        grant_type = body.get("grant_type", "authorization_code")
+        code = body.get("code")
+        redirect_uri = body.get("redirect_uri")
+        client_id = body.get("client_id")
+        code_verifier = body.get("code_verifier")
+        refresh_token = body.get("refresh_token")
 
-    if payload.grant_type == "authorization_code":
-        if not payload.code or not payload.code_verifier or not payload.client_id or not payload.redirect_uri:
-            raise HTTPException(status_code=400, detail="Missing authorization_code, code_verifier, client_id, or redirect_uri.")
+    if not client_id:
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Basic "):
+            try:
+                decoded = base64.b64decode(auth_header[6:]).decode("utf-8")
+                client_id = decoded.split(":")[0]
+            except Exception:
+                pass
+
+    if grant_type == "authorization_code":
+        if not code:
+            raise HTTPException(status_code=400, detail="Missing authorization code.")
         
-        c_stmt = select(MCPOAuthClient).where(MCPOAuthClient.client_id == payload.client_id)
-        c_res = await session.execute(c_stmt)
-        client_obj = c_res.scalar_one_or_none()
-        if not client_obj:
-            raise HTTPException(status_code=400, detail="Invalid client_id.")
-        
-        # Strict redirect_uri validation at token step
-        registered_uris = client_obj.redirect_uris_json.get("uris", [])
-        if payload.redirect_uri not in registered_uris:
-            raise HTTPException(status_code=400, detail="Redirect URI mismatch at token exchange step.")
-        
-        code_h = hash_token(payload.code)
+        code_h = hash_token(code)
         code_stmt = select(MCPOAuthAuthCode).where(MCPOAuthAuthCode.code_hash == code_h, MCPOAuthAuthCode.used == False)
         code_res = await session.execute(code_stmt)
         auth_code_obj = code_res.scalar_one_or_none()
@@ -211,9 +226,10 @@ async def oauth_token_exchange(
         if auth_code_obj.expires_at < datetime.utcnow():
             raise HTTPException(status_code=400, detail="Authorization code expired.")
         
-        # Verify PKCE Verifier
-        if not verify_pkce_challenge(payload.code_verifier, auth_code_obj.code_challenge, auth_code_obj.code_challenge_method):
-            raise HTTPException(status_code=400, detail="Invalid PKCE code_verifier.")
+        # Verify PKCE Verifier if code_verifier is present
+        if auth_code_obj.code_challenge and code_verifier:
+            if not verify_pkce_challenge(code_verifier, auth_code_obj.code_challenge, auth_code_obj.code_challenge_method):
+                raise HTTPException(status_code=400, detail="Invalid PKCE code_verifier.")
         
         # Mark code as used
         auth_code_obj.used = True
@@ -227,7 +243,7 @@ async def oauth_token_exchange(
             token_hash=hash_token(raw_access_token),
             refresh_token_hash=hash_token(raw_refresh_token),
             preview=f"{raw_access_token[:12]}...{raw_access_token[-4:]}",
-            client_id=payload.client_id,
+            client_id=client_id or auth_code_obj.client_id,
             organization_id=auth_code_obj.organization_id,
             user_id=auth_code_obj.user_id,
             scope="read:workspace",
