@@ -20,7 +20,7 @@ export default function SettingsPage() {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const user = await fetchFromMetaphor("/auth/me");
+        const user = await fetchFromMetaphor("/auth/me", undefined, "GET", false, true);
         if (user) {
           const cleanName = user.name && user.name !== "Supabase User" && user.name !== "Developer User"
             ? user.name
@@ -45,20 +45,27 @@ export default function SettingsPage() {
   }, []);
 
   const applyTheme = (themeName: string) => {
+    if (typeof window === "undefined") return;
     const root = document.documentElement;
+    const body = document.body;
+
     if (themeName === "dark") {
       root.classList.add("dark");
+      body.classList.add("dark");
       root.setAttribute("data-theme", "dark");
     } else if (themeName === "light") {
       root.classList.remove("dark");
+      body.classList.remove("dark");
       root.setAttribute("data-theme", "light");
     } else {
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       if (prefersDark) {
         root.classList.add("dark");
+        body.classList.add("dark");
         root.setAttribute("data-theme", "dark");
       } else {
         root.classList.remove("dark");
+        body.classList.remove("dark");
         root.setAttribute("data-theme", "light");
       }
     }
@@ -100,6 +107,7 @@ export default function SettingsPage() {
       setSavingName(false);
     }
   };
+
 
 
   if (loading) return null;
