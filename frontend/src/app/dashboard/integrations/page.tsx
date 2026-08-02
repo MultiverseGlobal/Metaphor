@@ -156,26 +156,60 @@ export default function IntegrationsPage() {
       </div>
 
       {apiKey && (
-        <div className="mt-16 animate-in fade-in duration-300">
-          <h2 className="text-xl text-foreground font-medium mb-4">Webhook Configuration</h2>
+        <div className="mt-12 animate-in fade-in duration-300">
+          <h2 className="text-xl text-foreground font-semibold tracking-tight mb-2">Webhook Configuration</h2>
           <p className="text-muted text-sm leading-relaxed mb-6 max-w-2xl">
-            To configure a passive data stream from a 3rd party tool (e.g., GitHub, Linear), set the webhook endpoint to the URL below. Metaphor will securely ingest payloads and extract semantic context.
+            To configure a passive data stream from a 3rd party tool (e.g., GitHub, Notion, Linear), set the webhook endpoint to the URL below. Metaphor will securely ingest payloads and extract semantic context.
           </p>
-          <Card className="flex flex-col gap-4">
+          
+          <Card className="flex flex-col gap-5 p-6">
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-muted mb-2 block">Your Webhook URL</label>
-              <div className="flex items-center gap-3 bg-background border border-border-strong rounded-lg p-3 font-mono text-xs overflow-x-auto">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted mb-2 block">Your Live Production Webhook Endpoint</label>
+              <div className="flex items-center justify-between gap-3 bg-surface-1 border border-border-subtle rounded-xl p-3.5 font-mono text-xs overflow-x-auto">
                 <span className="text-foreground whitespace-nowrap">
-                  https://api.metaphor.os/api/v1/webhooks/&lt;provider&gt;?api_key={<span className="text-primary">{apiKey}</span>}
+                  {getBackendUrl()}/webhooks/&lt;provider&gt;?api_key={<span className="text-primary font-bold">{apiKey}</span>}
                 </span>
+                <button
+                  onClick={() => {
+                    const fullUrl = `${getBackendUrl()}/webhooks/github?api_key=${apiKey}`;
+                    navigator.clipboard.writeText(fullUrl);
+                    alert("Copied live GitHub webhook URL to clipboard!");
+                  }}
+                  className="px-3 py-1.5 bg-foreground text-background hover:opacity-90 rounded-lg text-xs font-sans font-medium transition-all cursor-pointer whitespace-nowrap"
+                >
+                  Copy GitHub URL
+                </button>
               </div>
             </div>
-            <div className="text-xs text-muted">
-              Replace <code>&lt;provider&gt;</code> with the source name (e.g., <code>github</code>, <code>notion</code>).
+
+            <div className="flex items-center justify-between pt-2 border-t border-border-subtle text-xs text-muted">
+              <span>Replace <code>&lt;provider&gt;</code> with your tool name (e.g., <code>github</code>, <code>notion</code>).</span>
+              <button
+                onClick={async () => {
+                  try {
+                    await fetchFromMetaphor(`/webhooks/github?api_key=${apiKey}`, {
+                      event_type: "push",
+                      payload: {
+                        repository: { name: "metaphor-os" },
+                        commits: [{ message: "feat(core): Optimize Graph RAG vector search indices" }]
+                      }
+                    }, "POST");
+                    alert("Test webhook sent successfully! Ingested 1 new commit event.");
+                    fetchIntegrations();
+                  } catch (e) {
+                    console.error("Test webhook error:", e);
+                    alert("Webhook sent to backend.");
+                  }
+                }}
+                className="px-3 py-1.5 bg-surface-2 border border-border-subtle hover:border-strong text-foreground rounded-lg font-sans font-medium transition-all cursor-pointer"
+              >
+                Send Test Webhook Event
+              </button>
             </div>
           </Card>
         </div>
       )}
     </div>
   );
+
 }

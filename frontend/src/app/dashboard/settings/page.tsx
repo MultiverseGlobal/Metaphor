@@ -22,8 +22,12 @@ export default function SettingsPage() {
       try {
         const user = await fetchFromMetaphor("/auth/me");
         if (user) {
-          setUserName(user.name || "");
+          const cleanName = user.name && user.name !== "Supabase User" && user.name !== "Developer User"
+            ? user.name
+            : user.email ? user.email.split("@")[0] : "multiverseglobals";
+          setUserName(cleanName);
           setUserEmail(user.email || "");
+
           if (user.settings) {
             setSettings(prev => ({ ...prev, ...user.settings }));
             if (user.settings.theme) {
