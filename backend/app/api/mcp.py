@@ -108,6 +108,16 @@ async def register_mcp_client(
     }
 
 
+def now_utc() -> datetime:
+    return datetime.now(timezone.utc)
+
+def is_expired(dt: Optional[datetime]) -> bool:
+    if dt is None:
+        return False
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt < datetime.now(timezone.utc)
+
 # ── OAuth 2.1 Authorize Endpoint (Mandatory PKCE) ────────────────────────────
 @router.get("/oauth/authorize")
 async def oauth_authorize(
@@ -153,7 +163,7 @@ async def oauth_authorize(
         redirect_uri=redirect_uri,
         code_challenge=code_challenge,
         code_challenge_method=code_challenge_method,
-        expires_at=datetime.utcnow() + timedelta(minutes=10)
+        expires_at=now_utc() + timedelta(minutes=10)
     )
     session.add(code_obj)
     await session.commit()
@@ -223,7 +233,7 @@ async def oauth_token_exchange(
         if not auth_code_obj:
             raise HTTPException(status_code=400, detail="Invalid or expired authorization code.")
         
-        if auth_code_obj.expires_at < datetime.utcnow():
+        if is_expired(auth_code_obj.expires_at):
             raise HTTPException(status_code=400, detail="Authorization code expired.")
         
         # Verify PKCE Verifier if code_verifier is present
@@ -247,8 +257,8 @@ async def oauth_token_exchange(
             organization_id=auth_code_obj.organization_id,
             user_id=auth_code_obj.user_id,
             scope="read:workspace",
-            expires_at=datetime.utcnow() + timedelta(hours=1),
-            refresh_expires_at=datetime.utcnow() + timedelta(days=30)
+            expires_at=now_utc() + timedelta(hours=1),
+            refresh_expires_at=now_utc() + timedelta(days=30)
         )
         session.add(token_obj)
         await session.commit()
@@ -425,7 +435,7 @@ async def authenticate_mcp_token(request: Request, token_query: Optional[str] = 
     if token_obj.revoked_at is not None:
         raise HTTPException(status_code=401, detail="Unauthorized: Token has been revoked.")
         
-    if token_obj.expires_at and token_obj.expires_at < datetime.utcnow():
+    if token_obj.expires_at and is_expired(token_obj.expires_at):
         raise HTTPException(status_code=401, detail="Unauthorized: Token has expired.")
         
     return token_obj
