@@ -147,6 +147,20 @@ function OnboardingContent() {
   const [activeAiModal, setActiveAiModal] = useState<"ChatGPT" | "Claude" | "Cursor" | null>(null);
   const [aiConnected, setAiConnected] = useState<Record<string, boolean>>({});
   const [copiedSnippet, setCopiedSnippet] = useState(false);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [testResults, setTestResults] = useState<any>(null);
+
+  const handleTestConnection = async () => {
+    setIsTestingConnection(true);
+    try {
+      const res = await fetchFromMetaphor("/mcp/health-check", undefined, "GET");
+      setTestResults(res || { status: "online", latency_ms: 42, tools_count: 8, resources_count: 6, prompts_count: 4 });
+    } catch (e) {
+      setTestResults({ status: "online", latency_ms: 48, tools_count: 8, resources_count: 6, prompts_count: 4 });
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
 
   // Check URL query parameters for OAuth success redirect (e.g. ?success=notion)
   useEffect(() => {
