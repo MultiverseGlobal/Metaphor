@@ -67,12 +67,15 @@ export default function PlaygroundPage() {
         <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar pb-32">
           
           {messages.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center text-center opacity-50">
-              <Bot className="w-12 h-12 mb-4 text-muted" />
-              <h2 className="text-lg font-medium text-foreground">Test your Context</h2>
-              <p className="text-sm text-muted max-w-sm">Ask a question. The system will retrieve relevant Graph Nodes and answer you contextually.</p>
+            <div className="h-full flex flex-col items-center justify-center text-center">
+              <div className="mb-4 p-4 rounded-2xl bg-surface-1 border border-border-subtle shadow-inner">
+                <MetaphorLogo size={40} className="text-foreground" />
+              </div>
+              <h2 className="text-lg font-semibold tracking-tight text-foreground mb-1">Test your Context</h2>
+              <p className="text-sm text-muted max-w-sm leading-relaxed">Ask a question. The system will retrieve relevant Graph Nodes and answer you contextually.</p>
             </div>
           )}
+
 
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in slide-in-from-bottom-2 fade-in duration-300`}>
