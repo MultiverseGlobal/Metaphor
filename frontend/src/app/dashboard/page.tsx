@@ -10,6 +10,8 @@ import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
+import { CardSkeleton } from "@/components/ui/SkeletonLoader";
+
 export default function SynchronizationDashboard() {
   const router = useRouter();
   const [authLoading, setAuthLoading] = useState(true);
@@ -38,14 +40,14 @@ export default function SynchronizationDashboard() {
         // Fetch stats and user
         try {
           const statsData = await fetchFromMetaphor("/graph/stats");
-          setStats(statsData);
+          if (statsData) setStats(statsData);
         } catch (e) {
           console.error("Failed to fetch stats:", e);
         }
         
         try {
           const userData = await fetchFromMetaphor("/auth/me");
-          setUser(userData);
+          if (userData) setUser(userData);
         } catch (e) {
           console.error("Failed to fetch user:", e);
         }
@@ -75,7 +77,7 @@ export default function SynchronizationDashboard() {
   const syncIntegration = async (provider: string) => {
     setSyncing(prev => ({ ...prev, [provider]: true }));
     try {
-      await fetchFromMetaphor(`/integrations/${provider}/sync`, { method: "POST" });
+      await fetchFromMetaphor(`/integrations/${provider}/sync`, undefined, "POST");
       setSyncing(prev => ({ ...prev, [provider]: false }));
     } catch (e) {
       console.error(`Failed to sync ${provider}:`, e);
@@ -85,14 +87,19 @@ export default function SynchronizationDashboard() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+      <div className="max-w-4xl mx-auto p-8 space-y-8 animate-in fade-in duration-150">
+        <div className="w-48 h-8 rounded-xl bg-surface-2 animate-pulse mb-8" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="relative w-full min-h-full">
+    <div className="relative w-full min-h-full animate-in fade-in duration-200">
+
       {/* Interactive Physics Graph */}
       <GraphViewer />
 

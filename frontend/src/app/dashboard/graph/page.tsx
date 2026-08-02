@@ -41,6 +41,9 @@ const nodeTypes = {
   custom: CustomNode,
 };
 
+import { fetchFromMetaphor } from "@/app/api";
+import { GraphSkeleton } from "@/components/ui/SkeletonLoader";
+
 export default function KnowledgeGraphPage() {
   const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
@@ -52,22 +55,35 @@ export default function KnowledgeGraphPage() {
   useEffect(() => {
     async function fetchGraph() {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-        const res = await fetch(`${apiUrl}/graph`);
-        const data = await res.json();
+        let data = await fetchFromMetaphor("/graph");
         
-        // Simple force-directed/grid layout for MVP
-        const flowNodes: FlowNode[] = data.nodes.map((n: any, i: number) => ({
+        let nodesList = data?.nodes || [];
+        let edgesList = data?.edges || [];
+
+        // Fallback baseline nodes if workspace has zero nodes
+        if (nodesList.length === 0) {
+          nodesList = [
+            { id: "node-1", name: "Metaphor OS Architecture", type: "architecture", summary: "Core Cognitive Operating System memory layer with Graph RAG." },
+            { id: "node-2", name: "Remote MCP Integration", type: "project", summary: "OAuth 2.1 PKCE server connecting ChatGPT and Claude Desktop." },
+            { id: "node-3", name: "Linear Design System Enforcer", type: "rule", summary: "UI/UX rule enforcement with semantic design tokens." }
+          ];
+          edgesList = [
+            { id: "edge-1", source: "node-1", target: "node-2", type: "ENABLES" },
+            { id: "edge-2", source: "node-1", target: "node-3", type: "ENFORCES" }
+          ];
+        }
+
+        const flowNodes: FlowNode[] = nodesList.map((n: any, i: number) => ({
           id: n.id,
           type: 'custom',
           position: { 
-            x: (i % 5) * 200 + 100, 
-            y: Math.floor(i / 5) * 150 + 100 
+            x: (i % 4) * 220 + 80, 
+            y: Math.floor(i / 4) * 160 + 80 
           },
-          data: { label: n.name, type: n.type.toLowerCase(), summary: n.summary }
+          data: { label: n.name, type: (n.type || "project").toLowerCase(), summary: n.summary }
         }));
 
-        const flowEdges: FlowEdge[] = data.edges.map((e: any) => ({
+        const flowEdges: FlowEdge[] = edgesList.map((e: any) => ({
           id: e.id,
           source: e.source,
           target: e.target,
@@ -82,11 +98,9 @@ export default function KnowledgeGraphPage() {
 
         setNodes(flowNodes);
         setEdges(flowEdges);
-        
-        // Save raw nodes for the sidebar
-        setRawNodes(data.nodes.map((n: any) => ({
+        setRawNodes(nodesList.map((n: any) => ({
           ...n,
-          connections: data.edges.filter((e: any) => e.source === n.id || e.target === n.id).length
+          connections: edgesList.filter((e: any) => e.source === n.id || e.target === n.id).length
         })));
 
       } catch (e) {
@@ -97,6 +111,7 @@ export default function KnowledgeGraphPage() {
     }
     fetchGraph();
   }, [setNodes, setEdges]);
+
 
   const filteredNodes = useMemo(() => {
     return rawNodes.filter(node => {
@@ -109,8 +124,17 @@ export default function KnowledgeGraphPage() {
     });
   }, [rawNodes, searchQuery, activeFilter]);
 
+  if (loading) {
+    return (
+      <div className="p-8 h-full bg-background flex flex-col justify-center">
+        <GraphSkeleton />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-background animate-in fade-in duration-150">
+
       
       {/* Header */}
       <header className="px-8 py-6 border-b border-border-subtle flex items-center justify-between bg-surface-1/50">
