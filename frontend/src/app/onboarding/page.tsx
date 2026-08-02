@@ -751,27 +751,50 @@ function OnboardingContent() {
 
   // ── PHASE: COMPLETE ─────────────────────────────────────────────────────────
   if (phase === "complete") {
-    const mcpSnippets: Record<string, { title: string; instruction: string; snippet: string }> = {
+    const mcpSnippets: Record<string, { title: string; description: string; instruction: string; snippet: string; capabilities: string[] }> = {
       ChatGPT: {
-        title: "Connect ChatGPT via Remote MCP",
-        instruction: "1. Open ChatGPT > Settings > Apps & Connectors (Developer Mode)\n2. Click 'Add Custom MCP Server'\n3. Enter the Metaphor Remote MCP Server URL below:",
-        snippet: "https://metaphor-backend.onrender.com/api/v1/mcp"
+        title: "Connect ChatGPT",
+        description: "Connect Metaphor using the Model Context Protocol (MCP). ChatGPT will securely access your workspace through your Metaphor server.",
+        instruction: "1. Open ChatGPT > Settings > Apps & Connectors (Developer Mode)\n2. Click 'Add Custom MCP Server'\n3. Enter the Metaphor MCP Server URL below:",
+        snippet: "https://api.metaphor.ai/mcp",
+        capabilities: [
+          "Search your workspace context",
+          "Retrieve project documentation",
+          "Understand graph relationships",
+          "Access code & architectural context",
+          "Explain technical decisions",
+          "Find related knowledge nodes"
+        ]
       },
       Claude: {
-        title: "Connect Claude Desktop via Remote MCP",
+        title: "Connect Claude Desktop",
+        description: "Connect Claude Desktop via Remote MCP to reason over your complete workspace graph.",
         instruction: "1. Open Claude Desktop > Settings > Developer\n2. Add Remote MCP Server configuration to your claude_desktop_config.json file:",
         snippet: JSON.stringify({
           mcpServers: {
             metaphor: {
-              url: "https://metaphor-backend.onrender.com/api/v1/mcp"
+              url: "https://api.metaphor.ai/mcp"
             }
           }
-        }, null, 2)
+        }, null, 2),
+        capabilities: [
+          "Perform architectural reviews",
+          "Search documentation and decisions",
+          "Retrieve technical meeting notes",
+          "Understand codebase structures"
+        ]
       },
       Cursor: {
-        title: "Connect Cursor IDE via Remote MCP",
+        title: "Connect Cursor IDE",
+        description: "Surface workspace architecture, decisions, and documentation inline while building in Cursor.",
         instruction: "1. Open Cursor Settings > Features > MCP Servers\n2. Click '+ Add New MCP Server'\n3. Set Name: Metaphor, Type: SSE, Server URL:",
-        snippet: "https://metaphor-backend.onrender.com/api/v1/mcp/sse"
+        snippet: "https://api.metaphor.ai/mcp/sse",
+        capabilities: [
+          "Access code context & design rules",
+          "Search project documentation",
+          "Lookup architectural ADRs",
+          "Disambiguate workspace entities"
+        ]
       }
     };
 
