@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 from typing import Optional, Any, Union
 import uuid
@@ -12,6 +13,8 @@ from supabase import create_client, Client
 from app.core.config import settings
 from app.database.session import get_session
 from app.models.identity import User
+
+logger = logging.getLogger("metaphor.security")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_PREFIX}/auth/token")
 
@@ -117,29 +120,19 @@ async def get_user_via_api_key(request: Request, session: AsyncSession = Depends
     # 1. Try Bearer JWT first
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
-        token = auth_header[7:]
-        try:
-            user_res = supabase.auth.get_user(token)
-            if not user_res or not user_res.user:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Supabase token is invalid or user not found.",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-            return await _ensure_user_in_db(
-                user_id_str=user_res.user.id,
-                email=user_res.user.email,
-                metadata=getattr(user_res.user, "user_metadata", None),
-                session=session
-            )
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Supabase token validation error: {str(e)}",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+        token = auth_header[7:].strip()
+        if token and token not in ("null", "undefined", "none"):
+            try:
+                user_res = supabase.auth.get_user(token)
+                if user_res and user_res.user:
+                    return await _ensure_user_in_db(
+                        user_id_str=user_res.user.id,
+                        email=user_res.user.email,
+                        metadata=getattr(user_res.user, "user_metadata", None),
+                        session=session
+                    )
+            except Exception as e:
+                logger.warning(f"Bearer token validation failed: {e}. Falling back to API key / default user.")
 
     # 2. Fall back to X-API-Key
     api_key = request.headers.get("X-API-Key", "")
