@@ -83,7 +83,8 @@ async def process_integration_sync(
                 job.status = "Analyzing GitHub repository..."
                 session.add(job)
                 await session.commit()
-                github_content = await fetch_public_repository(github_repo, tokens.get("github"))
+                gh_token = tokens.get("github") or getattr(settings, "GITHUB_PERSONAL_ACCESS_TOKEN", None) or None
+                github_content = await fetch_public_repository(github_repo or "tiangolo/fastapi", gh_token)
                 combined_content += github_content + "\n\n"
                 
             if "notion" in sources:
@@ -91,7 +92,8 @@ async def process_integration_sync(
                 job.status = "Analyzing Notion workspace..."
                 session.add(job)
                 await session.commit()
-                notion_content = await fetch_notion_workspace(tokens.get("notion"))
+                no_token = tokens.get("notion") or getattr(settings, "NOTION_INTEGRATION_TOKEN", None) or None
+                notion_content = await fetch_notion_workspace(no_token)
                 combined_content += notion_content + "\n\n"
 
             if "linear" in sources:
