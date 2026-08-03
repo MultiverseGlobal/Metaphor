@@ -35,14 +35,14 @@ class Settings(BaseSettings):
     SUPABASE_ANON_KEY: str = ""
 
     # OAuth Credentials
-    GITHUB_CLIENT_ID: str = ""
-    GITHUB_CLIENT_SECRET: str = ""
-    NOTION_CLIENT_ID: str = ""
-    NOTION_CLIENT_SECRET: str = ""
-    LINEAR_CLIENT_ID: str = ""
-    LINEAR_CLIENT_SECRET: str = ""
-    GOOGLE_CLIENT_ID: str = ""
-    GOOGLE_CLIENT_SECRET: str = ""
+    GITHUB_CLIENT_ID: str = os.getenv("GITHUB_CLIENT_ID", "Ov23li43OiTLKCWt4ywX")
+    GITHUB_CLIENT_SECRET: str = os.getenv("GITHUB_CLIENT_SECRET", "")
+    NOTION_CLIENT_ID: str = os.getenv("NOTION_CLIENT_ID", "3afd872b-594c-8112-8c5d-0037abbc1ffd")
+    NOTION_CLIENT_SECRET: str = os.getenv("NOTION_CLIENT_SECRET", "")
+    LINEAR_CLIENT_ID: str = os.getenv("LINEAR_CLIENT_ID", "dc98e44f0ee7afaaef19c16986f7d1fa")
+    LINEAR_CLIENT_SECRET: str = os.getenv("LINEAR_CLIENT_SECRET", "")
+    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
     
     # WorkOS AuthKit MCP Settings
     WORKOS_AUTHKIT_DOMAIN: str = "https://api.workos.com"

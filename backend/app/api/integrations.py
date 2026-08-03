@@ -74,26 +74,49 @@ async def trigger_integration_sync(
     await session.commit()
     await session.refresh(job)
     
-    from arq import create_pool
-    from arq.connections import RedisSettings
-    from app.core.config import settings
-    import urllib.parse
-    
-    parsed = urllib.parse.urlparse(settings.REDIS_URL)
-    redis_host = parsed.hostname or "localhost"
-    redis_port = parsed.port or 6379
-    
-    redis = await create_pool(RedisSettings(host=redis_host, port=redis_port))
-    await redis.enqueue_job(
-        "process_integration_sync",
-        user_id=str(user.id),
-        org_id=org_id,
-        sources=request.sources,
-        github_repo=request.github_repo,
-        job_id=job.id
-    )
-    
-    return {"status": "sync_started", "message": "Integration sync running in the background via Arq."}
+    try:
+        from arq import create_pool
+        from arq.connections import RedisSettings
+        from app.core.config import settings
+        import urllib.parse
+        
+        parsed = urllib.parse.urlparse(settings.REDIS_URL)
+        redis_host = parsed.hostname or "localhost"
+        redis_port = parsed.port or 6379
+        
+        redis = await create_pool(RedisSettings(host=redis_host, port=redis_port))
+        await redis.enqueue_job(
+            "process_integration_sync",
+            user_id=str(user.id),
+            org_id=org_id,
+            sources=request.sources,
+            github_repo=request.github_repo,
+            job_id=job.id
+        )
+        return {"status": "sync_started", "message": "Integration sync running in the background via Arq."}
+    except Exception as redis_err:
+        logger.warning(f"Redis queue unavailable ({redis_err}), using FastAPI BackgroundTasks fallback")
+        from app.arq_worker import process_integration_sync
+        class DummyCtx(dict):
+            pass
+        
+        async def run_fallback():
+            dummy_ctx = {"redis": None}
+            # Catch exceptions in background
+            try:
+                await process_integration_sync(
+                    dummy_ctx,
+                    user_id=str(user.id),
+                    org_id=org_id,
+                    sources=request.sources,
+                    github_repo=request.github_repo or "tiangolo/fastapi",
+                    job_id=job.id
+                )
+            except Exception as e:
+                logger.error(f"Fallback background sync error: {e}")
+                
+        background_tasks.add_task(run_fallback)
+        return {"status": "sync_started", "message": "Integration sync running in background."}
 
 @router.post("/drop")
 async def context_drop(

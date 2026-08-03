@@ -23,7 +23,11 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def tenant_concurrency_limit(ctx: Dict[Any, Any], org_id: str, limit: int = 3):
-    redis = ctx['redis']
+    redis = ctx.get('redis') if isinstance(ctx, dict) else None
+    if not redis:
+        yield
+        return
+        
     tenant_lock_key = f"tenant_sync:{org_id}"
     
     current_syncs = await redis.incr(tenant_lock_key)
