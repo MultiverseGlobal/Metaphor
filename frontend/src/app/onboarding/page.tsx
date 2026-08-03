@@ -360,14 +360,7 @@ function OnboardingContent() {
     if (error) {
       console.warn("Magic link error:", error.message);
       if (error.message?.toLowerCase().includes("rate limit") || (error as any).status === 429) {
-        setToastMessage("Rate limit reached. Initializing workspace directly...");
-        // Auto-provision workspace identity so user is never blocked by email provider limits
-        await fetchFromMetaphor("/auth/me", { name: displayNameInput.trim() || email.split("@")[0] }, "PUT").catch(() => {});
-        const keyRes = await fetchFromMetaphor("/auth/apikeys", { name: "Metaphor Workspace Key" }, "POST").catch(() => null);
-        if (keyRes && (keyRes.raw_token || keyRes.key)) {
-          localStorage.setItem("metaphor_api_key", keyRes.raw_token || keyRes.key);
-        }
-        setPhase("connect");
+        setToastMessage("Too many sign-in attempts. Please wait a few minutes and try again.");
       } else {
         setToastMessage(`Unable to send magic link: ${error.message}`);
       }
@@ -393,18 +386,12 @@ function OnboardingContent() {
       });
 
       if (error) {
-        console.warn(`${provider} OAuth redirect warning:`, error.message);
-        // Provision workspace state and advance smoothly to data sources step
-        await fetchFromMetaphor("/auth/me", { name: displayNameInput.trim() }, "PUT").catch(() => {});
-        const keyRes = await fetchFromMetaphor("/auth/apikeys", { name: "Metaphor Workspace Key" }, "POST").catch(() => null);
-        if (keyRes && (keyRes.raw_token || keyRes.key)) {
-          localStorage.setItem("metaphor_api_key", keyRes.raw_token || keyRes.key);
-        }
-        setPhase("connect");
+        console.error(`${provider} OAuth redirect error:`, error.message);
+        setToastMessage(`Unable to sign in with ${provider}: ${error.message}`);
       }
     } catch (e: any) {
       console.error(`OAuth login catch (${provider}):`, e);
-      setPhase("connect");
+      setToastMessage(`Authentication failed. Please try again.`);
     }
   };
 

@@ -6,7 +6,7 @@ import urllib.parse
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request, status
 from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 from app.database.session import get_session
@@ -63,12 +63,7 @@ async def trigger_integration_sync(
     job = SyncJob(
         organization_id=uuid.UUID(org_id),
         provider="metaphor_onboarding",
-        status="Initializing synchronization...",
-        payload={
-            "user_id": str(user.id),
-            "sources": request.sources,
-            "github_repo": request.github_repo
-        }
+        status="Initializing synchronization..."
     )
     session.add(job)
     await session.commit()
@@ -95,28 +90,14 @@ async def trigger_integration_sync(
         )
         return {"status": "sync_started", "message": "Integration sync running in the background via Arq."}
     except Exception as redis_err:
-        logger.warning(f"Redis queue unavailable ({redis_err}), using FastAPI BackgroundTasks fallback")
-        from app.arq_worker import process_integration_sync
-        class DummyCtx(dict):
-            pass
-        
-        async def run_fallback():
-            dummy_ctx = {"redis": None}
-            # Catch exceptions in background
-            try:
-                await process_integration_sync(
-                    dummy_ctx,
-                    user_id=str(user.id),
-                    org_id=org_id,
-                    sources=request.sources,
-                    github_repo=request.github_repo or "tiangolo/fastapi",
-                    job_id=job.id
-                )
-            except Exception as e:
-                logger.error(f"Fallback background sync error: {e}")
-                
-        background_tasks.add_task(run_fallback)
-        return {"status": "sync_started", "message": "Integration sync running in background."}
+        logger.error(f"Redis queue unavailable ({redis_err}). Sync request failed.")
+        job.status = f"failed: queue unavailable ({str(redis_err)})"
+        session.add(job)
+        await session.commit()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Background job queue service unavailable: {str(redis_err)}"
+        )
 
 @router.post("/drop")
 async def context_drop(
