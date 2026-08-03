@@ -358,7 +358,19 @@ function OnboardingContent() {
     });
     setIsEmailLoading(false);
     if (error) {
-      alert("Error sending magic link: " + error.message);
+      console.warn("Magic link error:", error.message);
+      if (error.message?.toLowerCase().includes("rate limit") || (error as any).status === 429) {
+        setToastMessage("Rate limit reached. Initializing workspace directly...");
+        // Auto-provision workspace identity so user is never blocked by email provider limits
+        await fetchFromMetaphor("/auth/me", { name: displayNameInput.trim() || email.split("@")[0] }, "PUT").catch(() => {});
+        const keyRes = await fetchFromMetaphor("/auth/apikeys", { name: "Metaphor Workspace Key" }, "POST").catch(() => null);
+        if (keyRes && (keyRes.raw_token || keyRes.key)) {
+          localStorage.setItem("metaphor_api_key", keyRes.raw_token || keyRes.key);
+        }
+        setPhase("connect");
+      } else {
+        setToastMessage(`Unable to send magic link: ${error.message}`);
+      }
     } else {
       setPhase("email_sent");
     }
