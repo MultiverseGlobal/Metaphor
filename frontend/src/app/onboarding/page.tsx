@@ -153,10 +153,6 @@ function OnboardingContent() {
       setPhase("auth");
       return;
     }
-    if (stepParam === "connect" || stepParam === "2") {
-      setPhase("connect");
-      return;
-    }
 
     // If starting fresh onboarding, purge stale old account keys
     const isReset = searchParams?.get("reset") === "true";
@@ -184,7 +180,17 @@ function OnboardingContent() {
       return;
     }
 
-    // Auto-check Supabase session
+    // For step=connect: set the UI immediately so there's no flicker,
+    // then STILL call syncSessionState() to verify the session and provision the API key.
+    // Without this, landing at ?step=connect skips key provisioning entirely and
+    // every backend request returns 401.
+    if (stepParam === "connect" || stepParam === "2") {
+      setPhase("connect");
+    }
+
+    // Auto-check Supabase session — always runs unless we returned early above.
+    // If session is valid: provisions API key + confirms connect phase.
+    // If no session: sends user back to auth (step 1).
     async function syncSessionState() {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
@@ -209,6 +215,7 @@ function OnboardingContent() {
     }
     syncSessionState();
   }, [searchParams]);
+
 
 
 
@@ -482,6 +489,8 @@ function OnboardingContent() {
       }
     } catch (e) {
       console.error("Failed to start sync:", e);
+      setPhase("connect");
+      setToastMessage("Unable to start sync. Please check your connection and try again.");
     }
   };
 
