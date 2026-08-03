@@ -7,6 +7,8 @@ from sqlmodel import select
 
 from app.database.session import get_session
 from app.core.security import get_user_via_api_key
+from app.models.identity import User, OrganizationMember
+from app.models.operations import APIKey
 
 router = APIRouter()
 
@@ -43,7 +45,7 @@ async def create_api_key(
     memberships = result.scalars().all()
     
     if not memberships:
-        from app.models.identity import Organization, OrganizationMember
+        from app.models.identity import Organization
         org = Organization(name=f"{current_user.name}'s Workspace", slug=f"workspace-{current_user.id}")
         session.add(org)
         await session.flush()

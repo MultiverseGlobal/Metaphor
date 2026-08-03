@@ -75,6 +75,14 @@ async def process_integration_sync(
                     tokens[provider] = decrypt_token(integ.access_token)
 
             if "github" in sources:
+                if not github_repo:
+                    job.status = "failed: GitHub repository not specified"
+                    from datetime import datetime
+                    job.completed_at = datetime.utcnow()
+                    session.add(job)
+                    await session.commit()
+                    logger.error(f"Sync job {job_id} failed: GitHub repository not specified.")
+                    return "failed"
                 logger.info(f"Fetching GitHub repo: {github_repo}")
                 job.status = "Analyzing GitHub repository..."
                 session.add(job)

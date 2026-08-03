@@ -452,6 +452,11 @@ function OnboardingContent() {
   };
 
   const startIntegrationSync = async () => {
+    const connectedSources = Object.keys(connections).filter(k => connections[k]);
+    if (connectedSources.includes("github") && !githubRepo.trim()) {
+      setToastMessage("Please enter a GitHub repository name.");
+      return;
+    }
     setPhase("analyzing");
     try {
       let apiKey = localStorage.getItem("metaphor_api_key");

@@ -296,7 +296,7 @@ async def authorize_integration(
     elif provider == "google":
         client_id = settings.GOOGLE_CLIENT_ID
         if not client_id:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Google OAuth Client ID is not configured on the server.")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Google integration is not configured. Please set GOOGLE_CLIENT_ID in the environment.")
         redirect_uri = f"{base_url}{settings.API_PREFIX}/integrations/google/callback"
         scopes = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly"
         auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?client_id={client_id}&redirect_uri={urllib.parse.quote(redirect_uri)}&response_type=code&state={state_token}&scope={urllib.parse.quote(scopes)}&access_type=offline&prompt=consent"
