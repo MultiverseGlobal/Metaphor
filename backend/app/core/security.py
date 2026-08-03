@@ -22,6 +22,8 @@ def get_supabase_client() -> Client:
 
 supabase = get_supabase_client()
 
+from sqlmodel import select
+
 async def _ensure_user_in_db(user_id_str: str, email: Optional[str], metadata: Optional[dict], session: AsyncSession) -> User:
     try:
         user_uuid = uuid.UUID(user_id_str)
@@ -143,9 +145,6 @@ async def get_user_via_api_key(request: Request, session: AsyncSession = Depends
     api_key = request.headers.get("X-API-Key", "")
     if api_key:
         import hashlib
-        from sqlmodel import select
-        
-        # 2a. Check if it's a real generated API Key
         from app.models.operations import APIKey
         from app.models.identity import OrganizationMember
         
@@ -169,6 +168,7 @@ async def get_user_via_api_key(request: Request, session: AsyncSession = Depends
         default_user = await identity_service.get_or_create_default_user()
         default_org = await identity_service.get_or_create_default_organization()
         
+        from app.models.identity import OrganizationMember
         stmt = select(OrganizationMember).where(
             OrganizationMember.user_id == default_user.id,
             OrganizationMember.organization_id == default_org.id

@@ -1,11 +1,11 @@
 export function getBackendUrl(): string {
   if (process.env.NEXT_PUBLIC_BACKEND_URL) {
-    return process.env.NEXT_PUBLIC_BACKEND_URL;
+    return process.env.NEXT_PUBLIC_BACKEND_URL.replace(/\/$/, "");
   }
   if (typeof window !== "undefined") {
     const host = window.location.hostname;
     if (host !== "localhost" && host !== "127.0.0.1") {
-      return `${window.location.origin}/api/v1`;
+      return "https://metaphor-backend.onrender.com/api/v1";
     }
   }
   return "http://localhost:8000/api/v1";
