@@ -94,6 +94,7 @@ function OnboardingContent() {
   
   // Email Auth State
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   
   // Connect State
@@ -355,24 +356,54 @@ function OnboardingContent() {
 
 
   const handleEmailAuth = async () => {
-    if (!email) return;
+    if (!email || !password) {
+      setToastMessage("Please provide both email and password.");
+      return;
+    }
     setIsEmailLoading(true);
-    const { error } = await supabase.auth.signInWithOtp({
+    
+    // 1. Try standard password sign-in first
+    let { data, error } = await supabase.auth.signInWithPassword({
       email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/onboarding?step=connect')}`,
-      },
+      password
     });
-    setIsEmailLoading(false);
-    if (error) {
-      console.warn("Magic link error:", error.message);
-      if (error.message?.toLowerCase().includes("rate limit") || (error as any).status === 429) {
-        setToastMessage("Too many sign-in attempts. Please wait a few minutes and try again.");
+
+    // 2. If user does not exist yet, automatically sign up
+    if (error && (error.message?.includes("Invalid login credentials") || error.status === 400)) {
+      const signUpRes = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: displayNameInput.trim() }
+        }
+      });
+      if (!signUpRes.error) {
+        data = signUpRes.data;
+        error = null;
       } else {
-        setToastMessage(`Unable to send magic link: ${error.message}`);
+        error = signUpRes.error;
       }
+    }
+
+    setIsEmailLoading(false);
+
+    if (error) {
+      console.warn("Authentication error:", error.message);
+      setToastMessage(`Authentication failed: ${error.message}`);
     } else {
-      setPhase("email_sent");
+      if (displayNameInput.trim()) {
+        localStorage.setItem("metaphor_user_name", displayNameInput.trim());
+      }
+      try {
+        await fetchFromMetaphor("/auth/me", { name: displayNameInput.trim() }, "PUT").catch(() => {});
+        const keyRes = await fetchFromMetaphor("/auth/apikeys", { name: "Metaphor Workspace Key" }, "POST");
+        if (keyRes && (keyRes.raw_token || keyRes.key)) {
+          localStorage.setItem("metaphor_api_key", keyRes.raw_token || keyRes.key);
+        }
+      } catch (e) {
+        console.warn("User sync warning:", e);
+      }
+      setPhase("connect");
     }
   };
 
@@ -602,23 +633,36 @@ function OnboardingContent() {
             <h1 className="text-2xl font-medium tracking-tight text-foreground mb-3">
               Continue with Email
             </h1>
-            <p className="text-sm text-muted">We'll send a magic link to your inbox.</p>
+            <p className="text-sm text-muted">Enter your email and password to sign in or create an account.</p>
           </div>
           <div className="w-full space-y-4">
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="w-full p-4 rounded-xl border border-border-subtle bg-surface-1 text-foreground placeholder:text-muted focus:outline-none focus:border-foreground transition-colors"
-              onKeyDown={e => { if (e.key === "Enter") handleEmailAuth(); }}
-            />
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-2">Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full p-4 rounded-xl border border-border-subtle bg-surface-1 text-foreground placeholder:text-muted focus:outline-none focus:border-foreground transition-colors text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-2">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                className="w-full p-4 rounded-xl border border-border-subtle bg-surface-1 text-foreground placeholder:text-muted focus:outline-none focus:border-foreground transition-colors text-sm"
+                onKeyDown={e => { if (e.key === "Enter") handleEmailAuth(); }}
+              />
+            </div>
             <button
               onClick={handleEmailAuth}
-              disabled={isEmailLoading || !email}
-              className="w-full p-4 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex justify-center items-center gap-2"
+              disabled={isEmailLoading || !email || !password}
+              className="w-full p-4 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex justify-center items-center gap-2 mt-2"
             >
-              {isEmailLoading ? <div className="w-4 h-4 rounded-full border-2 border-background border-t-transparent animate-spin" /> : "Send Magic Link"}
+              {isEmailLoading ? <div className="w-4 h-4 rounded-full border-2 border-background border-t-transparent animate-spin" /> : "Continue to Workspace"}
             </button>
             <button onClick={() => setPhase("auth")} className="w-full text-xs text-muted font-medium hover:text-foreground transition-colors mt-4">
               Back to options
