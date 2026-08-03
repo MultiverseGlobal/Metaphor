@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 class IntegrationSyncRequest(BaseModel):
     sources: List[str]
-    github_repo: Optional[str] = "tiangolo/fastapi"  # default for demo
+    github_repo: Optional[str] = None
     github_token: Optional[str] = None
     notion_token: Optional[str] = None
 
