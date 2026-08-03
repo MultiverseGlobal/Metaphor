@@ -48,10 +48,24 @@ const PROVIDER_METADATA: Record<string, { name: string; category: string; descri
 };
 
 
+type ChatDrop = {
+  id: string;
+  model_name: string;
+  session_title: string;
+  summary: string;
+  active_files: string[];
+  created_at: string;
+  expires_at: string;
+  retracted_at: string | null;
+  is_expired: boolean;
+  is_retracted: boolean;
+};
+
 import { CardSkeleton } from "@/components/ui/SkeletonLoader";
 
 export default function IntegrationsPage() {
   const [integrations, setIntegrations] = useState<IntegrationState[]>([]);
+  const [drops, setDrops] = useState<ChatDrop[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState<Record<string, boolean>>({});
   const [apiKey, setApiKey] = useState<string>("");
@@ -59,6 +73,7 @@ export default function IntegrationsPage() {
 
   useEffect(() => {
     loadIntegrations();
+    loadDrops();
     const storedKey = localStorage.getItem("metaphor_api_key");
     if (storedKey) setApiKey(storedKey);
   }, []);
@@ -72,6 +87,26 @@ export default function IntegrationsPage() {
       console.error("Failed to load integrations", e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadDrops = async () => {
+    try {
+      const data = await fetchFromMetaphor("/integrations/drops");
+      if (Array.isArray(data)) setDrops(data);
+    } catch (e) {
+      console.error("Failed to load chat drops", e);
+    }
+  };
+
+  const handleRetractDrop = async (dropId: string) => {
+    try {
+      await fetchFromMetaphor(`/integrations/drops/${dropId}`, undefined, "DELETE");
+      setFeedbackMsg("Chat drop retracted! It is now immediately excluded from MCP queries.");
+      setTimeout(() => setFeedbackMsg(null), 3500);
+      await loadDrops();
+    } catch (e) {
+      console.error("Failed to retract drop:", e);
     }
   };
 
@@ -236,7 +271,72 @@ export default function IntegrationsPage() {
           </Card>
         </div>
       )}
+
+      {/* Cross-Model Chat Drops Audit Feed */}
+      <div className="mt-12 animate-in fade-in duration-300">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-xl text-foreground font-semibold tracking-tight">Cross-Model Context Audit Feed</h2>
+          <span className="text-xs text-muted font-mono">{drops.filter(d => !d.is_retracted && !d.is_expired).length} Active Threads</span>
+        </div>
+        <p className="text-muted text-sm leading-relaxed mb-6 max-w-2xl">
+          Context drops from connected AI clients (Claude, Cursor, ChatGPT via <code>sync_chat_drop</code>) are auto-approved and immediately accessible to other models. Review or retract drops anytime below.
+        </p>
+
+        {drops.length === 0 ? (
+          <Card className="p-8 text-center text-muted text-sm">
+            No cross-model context drops recorded yet. Connect Claude, Cursor, or ChatGPT via MCP to sync session context automatically!
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {drops.map((drop) => (
+              <Card key={drop.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1.5 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold bg-surface-2 text-foreground border border-border-subtle">
+                      {drop.model_name}
+                    </span>
+                    <h4 className="text-sm font-semibold text-foreground">{drop.session_title}</h4>
+                    {drop.is_retracted && (
+                      <span className="px-2 py-0.5 rounded text-[10px] bg-destructive/10 text-destructive font-medium border border-destructive/20">
+                        Retracted
+                      </span>
+                    )}
+                    {drop.is_expired && !drop.is_retracted && (
+                      <span className="px-2 py-0.5 rounded text-[10px] bg-muted/10 text-muted font-medium border border-border-subtle">
+                        Expired
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted leading-relaxed line-clamp-2">{drop.summary}</p>
+                  {drop.active_files.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {drop.active_files.map((file, idx) => (
+                        <span key={idx} className="text-[10px] font-mono text-muted bg-surface-1 px-1.5 py-0.5 rounded border border-border-subtle">
+                          {file}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-border-subtle justify-between md:justify-end">
+                  <span className="text-[11px] text-muted whitespace-nowrap">
+                    {new Date(drop.created_at).toLocaleDateString()}
+                  </span>
+                  {!drop.is_retracted && (
+                    <button
+                      onClick={() => handleRetractDrop(drop.id)}
+                      className="px-3 py-1.5 bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/20 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                    >
+                      Retract Drop
+                    </button>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
-
 }

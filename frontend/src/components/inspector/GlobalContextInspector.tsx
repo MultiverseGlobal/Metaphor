@@ -57,7 +57,7 @@ export const GlobalContextInspector: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="metaphor-badge text-[9px] text-[var(--accent-cyan)]">{type}</span>
+              <span className={`metaphor-badge text-[9px] ${type.toLowerCase() === 'decision' ? 'text-amber-500 border-amber-500/30 bg-amber-500/10' : 'text-[var(--accent-cyan)]'}`}>{type}</span>
               <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">{source}</span>
             </div>
             <h3 className="text-base font-semibold text-[var(--text-primary)] mt-1 line-clamp-2 leading-tight">
@@ -143,6 +143,16 @@ export const GlobalContextInspector: React.FC = () => {
                 <h4 className="text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1">Description</h4>
                 <p className="text-xs text-[var(--text-secondary)] leading-relaxed bg-white/2 p-2.5 rounded-lg border border-[var(--border-subtle)]">
                   {description}
+                </p>
+              </div>
+            )}
+
+            {/* Decision Rationale */}
+            {entity && entity.type.toLowerCase() === 'decision' && (
+              <div>
+                <h4 className="text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1">Rationale</h4>
+                <p className="text-xs text-[var(--text-primary)] leading-relaxed bg-[rgba(245,158,11,0.1)] p-2.5 rounded-lg border border-[rgba(245,158,11,0.2)]">
+                  {entity.reasoning || <span className="text-[var(--text-muted)] italic">No rationale found in sources.</span>}
                 </p>
               </div>
             )}

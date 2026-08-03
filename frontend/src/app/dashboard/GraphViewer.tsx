@@ -51,14 +51,33 @@ export default function GraphViewer() {
           warmupTicks={50}
           cooldownTicks={30}
           enablePointerEvents={false}
-          nodeColor={(node: any) => {
-            switch(node.type) {
-              case 'Project': return '#3b82f6';
-              case 'Concept': return '#8b5cf6';
-              case 'Goal': return '#10b981';
-              case 'Constraint': return '#ef4444';
-              case 'Preference': return '#f59e0b';
-              default: return '#9ca3af';
+          nodeCanvasObject={(node: any, ctx, globalScale) => {
+            let color = '#9ca3af';
+            const typeStr = node.type ? node.type.toLowerCase() : '';
+            switch(typeStr) {
+              case 'project': color = '#3b82f6'; break;
+              case 'concept': color = '#8b5cf6'; break;
+              case 'goal': color = '#10b981'; break;
+              case 'constraint': color = '#ef4444'; break;
+              case 'preference': color = '#f59e0b'; break;
+              case 'decision': color = '#f97316'; break; // Orange for Decision
+            }
+
+            ctx.fillStyle = color;
+            if (typeStr === 'decision') {
+              // Draw a diamond
+              const size = 6;
+              ctx.beginPath();
+              ctx.moveTo(node.x, node.y - size);
+              ctx.lineTo(node.x + size, node.y);
+              ctx.lineTo(node.x, node.y + size);
+              ctx.lineTo(node.x - size, node.y);
+              ctx.fill();
+            } else {
+              // Draw a circle
+              ctx.beginPath();
+              ctx.arc(node.x, node.y, 4, 0, 2 * Math.PI, false);
+              ctx.fill();
             }
           }}
           linkColor={() => 'rgba(255,255,255,0.2)'}

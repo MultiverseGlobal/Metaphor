@@ -28,8 +28,9 @@ class ReflectionService:
             "You evaluate incoming events against the existing knowledge graph and emit specific MUTATION OPERATIONS.\n"
             "If a user states a constraint that conflicts with a previous constraint, you must SUPERSEDE the old node.\n"
             "If an event adds nuance to an existing node, you UPDATE the node.\n"
-            "If an event introduces entirely new concepts, you CREATE new nodes.\n"
+            "If an event introduces entirely new concepts (like Projects, Goals, Decisions, or Constraints), you CREATE new nodes.\n"
             "If an event is redundant or has no semantic value, you IGNORE it.\n"
+            "CRITICAL - NO FABRICATED REASONING: When extracting a 'Decision', if the source material does not explicitly state the rationale/reasoning, you MUST set 'reasoning' to null or 'No rationale found in sources'. NEVER invent or hallucinate reasoning.\n"
         )
 
         prompt = (
@@ -47,7 +48,7 @@ class ReflectionService:
             f"  \"operations\": [\n"
             f"    {{\n"
             f"       \"action\": \"CREATE_NODE\",\n"
-            f"       \"node\": {{\"title\": \"...\", \"type\": \"Project|Decision|Goal|Constraint|Preference|Person|Concept\", \"summary\": \"...\", \"metadata\": {{}}, \"confidence\": 0.95}}\n"
+            f"       \"node\": {{\"title\": \"...\", \"type\": \"Project|Decision|Goal|Constraint|Preference|Person|Concept\", \"summary\": \"...\", \"metadata\": {{}}, \"confidence\": 0.95, \"reasoning\": \"...\", \"decided_at\": \"2023-01-01T12:00:00Z\"}}\n"
             f"    }},\n"
             f"    {{\n"
             f"       \"action\": \"SUPERSEDE_NODE\",\n"
@@ -69,7 +70,7 @@ class ReflectionService:
             f"       \"action\": \"CREATE_EDGE\",\n"
             f"       \"source_title_or_id\": \"title or uuid\",\n"
             f"       \"target_title_or_id\": \"title or uuid\",\n"
-            f"       \"relationship\": \"owns|requires|contradicts|relates_to\"\n"
+            f"       \"relationship\": \"owns|requires|contradicts|relates_to|alternative|outcome\"\n"
             f"    }},\n"
             f"    {{\n"
             f"       \"action\": \"IGNORE\",\n"
@@ -111,8 +112,18 @@ class ReflectionService:
                 title = n_data.get("title")
                 if title:
                     summary = n_data.get("summary", "")
-                    # Generate embedding
                     embedding = await llm_service.generate_embedding(f"{title}: {summary}")
+                    
+                    # Parse datetime
+                    decided_at_str = n_data.get("decided_at")
+                    decided_at = None
+                    if decided_at_str:
+                        from dateutil.parser import parse
+                        try:
+                            decided_at = parse(decided_at_str)
+                        except Exception:
+                            pass
+                            
                     node = await self.graph.create_node(
                         org_id=org_id,
                         type=n_data.get("type", "Concept"),
@@ -122,7 +133,9 @@ class ReflectionService:
                         metadata=n_data.get("metadata", {}),
                         embedding_vector=embedding,
                         confidence=n_data.get("confidence", 1.0),
-                        source_event_id=event.id
+                        source_event_id=event.id,
+                        decided_at=decided_at,
+                        reasoning=n_data.get("reasoning")
                     )
                     node_map[title.lower()] = node
                     applied_ops += 1
@@ -138,6 +151,16 @@ class ReflectionService:
                         summary = n_data.get("summary", "")
                         # Generate embedding
                         embedding = await llm_service.generate_embedding(f"{title}: {summary}")
+                        # Parse datetime
+                        decided_at_str = n_data.get("decided_at")
+                        decided_at = None
+                        if decided_at_str:
+                            from dateutil.parser import parse
+                            try:
+                                decided_at = parse(decided_at_str)
+                            except Exception:
+                                pass
+                                
                         # Create the new node
                         new_node = await self.graph.create_node(
                             org_id=org_id,
@@ -148,7 +171,9 @@ class ReflectionService:
                             metadata=n_data.get("metadata", {}),
                             embedding_vector=embedding,
                             confidence=n_data.get("confidence", 1.0),
-                            source_event_id=event.id
+                            source_event_id=event.id,
+                            decided_at=decided_at,
+                            reasoning=n_data.get("reasoning")
                         )
                         node_map[title.lower()] = new_node
                         

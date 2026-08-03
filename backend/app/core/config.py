@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "https://metaphor-three.vercel.app"
     BACKEND_URL: str = "http://localhost:8000"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 # 1 week
+    CHAT_SESSION_RETENTION_DAYS: int = 14
     
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgrespassword@localhost:5432/metaphor"

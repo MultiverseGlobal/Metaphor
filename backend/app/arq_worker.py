@@ -146,6 +146,28 @@ async def process_integration_sync(
 
 
 
+async def cleanup_expired_chat_sessions(ctx):
+    """
+    Scheduled Arq worker task to delete expired ChatSession rows from PostgreSQL database.
+    """
+    from datetime import datetime, timezone
+    from sqlmodel import select
+    from app.models.chat_session import ChatSession
+
+    async with get_session_context() as session:
+        now = datetime.now(timezone.utc)
+        stmt = select(ChatSession).where(ChatSession.expires_at <= now)
+        res = await session.execute(stmt)
+        expired_items = res.scalars().all()
+        count = len(expired_items)
+        if count > 0:
+            logger.info(f"Cleaning up {count} expired ChatSession rows...")
+            for item in expired_items:
+                await session.delete(item)
+            await session.commit()
+            logger.info(f"Successfully cleaned up {count} expired ChatSession rows.")
+        return count
+
 async def startup(ctx):
     pass
 
@@ -159,7 +181,7 @@ redis_host = parsed.hostname or "localhost"
 redis_port = parsed.port or 6379
 
 class WorkerSettings:
-    functions = [process_integration_sync]
+    functions = [process_integration_sync, cleanup_expired_chat_sessions]
     redis_settings = RedisSettings(host=redis_host, port=redis_port)
     on_startup = startup
     on_shutdown = shutdown

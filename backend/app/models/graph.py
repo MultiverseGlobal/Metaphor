@@ -25,6 +25,8 @@ class Node(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
     updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
     archived_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    decided_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    reasoning: Optional[str] = None
     
     # For idempotency
     source_event_id: Optional[uuid.UUID] = Field(default=None, index=True)
@@ -75,9 +77,9 @@ class Embedding(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     node_id: uuid.UUID = Field(foreign_key="nodes.id", index=True)
     
-    vector: Any = Field(sa_column=Column(Vector(768))) # Assuming Gemini text-embedding-004
-    model: str = Field(default="models/text-embedding-004")
-    dimensions: int = Field(default=768)
+    vector: Any = Field(sa_column=Column(Vector(3072))) # gemini-embedding-001
+    model: str = Field(default="models/gemini-embedding-001")
+    dimensions: int = Field(default=3072)
 
 class SearchDocument(SQLModel, table=True):
     __tablename__ = "search_documents"

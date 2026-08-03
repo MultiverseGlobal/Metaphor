@@ -47,7 +47,8 @@ async def init_db() -> None:
             User, Organization, OrganizationMember,
             Node, NodeMetadata, Edge, Evidence, Embedding, SearchDocument,
             ContextPackage, ContextSession,
-            Integration, WebhookEvent, Activity, APIKey, MCPSession
+            Integration, WebhookEvent, Activity, APIKey, MCPSession,
+            ChatSession
         )
         await conn.run_sync(SQLModel.metadata.create_all)
 

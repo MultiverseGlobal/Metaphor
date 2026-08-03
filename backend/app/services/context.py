@@ -110,3 +110,118 @@ class ContextService:
         await self.session.refresh(pkg)
         
         return pkg
+
+    async def generate_decision_package(self, org_id: uuid.UUID, ai_consumer: str, query: str) -> ContextPackage:
+        # Specialized query for decisions
+        from app.services.llm import llm_service
+        from app.models.graph import Evidence, Edge
+        
+        query_embedding = await llm_service.generate_embedding(query)
+        
+        # 1. Fetch decision nodes via vector search, then filter to approved decisions
+        nodes = await self.graph.vector_search(org_id, query_embedding, limit=20, statuses=["approved"])
+        decision_nodes = [n for n in nodes if "decision" in n.type.lower()][:5]
+
+        # 2. Gather Evidence and Edges for each
+        enriched_nodes = []
+        for n in decision_nodes:
+            # Evidence
+            ev_stmt = select(Evidence).where(Evidence.node_id == n.id)
+            ev_res = await self.session.execute(ev_stmt)
+            evidences = ev_res.scalars().all()
+
+            # Alternatives (edges pointing to other nodes with relationship 'alternative')
+            alt_stmt = select(Edge).where(Edge.from_node == n.id, Edge.relationship == "alternative")
+            alt_res = await self.session.execute(alt_stmt)
+            alts = alt_res.scalars().all()
+            
+            # Follow-ups/outcomes
+            out_stmt = select(Edge).where(Edge.from_node == n.id, Edge.relationship == "outcome")
+            out_res = await self.session.execute(out_stmt)
+            outs = out_res.scalars().all()
+
+            enriched_nodes.append({
+                "id": str(n.id),
+                "title": n.title,
+                "reasoning": n.reasoning,
+                "decided_at": n.decided_at.isoformat() if n.decided_at else None,
+                "evidence": [{"source": e.source, "url": e.url, "text": e.raw_text[:200]} for e in evidences],
+                "alternatives_count": len(alts),
+                "outcomes_count": len(outs)
+            })
+
+        package_json = {
+            "status": "matched" if enriched_nodes else "no_results",
+            "query": query,
+            "answer": "Here is the reasoning trail for the decisions related to your query.",
+            "decisions": enriched_nodes
+        }
+
+        pkg = ContextPackage(
+            objective=query,
+            package_json=package_json,
+            token_count=len(json.dumps(package_json))
+        )
+        self.session.add(pkg)
+        await self.session.commit()
+        await self.session.refresh(pkg)
+        
+        return pkg
+
+    async def index_chat_drop(
+        self,
+        org_id: uuid.UUID,
+        chat_session_id: uuid.UUID,
+        source_model: str,
+        session_title: str,
+        summary: str,
+        active_files: List[str]
+    ) -> Node:
+        """
+        Indexes an explicit chat drop directly into the Graph as a Node with status='approved' and source_type='chat_drop'.
+        Bypasses Reflection Engine review gate since this is an explicit human-directed write.
+        """
+        from app.models.graph import Node, NodeMetadata, Edge
+        from sqlmodel import select
+
+        node_title = f"[{source_model.upper()}] {session_title}"
+        payload_content = json.dumps({
+            "chat_session_id": str(chat_session_id),
+            "source_model": source_model,
+            "summary": summary,
+            "active_files": active_files
+        })
+
+        node = Node(
+            organization_id=org_id,
+            type="chat_session",
+            title=node_title,
+            summary=summary[:500],
+            content=payload_content,
+            confidence=1.0,
+            status="approved" # Auto-approved with audit trail — explicit user action
+        )
+        self.session.add(node)
+        await self.session.flush()
+
+        # Add explicit metadata distinguishing this as a chat_drop
+        meta_source = NodeMetadata(node_id=node.id, key="source_type", value="chat_drop")
+        meta_model = NodeMetadata(node_id=node.id, key="source_model", value=source_model)
+        self.session.add(meta_source)
+        self.session.add(meta_model)
+
+        # Connect to any active project node in the organization if present
+        stmt_proj = select(Node).where(Node.organization_id == org_id, Node.type == "project").limit(1)
+        res_proj = await self.session.execute(stmt_proj)
+        proj_node = res_proj.scalars().first()
+        if proj_node:
+            edge = Edge(
+                from_node=node.id,
+                to_node=proj_node.id,
+                relation="SESSION_CONTEXT_FOR"
+            )
+            self.session.add(edge)
+
+        await self.session.commit()
+        await self.session.refresh(node)
+        return node

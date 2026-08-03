@@ -9,7 +9,20 @@ class GraphService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create_node(self, org_id: uuid.UUID, type: str, title: str, summary: str, content: str, metadata: Dict[str, str] = None, embedding_vector: List[float] = None, confidence: float = 1.0, source_event_id: Optional[uuid.UUID] = None) -> Node:
+    async def create_node(
+        self, 
+        org_id: uuid.UUID, 
+        type: str, 
+        title: str, 
+        summary: str, 
+        content: str, 
+        metadata: Dict[str, str] = None, 
+        embedding_vector: List[float] = None, 
+        confidence: float = 1.0, 
+        source_event_id: Optional[uuid.UUID] = None,
+        decided_at: Optional[datetime] = None,
+        reasoning: Optional[str] = None
+    ) -> Node:
         # Idempotency check
         if source_event_id:
             stmt = select(Node).where(
@@ -29,7 +42,9 @@ class GraphService:
             summary=summary,
             content=content,
             confidence=confidence,
-            source_event_id=source_event_id
+            source_event_id=source_event_id,
+            decided_at=decided_at,
+            reasoning=reasoning
         )
         self.session.add(node)
         await self.session.commit()
@@ -53,13 +68,14 @@ class GraphService:
             
         return node
 
-    async def vector_search(self, org_id: uuid.UUID, query_vector: List[float], limit: int = 20) -> List[Node]:
+    async def vector_search(self, org_id: uuid.UUID, query_vector: List[float], limit: int = 20, statuses: Optional[List[str]] = None) -> List[Node]:
         from app.models.graph import Embedding
+        filter_statuses = statuses or ["active"]
         stmt = (
             select(Node)
             .join(Embedding, Node.embedding_id == Embedding.id)
             .where(Node.organization_id == org_id)
-            .where(Node.status == "active")
+            .where(Node.status.in_(filter_statuses))
             .order_by(Embedding.vector.cosine_distance(query_vector))
             .limit(limit)
         )

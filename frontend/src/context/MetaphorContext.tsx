@@ -21,6 +21,8 @@ export interface MetaphorEntity {
   impactScore?: number;
   properties: Record<string, unknown>;
   connectedEntityIds: string[];
+  reasoning?: string;
+  decidedAt?: string;
 }
 
 export interface MetaphorConnector {

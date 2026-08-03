@@ -69,6 +69,46 @@ def enforce_token_rate_limit(token_id: str):
     RATE_LIMIT_STORE[token_id].append(now)
 
 
+import re
+
+SECRET_PATTERNS = [
+    re.compile(r"(?i)(sk-[a-zA-Z0-9_-]{20,})"),
+    re.compile(r"(?i)(ghp_[a-zA-Z0-9]{20,})"),
+    re.compile(r"(?i)(AKIA[0-9A-Z]{16})"),
+    re.compile(r"-----BEGIN (RSA|EC|OPENSSH|PRIVATE) KEY-----"),
+    re.compile(r"(?i)(metaphor_[a-zA-Z0-9_-]{20,})"),
+    re.compile(r"(?i)(AIza[0-9A-Za-z-_]{35})"),
+    re.compile(r"(?i)(bearer\s+[a-zA-Z0-9_\-\.]{20,})")
+]
+
+def scan_text_for_secrets(text: str) -> Optional[str]:
+    if not text:
+        return None
+    for pattern in SECRET_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            return match.group(0)
+    return None
+
+def scan_payload_for_secrets(data: Any) -> Optional[str]:
+    if isinstance(data, str):
+        return scan_text_for_secrets(data)
+    elif isinstance(data, list):
+        for item in data:
+            found = scan_payload_for_secrets(item)
+            if found:
+                return found
+    elif isinstance(data, dict):
+        for k, v in data.items():
+            found_k = scan_payload_for_secrets(k)
+            if found_k:
+                return found_k
+            found_v = scan_payload_for_secrets(v)
+            if found_v:
+                return found_v
+    return None
+
+
 # ── Tenant-Isolated Resource Resolvers ─────────────────────────────────────────
 async def list_mcp_resources() -> List[Dict[str, Any]]:
     return [
@@ -77,6 +117,7 @@ async def list_mcp_resources() -> List[Dict[str, Any]]:
         {"uri": "workspace://graph", "name": "Knowledge Graph", "description": "Context graph summary & node topology", "mimeType": "application/json"},
         {"uri": "workspace://architecture", "name": "Architecture", "description": "Architectural decisions and design constraints", "mimeType": "application/json"},
         {"uri": "workspace://repositories", "name": "Repositories", "description": "Ingested repositories, codebase files, and commits", "mimeType": "application/json"},
+        {"uri": "workspace://active-threads", "name": "Active Chat Threads", "description": "Recent cross-model chat session drops & active context threads across AI clients (Claude, Cursor, ChatGPT)", "mimeType": "application/json"},
     ]
 
 async def read_mcp_resource(uri: str, organization_id: uuid.UUID, session: AsyncSession) -> Dict[str, Any]:
@@ -123,11 +164,36 @@ async def read_mcp_resource(uri: str, organization_id: uuid.UUID, session: Async
         nodes = res.scalars().all()
         return {"uri": uri, "contents": [{"text": json.dumps([{"id": str(n.id), "title": n.title, "summary": n.summary, "properties": getattr(n, "properties", {})} for n in nodes], indent=2)}]}
 
+    elif uri == "workspace://active-threads":
+        from app.models.chat_session import ChatSession
+        now = datetime.now(timezone.utc)
+        stmt = select(ChatSession).where(
+            ChatSession.organization_id == organization_id,
+            ChatSession.expires_at > now,
+            ChatSession.retracted_at == None
+        ).order_by(ChatSession.updated_at.desc()).limit(20)
+        res = await session.execute(stmt)
+        sessions = res.scalars().all()
+        data = [
+            {
+                "id": str(s.id),
+                "model_name": s.model_name,
+                "session_title": s.session_title,
+                "summary": s.summary,
+                "context_payload": s.context_payload,
+                "created_at": s.created_at.isoformat(),
+                "updated_at": s.updated_at.isoformat(),
+                "expires_at": s.expires_at.isoformat()
+            }
+            for s in sessions
+        ]
+        return {"uri": uri, "contents": [{"text": json.dumps(data, indent=2)}]}
+
     else:
         raise HTTPException(404, detail=f"Resource '{uri}' not found.")
 
 
-# ── Tenant-Isolated Read-Only Tools Resolvers ──────────────────────────────────
+# ── Tenant-Isolated Read/Write Tools Resolvers ──────────────────────────────────
 async def list_mcp_tools() -> List[Dict[str, Any]]:
     return [
         {
@@ -178,11 +244,144 @@ async def list_mcp_tools() -> List[Dict[str, Any]]:
             "inputSchema": {"type": "object", "properties": {}},
             "annotations": {"readOnly": True, "destructive": False}
         },
+        {
+            "name": "get_active_session_context",
+            "description": "Retrieve recent chat drops and active cross-model session context across workspace AI assistants (Cursor, Claude, ChatGPT).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "target_model": {"type": "string", "description": "Optional model filter (e.g. cursor, claude, chatgpt)"},
+                    "limit": {"type": "integer", "default": 10}
+                }
+            },
+            "annotations": {"readOnly": True, "destructive": False}
+        },
+        {
+            "name": "sync_chat_drop",
+            "description": "Drop active chat session context or task progress from your current AI client (Claude, Cursor, ChatGPT) into Metaphor shared memory.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "source_model": {"type": "string", "description": "Name of the calling AI client, e.g. claude, cursor, chatgpt"},
+                    "summary": {"type": "string", "description": "Summary of active task, decisions, code changes, or context"},
+                    "active_files": {"type": "array", "items": {"type": "string"}, "description": "List of active file paths"},
+                    "session_title": {"type": "string", "description": "Optional title for this session drop"},
+                    "context_payload": {"type": "object", "description": "Optional additional structured context payload"}
+                },
+                "required": ["source_model", "summary"]
+            },
+            "annotations": {"readOnly": False, "destructive": False}
+        },
     ]
 
 
-async def call_mcp_tool(name: str, arguments: Dict[str, Any], organization_id: uuid.UUID, session: AsyncSession) -> Dict[str, Any]:
+async def call_mcp_tool(
+    name: str,
+    arguments: Dict[str, Any],
+    organization_id: uuid.UUID,
+    session: AsyncSession,
+    scopes: Optional[List[str]] = None
+) -> Dict[str, Any]:
     # Every tool query strictly filters by organization_id
+    if name == "sync_chat_drop":
+        # 1. Verify Write Scope
+        has_write_scope = scopes is not None and any(
+            s.lower() in ["write", "mcp:write", "write:workspace", "admin", "all", "*"]
+            for s in scopes
+        )
+        if not has_write_scope and scopes is not None:
+            raise HTTPException(
+                status_code=403,
+                detail="Permission denied: Token requires write scope ('mcp:write' or 'write') to execute sync_chat_drop."
+            )
+
+        source_model = arguments.get("source_model", "unknown")
+        summary = arguments.get("summary", "")
+        active_files = arguments.get("active_files", [])
+        session_title = arguments.get("session_title", "Cross-Model Session Drop")
+        context_payload = arguments.get("context_payload", {})
+
+        # 2. Secret Detection Scan
+        secret_found = scan_payload_for_secrets({
+            "summary": summary,
+            "active_files": active_files,
+            "context_payload": context_payload
+        })
+        if secret_found:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Security violation: Sensitive credential pattern ('{secret_found[:6]}...') detected in payload. Please remove API keys, tokens, or private secrets before dropping context."
+            )
+
+        # 3. Store ChatSession in DB
+        from app.models.chat_session import ChatSession
+        from app.services.context import ContextService
+        from app.services.graph import GraphService
+
+        full_payload = {"active_files": active_files, **context_payload}
+        chat_sess = ChatSession(
+            organization_id=organization_id,
+            model_name=source_model.lower(),
+            session_title=session_title,
+            summary=summary,
+            context_payload=full_payload
+        )
+        session.add(chat_sess)
+        await session.commit()
+        await session.refresh(chat_sess)
+
+        # 4. Index in Graph directly with source_type='chat_drop'
+        graph = GraphService(session)
+        ctx_service = ContextService(session, graph)
+        await ctx_service.index_chat_drop(
+            org_id=organization_id,
+            chat_session_id=chat_sess.id,
+            source_model=source_model,
+            session_title=session_title,
+            summary=summary,
+            active_files=active_files
+        )
+
+        return {"content": [{"type": "text", "text": json.dumps({
+            "status": "success",
+            "chat_session_id": str(chat_sess.id),
+            "model_name": source_model,
+            "expires_at": chat_sess.expires_at.isoformat(),
+            "message": "Context drop recorded and indexed into cognitive graph."
+        }, indent=2)}]}
+
+    elif name == "get_active_session_context":
+        target_model = arguments.get("target_model")
+        limit = arguments.get("limit", 10)
+
+        from app.models.chat_session import ChatSession
+        now = datetime.now(timezone.utc)
+        stmt = select(ChatSession).where(
+            ChatSession.organization_id == organization_id,
+            ChatSession.expires_at > now,
+            ChatSession.retracted_at == None
+        )
+        if target_model:
+            stmt = stmt.where(ChatSession.model_name == target_model.lower())
+        stmt = stmt.order_by(ChatSession.updated_at.desc()).limit(limit)
+
+        res = await session.execute(stmt)
+        sessions = res.scalars().all()
+
+        data = [
+            {
+                "id": str(s.id),
+                "model_name": s.model_name,
+                "session_title": s.session_title,
+                "summary": s.summary,
+                "context_payload": s.context_payload,
+                "created_at": s.created_at.isoformat(),
+                "updated_at": s.updated_at.isoformat(),
+                "expires_at": s.expires_at.isoformat()
+            }
+            for s in sessions
+        ]
+        return {"content": [{"type": "text", "text": json.dumps(data, indent=2)}]}
     if name == "search_context":
         query = arguments.get("query", "")
         graph = GraphService(session)
@@ -228,7 +427,11 @@ async def call_mcp_tool(name: str, arguments: Dict[str, Any], organization_id: u
         graph = GraphService(session)
         ctx_service = ContextService(session, graph)
         try:
-            package = await ctx_service.generate_context_package(organization_id, "mcp", question)
+            is_decision = any(q in question.lower() for q in ["why did we choose", "what was the reasoning", "why did we decide", "decision behind"])
+            if is_decision:
+                package = await ctx_service.generate_decision_package(organization_id, "mcp", question)
+            else:
+                package = await ctx_service.generate_context_package(organization_id, "mcp", question)
             pkg_data = package.package_json
         except Exception as e:
             logger.warning(f"Workspace answer generation fallback: {e}")

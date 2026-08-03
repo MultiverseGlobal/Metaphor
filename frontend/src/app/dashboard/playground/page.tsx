@@ -74,10 +74,11 @@ export default function PlaygroundPage() {
               <h2 className="text-lg font-semibold tracking-tight text-foreground mb-1">Test your Context</h2>
               <p className="text-sm text-muted max-w-sm leading-relaxed mb-6">Ask a question. The system will retrieve relevant Graph Nodes and answer you contextually.</p>
               
-              <div className="flex flex-wrap justify-center gap-2 max-w-md">
+              <div className="flex flex-wrap justify-center gap-2 max-w-lg">
                 {[
-                  "Who am i?",
-                  "What architectural decisions are active?",
+                  "Use Metaphor (get_active_session_context) to check my Cursor chat session.",
+                  "Drop this active task progress into Metaphor (sync_chat_drop) for Claude.",
+                  "What active architectural decisions exist in this workspace?",
                   "Summarize indexed workspace context"
                 ].map((preset, idx) => (
                   <button

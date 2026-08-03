@@ -210,6 +210,85 @@ async def check_integration_status(
         "has_data": node is not None
     }
 
+@router.get("/drops")
+async def list_chat_drops(
+    user: User = Depends(get_user_via_api_key),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Lists all cross-model chat session drops for the organization audit feed.
+    """
+    from sqlmodel import select, desc
+    from app.models.identity import OrganizationMember
+    from app.models.chat_session import ChatSession
+
+    stmt = select(OrganizationMember).where(OrganizationMember.user_id == user.id)
+    result = await session.execute(stmt)
+    org_member = result.scalars().first()
+
+    if not org_member:
+        return []
+
+    stmt_drops = select(ChatSession).where(
+        ChatSession.organization_id == org_member.organization_id
+    ).order_by(desc(ChatSession.created_at)).limit(50)
+    
+    res = await session.execute(stmt_drops)
+    drops = res.scalars().all()
+    now = datetime.now(timezone.utc)
+
+    return [
+        {
+            "id": str(d.id),
+            "model_name": d.model_name,
+            "session_title": d.session_title,
+            "summary": d.summary,
+            "active_files": d.context_payload.get("active_files", []) if isinstance(d.context_payload, dict) else [],
+            "created_at": d.created_at.isoformat(),
+            "expires_at": d.expires_at.isoformat(),
+            "retracted_at": d.retracted_at.isoformat() if d.retracted_at else None,
+            "is_expired": d.expires_at <= now,
+            "is_retracted": d.retracted_at is not None
+        }
+        for d in drops
+    ]
+
+@router.delete("/drops/{drop_id}")
+async def retract_chat_drop(
+    drop_id: uuid.UUID,
+    user: User = Depends(get_user_via_api_key),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Retracts a chat session drop, immediately excluding it from MCP queries.
+    """
+    from sqlmodel import select
+    from app.models.identity import OrganizationMember
+    from app.models.chat_session import ChatSession
+
+    stmt = select(OrganizationMember).where(OrganizationMember.user_id == user.id)
+    result = await session.execute(stmt)
+    org_member = result.scalars().first()
+
+    if not org_member:
+        raise HTTPException(status_code=403, detail="User not part of organization")
+
+    stmt_drop = select(ChatSession).where(
+        ChatSession.id == drop_id,
+        ChatSession.organization_id == org_member.organization_id
+    )
+    res = await session.execute(stmt_drop)
+    drop = res.scalars().first()
+
+    if not drop:
+        raise HTTPException(status_code=404, detail="Chat drop not found")
+
+    drop.retracted_at = datetime.now(timezone.utc)
+    session.add(drop)
+    await session.commit()
+
+    return {"status": "success", "message": f"Drop {drop_id} successfully retracted."}
+
 def get_base_url(request: Request | None = None) -> str:
     from app.core.config import settings
     # 1. If BACKEND_URL in settings is valid and not localhost, use it

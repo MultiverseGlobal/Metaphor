@@ -636,8 +636,8 @@ async def remote_mcp_jsonrpc_endpoint(
         tool_name = params.get("name", "")
         name_called = tool_name
         arguments = params.get("arguments", {})
-        summary = str(arguments)
-        tool_res = await call_mcp_tool(tool_name, arguments, token_obj.organization_id, session)
+        token_scopes = token_obj.scope.split() if getattr(token_obj, "scope", None) else []
+        tool_res = await call_mcp_tool(tool_name, arguments, token_obj.organization_id, session, scopes=token_scopes)
         response_payload = {"jsonrpc": "2.0", "id": req_id, "result": tool_res}
 
     elif method == "prompts/list":
