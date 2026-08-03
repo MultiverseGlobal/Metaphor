@@ -14,7 +14,7 @@ function LoginForm() {
   const defaultTarget = isAlreadyOnboarded ? "/dashboard" : "/onboarding";
   const redirectTarget = searchParams.get("redirect") || defaultTarget;
 
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(searchParams.get("signup") !== "true");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);

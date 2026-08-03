@@ -34,7 +34,7 @@ const AppleIcon = () => (
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Phase = "auth" | "email_auth" | "email_sent" | "connect" | "analyzing" | "resolving" | "complete";
+type Phase = "connect" | "analyzing" | "resolving" | "complete";
 
 const AMBIGUITY_QUESTIONS = [
   "What is the most important thing you're working on?",
@@ -89,13 +89,8 @@ function ConnectCard({ name, icon, connected, connecting, onToggle }: { name: st
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [phase, setPhase] = useState<Phase>("auth");
+  const [phase, setPhase] = useState<Phase>("connect");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  
-  // Email Auth State
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isEmailLoading, setIsEmailLoading] = useState(false);
   
   // Connect State
   const [connections, setConnections] = useState<Record<string, boolean>>({});
@@ -149,20 +144,13 @@ function OnboardingContent() {
 
   // Check URL query parameters & ensure onboarding starts at Step 1 or restores session step
   useEffect(() => {
-    const stepParam = searchParams?.get("step");
-    if (stepParam === "1" || stepParam === "auth" || stepParam === "identity") {
-      setPhase("auth");
-      return;
-    }
-
     // If starting fresh onboarding, purge stale old account keys
     const isReset = searchParams?.get("reset") === "true";
     if (isReset && typeof window !== "undefined") {
-      localStorage.removeItem("metaphor_user_name");
       localStorage.removeItem("metaphor_connected_sources");
       localStorage.removeItem("metaphor_processed_nodes");
       localStorage.removeItem("metaphor_onboarded");
-      setPhase("auth");
+      setPhase("connect");
       return;
     }
 
@@ -181,17 +169,9 @@ function OnboardingContent() {
       return;
     }
 
-    // For step=connect: set the UI immediately so there's no flicker,
-    // then STILL call syncSessionState() to verify the session and provision the API key.
-    // Without this, landing at ?step=connect skips key provisioning entirely and
-    // every backend request returns 401.
-    if (stepParam === "connect" || stepParam === "2") {
-      setPhase("connect");
-    }
-
     // Auto-check Supabase session — always runs unless we returned early above.
     // If session is valid: provisions API key + confirms connect phase.
-    // If no session: sends user back to auth (step 1).
+    // If no session: sends user back to login.
     async function syncSessionState() {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
@@ -199,7 +179,6 @@ function OnboardingContent() {
         const name = session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split("@")[0];
         if (name && typeof window !== "undefined" && !localStorage.getItem("metaphor_user_name")) {
           localStorage.setItem("metaphor_user_name", name);
-          setDisplayNameInput(name);
         }
         try {
           const keyRes = await fetchFromMetaphor("/auth/apikeys", { name: "Metaphor Workspace Key" }, "POST");
@@ -211,7 +190,7 @@ function OnboardingContent() {
         }
         setPhase("connect");
       } else {
-        setPhase("auth");
+        router.push("/login");
       }
     }
     syncSessionState();
@@ -346,92 +325,7 @@ function OnboardingContent() {
     }
   }, [phase]);
 
-  // Add state for Step 1 identity inputs
-  const [displayNameInput, setDisplayNameInput] = useState(
-    typeof window !== "undefined" ? localStorage.getItem("metaphor_user_name") || "Theoonim" : "Theoonim"
-  );
-  const [workspaceInput, setWorkspaceInput] = useState("Metaphor OS");
-
-
-
-
-  const handleEmailAuth = async () => {
-    if (!email || !password) {
-      setToastMessage("Please provide both email and password.");
-      return;
-    }
-    setIsEmailLoading(true);
-    
-    // 1. Try standard password sign-in first
-    let { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    // 2. If user does not exist yet, automatically sign up
-    if (error && (error.message?.includes("Invalid login credentials") || error.status === 400)) {
-      const signUpRes = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: displayNameInput.trim() }
-        }
-      });
-      if (!signUpRes.error) {
-        data = signUpRes.data;
-        error = null;
-      } else {
-        error = signUpRes.error;
-      }
-    }
-
-    setIsEmailLoading(false);
-
-    if (error) {
-      console.warn("Authentication error:", error.message);
-      setToastMessage(`Authentication failed: ${error.message}`);
-    } else {
-      if (displayNameInput.trim()) {
-        localStorage.setItem("metaphor_user_name", displayNameInput.trim());
-      }
-      try {
-        await fetchFromMetaphor("/auth/me", { name: displayNameInput.trim() }, "PUT").catch(() => {});
-        const keyRes = await fetchFromMetaphor("/auth/apikeys", { name: "Metaphor Workspace Key" }, "POST");
-        if (keyRes && (keyRes.raw_token || keyRes.key)) {
-          localStorage.setItem("metaphor_api_key", keyRes.raw_token || keyRes.key);
-        }
-      } catch (e) {
-        console.warn("User sync warning:", e);
-      }
-      setPhase("connect");
-    }
-  };
-
   const supabase = createClient();
-
-  const handleOAuthLogin = async (provider: 'github' | 'google') => {
-    if (displayNameInput.trim()) {
-      localStorage.setItem("metaphor_user_name", displayNameInput.trim());
-    }
-    
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/onboarding?step=connect')}`,
-          queryParams: provider === 'google' ? { access_type: 'offline', prompt: 'consent' } : undefined,
-        },
-      });
-
-      if (error) {
-        console.error(`${provider} OAuth redirect error:`, error.message);
-        setToastMessage(`Unable to sign in with ${provider}: ${error.message}`);
-      }
-    } catch (e: any) {
-      console.error(`OAuth login catch (${provider}):`, e);
-      setToastMessage(`Authentication failed. Please try again.`);
-    }
-  };
 
   const toggleConnection = async (id: string) => {
     if (connections[id]) {
@@ -531,167 +425,6 @@ function OnboardingContent() {
     localStorage.setItem("metaphor_onboarded", "true");
     router.push("/dashboard");
   };
-
-  // ── PHASE 1: STEP 1 - WORKSPACE & IDENTITY SETUP ────────────────────────────
-  if (phase === "auth") {
-    return (
-      <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in fade-in duration-500">
-        <div className="w-full max-w-sm flex flex-col items-center">
-          
-          <MetaphorLogo size={48} className="mb-8 text-foreground" />
-
-          <div className="mb-8 text-center w-full">
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-muted mb-2 block">Step 1 of 4</span>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground mb-2">
-              Initialize Workspace
-            </h1>
-            <p className="text-sm text-muted">
-              Configure your developer profile and workspace identity.
-            </p>
-          </div>
-
-          <div className="w-full space-y-5 text-left">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-2">Display Name</label>
-              <input
-                type="text"
-                value={displayNameInput}
-                onChange={e => setDisplayNameInput(e.target.value)}
-                placeholder="e.g. Theoonim"
-                className="w-full p-3.5 rounded-xl border border-border-subtle bg-surface-1 text-foreground placeholder:text-muted focus:outline-none focus:border-foreground transition-colors text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-2">Workspace Name</label>
-              <input
-                type="text"
-                value={workspaceInput}
-                onChange={e => setWorkspaceInput(e.target.value)}
-                placeholder="e.g. Metaphor OS"
-                className="w-full p-3.5 rounded-xl border border-border-subtle bg-surface-1 text-foreground placeholder:text-muted focus:outline-none focus:border-foreground transition-colors text-sm"
-              />
-            </div>
-
-            <button
-              onClick={async () => {
-                if (displayNameInput.trim()) {
-                  localStorage.setItem("metaphor_user_name", displayNameInput.trim());
-                }
-                const { data: { session } } = await supabase.auth.getSession();
-                if (!session) {
-                  setPhase("email_auth");
-                  return;
-                }
-                try {
-                  await fetchFromMetaphor("/auth/me", { name: displayNameInput.trim() }, "PUT").catch(() => {});
-                  const keyRes = await fetchFromMetaphor("/auth/apikeys", { name: "Metaphor Workspace Key" }, "POST");
-                  if (keyRes && (keyRes.raw_token || keyRes.key)) {
-                    localStorage.setItem("metaphor_api_key", keyRes.raw_token || keyRes.key);
-                  }
-                } catch (e) {
-                  console.warn("User sync warning:", e);
-                }
-                setPhase("connect");
-              }}
-              className="w-full p-4 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-all flex justify-center items-center gap-2 cursor-pointer shadow-md mt-6"
-            >
-              <span>Continue to Data Sources</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-
-          </div>
-
-          <div className="py-4 flex items-center gap-4 w-full">
-            <div className="flex-1 border-t border-border-subtle"></div>
-            <span className="text-[11px] text-muted font-medium">or sign in with OAuth</span>
-            <div className="flex-1 border-t border-border-subtle"></div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 w-full">
-            <AuthButton icon={<GoogleLogo />} label="Google" onClick={() => handleOAuthLogin('google')} />
-            <AuthButton icon={<GithubIcon className="opacity-80" />} label="GitHub" onClick={() => handleOAuthLogin('github')} />
-          </div>
-
-          <p className="mt-8 text-[11px] text-muted max-w-[280px] text-center leading-relaxed">
-            Data is encrypted locally and stored securely in your private knowledge graph.
-          </p>
-
-        </div>
-      </div>
-    );
-  }
-
-
-  // ── PHASE: EMAIL AUTH ────────────────────────────────────────────────────────
-  if (phase === "email_auth") {
-    return (
-      <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in slide-in-from-bottom-4 duration-500">
-        <div className="w-full max-w-sm flex flex-col items-center">
-          <MetaphorLogo size={48} className="mb-10 text-foreground" />
-          <div className="mb-8 text-center w-full">
-            <h1 className="text-2xl font-medium tracking-tight text-foreground mb-3">
-              Continue with Email
-            </h1>
-            <p className="text-sm text-muted">Enter your email and password to sign in or create an account.</p>
-          </div>
-          <div className="w-full space-y-4">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-2">Email Address</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full p-4 rounded-xl border border-border-subtle bg-surface-1 text-foreground placeholder:text-muted focus:outline-none focus:border-foreground transition-colors text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-2">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="w-full p-4 rounded-xl border border-border-subtle bg-surface-1 text-foreground placeholder:text-muted focus:outline-none focus:border-foreground transition-colors text-sm"
-                onKeyDown={e => { if (e.key === "Enter") handleEmailAuth(); }}
-              />
-            </div>
-            <button
-              onClick={handleEmailAuth}
-              disabled={isEmailLoading || !email || !password}
-              className="w-full p-4 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex justify-center items-center gap-2 mt-2"
-            >
-              {isEmailLoading ? <div className="w-4 h-4 rounded-full border-2 border-background border-t-transparent animate-spin" /> : "Continue to Workspace"}
-            </button>
-            <button onClick={() => setPhase("auth")} className="w-full text-xs text-muted font-medium hover:text-foreground transition-colors mt-4">
-              Back to options
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── PHASE: EMAIL SENT ────────────────────────────────────────────────────────
-  if (phase === "email_sent") {
-    return (
-      <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-8 animate-in fade-in duration-500">
-        <div className="w-full max-w-sm flex flex-col items-center text-center">
-          <div className="w-16 h-16 rounded-full bg-surface-2 border border-border-strong flex items-center justify-center mb-8">
-            <Mail className="w-6 h-6 text-foreground" />
-          </div>
-          <h1 className="text-2xl font-medium tracking-tight text-foreground mb-3">Check your inbox</h1>
-          <p className="text-sm text-muted mb-8 leading-relaxed">
-            We sent a secure magic link to <br/><span className="font-medium text-foreground">{email}</span>
-          </p>
-          <button onClick={() => setPhase("auth")} className="text-xs text-muted font-medium hover:text-foreground transition-colors">
-            Use a different email
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   // ── PHASE: CONNECT ────────────────────────────────────────────────────────────
   if (phase === "connect") {

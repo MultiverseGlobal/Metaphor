@@ -63,7 +63,7 @@ export default function LandingPage() {
           <Link href="/login" className="text-xs font-medium text-muted hover:text-foreground transition-colors px-3 py-1.5 rounded-lg">
             Sign In
           </Link>
-          <Link href="/onboarding?step=1&reset=true" className="group flex items-center gap-1.5 px-4 py-2 bg-foreground text-background font-medium text-xs rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-sm">
+          <Link href="/login?signup=true" className="group flex items-center gap-1.5 px-4 py-2 bg-foreground text-background font-medium text-xs rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-sm">
             <span>Get Started</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </Link>
@@ -114,21 +114,19 @@ export default function LandingPage() {
             className="flex flex-col sm:flex-row items-center gap-3 w-full justify-center mb-16"
           >
             <Link 
-              href="/onboarding?step=1&reset=true"
+              href="/login?signup=true"
               className="w-full sm:w-auto px-6 py-3 bg-foreground text-background font-medium text-xs rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer"
             >
-              <span>Start 2-Minute Onboarding</span>
+              <span>Start Building for Free</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
 
-
-
             <Link 
-              href="/dashboard"
+              href="#architecture"
               className="w-full sm:w-auto px-6 py-3 bg-surface-1 border border-border-subtle hover:border-strong text-foreground font-medium text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Terminal className="w-4 h-4 text-muted" />
-              <span>Explore Live Dashboard</span>
+              <Network className="w-4 h-4 text-muted" />
+              <span>Read Architecture</span>
             </Link>
           </motion.div>
         </div>
