@@ -455,9 +455,11 @@ function OnboardingContent() {
     setPhase("analyzing");
     try {
       let apiKey = localStorage.getItem("metaphor_api_key");
-      if (!apiKey) {
-        const keyData = await fetchFromMetaphor("/auth/apikeys", undefined, "POST");
-        localStorage.setItem("metaphor_api_key", keyData.raw_token);
+      if (!apiKey || apiKey === "undefined" || apiKey === "null") {
+        const keyData = await fetchFromMetaphor("/auth/apikeys", undefined, "POST").catch(() => null);
+        if (keyData && (keyData.raw_token || keyData.key)) {
+          localStorage.setItem("metaphor_api_key", keyData.raw_token || keyData.key);
+        }
       }
 
       const connectedSources = Object.keys(connections).filter(k => connections[k]);

@@ -6,15 +6,13 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
 from app.database.session import get_session
-from app.core.security import get_current_user
-from app.models.identity import User, OrganizationMember
-from app.models.operations import APIKey
+from app.core.security import get_user_via_api_key
 
 router = APIRouter()
 
 @router.get("")
 async def list_api_keys(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_user_via_api_key),
     session: AsyncSession = Depends(get_session)
 ):
     stmt = select(OrganizationMember).where(OrganizationMember.user_id == current_user.id)
@@ -37,7 +35,7 @@ async def list_api_keys(
 
 @router.post("")
 async def create_api_key(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_user_via_api_key),
     session: AsyncSession = Depends(get_session)
 ):
     stmt = select(OrganizationMember).where(OrganizationMember.user_id == current_user.id)
