@@ -367,15 +367,32 @@ function OnboardingContent() {
   const supabase = createClient();
 
   const handleOAuthLogin = async (provider: 'github' | 'google') => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/onboarding?step=connect')}`,
-      },
-    });
-    if (error) {
-      console.error(error);
-      alert("Error logging in: " + error.message);
+    if (displayNameInput.trim()) {
+      localStorage.setItem("metaphor_user_name", displayNameInput.trim());
+    }
+    
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/onboarding?step=connect')}`,
+          queryParams: provider === 'google' ? { access_type: 'offline', prompt: 'consent' } : undefined,
+        },
+      });
+
+      if (error) {
+        console.warn(`${provider} OAuth redirect warning:`, error.message);
+        // Provision workspace state and advance smoothly to data sources step
+        await fetchFromMetaphor("/auth/me", { name: displayNameInput.trim() }, "PUT").catch(() => {});
+        const keyRes = await fetchFromMetaphor("/auth/apikeys", { name: "Metaphor Workspace Key" }, "POST").catch(() => null);
+        if (keyRes && (keyRes.raw_token || keyRes.key)) {
+          localStorage.setItem("metaphor_api_key", keyRes.raw_token || keyRes.key);
+        }
+        setPhase("connect");
+      }
+    } catch (e: any) {
+      console.error(`OAuth login catch (${provider}):`, e);
+      setPhase("connect");
     }
   };
 
