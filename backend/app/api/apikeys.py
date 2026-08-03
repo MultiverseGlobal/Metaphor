@@ -45,16 +45,23 @@ async def create_api_key(
     memberships = result.scalars().all()
     
     if not memberships:
-        return {"error": "User has no organization"}
-    
-    org_id = memberships[0].organization_id
+        from app.models.identity import Organization, OrganizationMember
+        org = Organization(name=f"{current_user.name}'s Workspace", slug=f"workspace-{current_user.id}")
+        session.add(org)
+        await session.flush()
+        member = OrganizationMember(user_id=current_user.id, organization_id=org.id, role="owner")
+        session.add(member)
+        await session.flush()
+        org_id = org.id
+    else:
+        org_id = memberships[0].organization_id
     
     raw_token = f"metaphor_{secrets.token_urlsafe(32)}"
     hashed_token = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
     
     new_key = APIKey(
         organization_id=org_id,
-        name="Production Webhook Key",
+        name="Metaphor Workspace Key",
         hashed_key=hashed_token
     )
     session.add(new_key)
@@ -64,5 +71,6 @@ async def create_api_key(
     return {
         "id": new_key.id,
         "name": new_key.name,
-        "raw_token": raw_token
+        "raw_token": raw_token,
+        "key": raw_token
     }

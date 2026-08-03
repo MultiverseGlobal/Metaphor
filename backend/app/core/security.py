@@ -22,44 +22,90 @@ def get_supabase_client() -> Client:
 
 supabase = get_supabase_client()
 
+async def _ensure_user_in_db(user_id_str: str, email: Optional[str], metadata: Optional[dict], session: AsyncSession) -> User:
+    try:
+        user_uuid = uuid.UUID(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user UUID")
+
+    user = await session.get(User, user_uuid)
+    if user is not None:
+        return user
+
+    name = (metadata or {}).get("full_name") or (metadata or {}).get("name") or (email.split("@")[0] if email else "Metaphor Developer")
+    user = User(
+        id=user_uuid,
+        email=email or f"{user_id_str}@user.metaphor",
+        hashed_password="",
+        name=name
+    )
+    session.add(user)
+
+    from app.models.identity import Organization, OrganizationMember
+    from app.models.operations import APIKey
+    import secrets
+    import hashlib
+
+    # Check if org already exists for this slug fallback
+    stmt = select(Organization).where(Organization.slug == f"workspace-{user_id_str}")
+    res = await session.execute(stmt)
+    org = res.scalars().first()
+
+    if not org:
+        org = Organization(name=f"{name}'s Workspace", slug=f"workspace-{user_id_str}")
+        session.add(org)
+        await session.flush()
+
+    member = OrganizationMember(user_id=user.id, organization_id=org.id, role="owner")
+    session.add(member)
+
+    # Issue initial default API Key for immediate usage
+    raw_token = f"metaphor_{secrets.token_urlsafe(32)}"
+    hashed_token = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
+    default_key = APIKey(
+        organization_id=org.id,
+        name="Workspace Primary Key",
+        hashed_key=hashed_token
+    )
+    session.add(default_key)
+
+    try:
+        await session.commit()
+        await session.refresh(user)
+    except Exception as commit_err:
+        await session.rollback()
+        # Fallback fetch in case of concurrent insert
+        user = await session.get(User, user_uuid)
+        if user:
+            return user
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database user sync failed: {str(commit_err)}"
+        )
+    return user
+
+
 async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSession = Depends(get_session)) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
+
     try:
         user_res = supabase.auth.get_user(token)
         if not user_res or not user_res.user:
             raise credentials_exception
         user_id = user_res.user.id
-    except Exception as e:
+    except Exception:
         raise credentials_exception
-        
-    user = await session.get(User, uuid.UUID(user_id))
-    if user is None:
-        # Create a user record if it doesn't exist
-        email = user_res.user.email
-        name = user_res.user.user_metadata.get("full_name") or user_res.user.user_metadata.get("name") or "Supabase User"
-        user = User(
-            id=uuid.UUID(user_id),
-            email=email,
-            hashed_password="", # No local password needed
-            name=name
-        )
-        session.add(user)
-        
-        from app.models.identity import Organization, OrganizationMember
-        org = Organization(name=f"{name}'s Workspace", slug=f"workspace-{user_id}")
-        session.add(org)
-        
-        member = OrganizationMember(user_id=user.id, organization_id=org.id, role="owner")
-        session.add(member)
-        
-        await session.commit()
-        await session.refresh(user)
-    return user
+
+    return await _ensure_user_in_db(
+        user_id_str=user_id,
+        email=user_res.user.email,
+        metadata=getattr(user_res.user, "user_metadata", None),
+        session=session
+    )
 
 
 async def get_user_via_api_key(request: Request, session: AsyncSession = Depends(get_session)) -> User:
@@ -70,52 +116,27 @@ async def get_user_via_api_key(request: Request, session: AsyncSession = Depends
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
         token = auth_header[7:]
-        user_res = None
         try:
             user_res = supabase.auth.get_user(token)
+            if not user_res or not user_res.user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Supabase token is invalid or user not found.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            return await _ensure_user_in_db(
+                user_id_str=user_res.user.id,
+                email=user_res.user.email,
+                metadata=getattr(user_res.user, "user_metadata", None),
+                session=session
+            )
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"Supabase token validation error: {str(e)}",
                 headers={"WWW-Authenticate": "Bearer"},
-            )
-
-        if not user_res or not user_res.user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Supabase token is invalid or user not found. (user_res: {user_res})",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-        try:
-            user = await session.get(User, uuid.UUID(user_res.user.id))
-            if user:
-                return user
-            else:
-                # Sync user to DB
-                name = user_res.user.user_metadata.get("full_name") or user_res.user.user_metadata.get("name") or "Supabase User"
-                new_user = User(
-                    id=uuid.UUID(user_res.user.id),
-                    email=user_res.user.email,
-                    hashed_password="",
-                    name=name
-                )
-                session.add(new_user)
-                
-                from app.models.identity import Organization, OrganizationMember
-                org = Organization(name=f"{name}'s Workspace", slug=f"workspace-{user_res.user.id}")
-                session.add(org)
-                
-                member = OrganizationMember(user_id=new_user.id, organization_id=org.id, role="owner")
-                session.add(member)
-                
-                await session.commit()
-                await session.refresh(new_user)
-                return new_user
-        except Exception as db_err:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Database user sync failed: {str(db_err)}"
             )
 
     # 2. Fall back to X-API-Key

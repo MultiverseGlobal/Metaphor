@@ -243,7 +243,14 @@ async def authorize_integration(
     org_member = result.scalars().first()
     
     if not org_member:
-        raise HTTPException(status_code=400, detail="User does not belong to an organization")
+        from app.models.identity import Organization, OrganizationMember
+        org = Organization(name=f"{user.name}'s Workspace", slug=f"workspace-{user.id}")
+        session.add(org)
+        await session.flush()
+        org_member = OrganizationMember(user_id=user.id, organization_id=org.id, role="owner")
+        session.add(org_member)
+        await session.commit()
+        await session.refresh(org_member)
         
     org_id = str(org_member.organization_id)
     

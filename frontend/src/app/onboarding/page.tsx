@@ -146,11 +146,15 @@ function OnboardingContent() {
     }
   }, [activeAiModal]);
 
-  // Check URL query parameters & ensure onboarding starts at Step 1
+  // Check URL query parameters & ensure onboarding starts at Step 1 or restores session step
   useEffect(() => {
     const stepParam = searchParams?.get("step");
     if (stepParam === "1" || stepParam === "auth" || stepParam === "identity") {
       setPhase("auth");
+      return;
+    }
+    if (stepParam === "connect" || stepParam === "2") {
+      setPhase("connect");
       return;
     }
 
@@ -177,9 +181,33 @@ function OnboardingContent() {
       });
       const providerName = successProvider.charAt(0).toUpperCase() + successProvider.slice(1);
       setToastMessage(`✓ ${providerName} connected successfully!`);
-    } else {
-      setPhase("auth");
+      return;
     }
+
+    // Auto-check Supabase session
+    async function syncSessionState() {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const name = session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split("@")[0];
+        if (name && typeof window !== "undefined" && !localStorage.getItem("metaphor_user_name")) {
+          localStorage.setItem("metaphor_user_name", name);
+          setDisplayNameInput(name);
+        }
+        try {
+          const keyRes = await fetchFromMetaphor("/auth/apikeys", { name: "Metaphor Workspace Key" }, "POST");
+          if (keyRes && (keyRes.raw_token || keyRes.key)) {
+            localStorage.setItem("metaphor_api_key", keyRes.raw_token || keyRes.key);
+          }
+        } catch (e) {
+          console.warn("Failed to provision API key automatically:", e);
+        }
+        setPhase("connect");
+      } else {
+        setPhase("auth");
+      }
+    }
+    syncSessionState();
   }, [searchParams]);
 
 
@@ -325,7 +353,7 @@ function OnboardingContent() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/onboarding?step=connect')}`,
       },
     });
     setIsEmailLoading(false);
@@ -342,12 +370,12 @@ function OnboardingContent() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/onboarding?step=connect')}`,
       },
-    })
+    });
     if (error) {
-      console.error(error)
-      alert("Error logging in: " + error.message)
+      console.error(error);
+      alert("Error logging in: " + error.message);
     }
   };
 
@@ -360,7 +388,28 @@ function OnboardingContent() {
     setConnecting(id);
     
     try {
-      const res = await fetchFromMetaphor(`/integrations/${id}/authorize`, undefined, "GET");
+      let res;
+      try {
+        res = await fetchFromMetaphor(`/integrations/${id}/authorize`, undefined, "GET");
+      } catch (authErr: any) {
+        if (authErr.message?.includes("401")) {
+          // Attempt to provision or fetch a fresh workspace API key
+          try {
+            const keyRes = await fetchFromMetaphor("/auth/apikeys", { name: "Metaphor Workspace Key" }, "POST", true);
+            if (keyRes && (keyRes.raw_token || keyRes.key)) {
+              localStorage.setItem("metaphor_api_key", keyRes.raw_token || keyRes.key);
+              res = await fetchFromMetaphor(`/integrations/${id}/authorize`, undefined, "GET");
+            } else {
+              throw authErr;
+            }
+          } catch {
+            throw authErr;
+          }
+        } else {
+          throw authErr;
+        }
+      }
+
       if (res && res.url) {
         window.location.href = res.url;
       } else {
@@ -368,12 +417,8 @@ function OnboardingContent() {
       }
     } catch (e: any) {
       console.error(`Failed to start ${id} OAuth flow:`, e);
-      if (e.message?.includes("401") || e.message?.includes("JWT does not exist") || e.message?.includes("validation error")) {
-        setToastMessage("Session expired or user deleted. Please sign in to connect sources.");
-        setPhase("auth");
-      } else {
-        setToastMessage(`Error starting ${id} integration. Please try again.`);
-      }
+      setToastMessage(`Connecting ${id}... Check configuration or credentials.`);
+      // Never force phase back to "auth" to prevent sending user back to Step 1
     } finally {
       setTimeout(() => setConnecting(null), 1200);
     }
@@ -489,15 +534,20 @@ function OnboardingContent() {
               onClick={async () => {
                 if (displayNameInput.trim()) {
                   localStorage.setItem("metaphor_user_name", displayNameInput.trim());
-                  fetchFromMetaphor("/auth/me", { name: displayNameInput.trim() }, "PUT").catch(() => {});
+                }
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) {
+                  setPhase("email_auth");
+                  return;
                 }
                 try {
-                  const keyRes = await fetchFromMetaphor("/auth/apikeys", { name: "Metaphor Workspace Key" }, "POST", true);
-                  if (keyRes && keyRes.key) {
-                    localStorage.setItem("metaphor_api_key", keyRes.key);
+                  await fetchFromMetaphor("/auth/me", { name: displayNameInput.trim() }, "PUT").catch(() => {});
+                  const keyRes = await fetchFromMetaphor("/auth/apikeys", { name: "Metaphor Workspace Key" }, "POST");
+                  if (keyRes && (keyRes.raw_token || keyRes.key)) {
+                    localStorage.setItem("metaphor_api_key", keyRes.raw_token || keyRes.key);
                   }
                 } catch (e) {
-                  // Graceful fallback if key generation endpoint fails
+                  console.warn("User sync warning:", e);
                 }
                 setPhase("connect");
               }}
