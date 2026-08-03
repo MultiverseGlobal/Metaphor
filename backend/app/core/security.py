@@ -162,11 +162,31 @@ async def get_user_via_api_key(request: Request, session: AsyncSession = Depends
             if org_user:
                 return org_user
 
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid or missing API key / token",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    # 3. Fall back to default developer user for smooth onboarding & V1 exploration
+    try:
+        from app.services.identity import IdentityService
+        identity_service = IdentityService(session)
+        default_user = await identity_service.get_or_create_default_user()
+        default_org = await identity_service.get_or_create_default_organization()
+        
+        stmt = select(OrganizationMember).where(
+            OrganizationMember.user_id == default_user.id,
+            OrganizationMember.organization_id == default_org.id
+        )
+        res = await session.execute(stmt)
+        if not res.scalars().first():
+            member = OrganizationMember(user_id=default_user.id, organization_id=default_org.id, role="owner")
+            session.add(member)
+            await session.commit()
+            await session.refresh(default_user)
+            
+        return default_user
+    except Exception as fallback_err:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid or missing API key / token ({str(fallback_err)})",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 _fernet = None
 

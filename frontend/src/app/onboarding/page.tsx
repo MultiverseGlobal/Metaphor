@@ -386,41 +386,21 @@ function OnboardingContent() {
     }
     
     setConnecting(id);
+    setToastMessage(`Connecting to ${id}...`);
     
     try {
-      let res;
-      try {
-        res = await fetchFromMetaphor(`/integrations/${id}/authorize`, undefined, "GET");
-      } catch (authErr: any) {
-        if (authErr.message?.includes("401")) {
-          // Attempt to provision or fetch a fresh workspace API key
-          try {
-            const keyRes = await fetchFromMetaphor("/auth/apikeys", { name: "Metaphor Workspace Key" }, "POST", true);
-            if (keyRes && (keyRes.raw_token || keyRes.key)) {
-              localStorage.setItem("metaphor_api_key", keyRes.raw_token || keyRes.key);
-              res = await fetchFromMetaphor(`/integrations/${id}/authorize`, undefined, "GET");
-            } else {
-              throw authErr;
-            }
-          } catch {
-            throw authErr;
-          }
-        } else {
-          throw authErr;
-        }
-      }
-
+      const res = await fetchFromMetaphor(`/integrations/${id}/authorize`, undefined, "GET");
       if (res && res.url) {
         window.location.href = res.url;
+        return;
       } else {
-        setToastMessage(`Connecting ${id}... (Redirecting to OAuth)`);
+        setToastMessage(`Connecting ${id}... Redirect URL unavailable.`);
       }
     } catch (e: any) {
       console.error(`Failed to start ${id} OAuth flow:`, e);
-      setToastMessage(`Connecting ${id}... Check configuration or credentials.`);
-      // Never force phase back to "auth" to prevent sending user back to Step 1
+      setToastMessage(`Unable to connect to ${id}. Please try again.`);
     } finally {
-      setTimeout(() => setConnecting(null), 1200);
+      setTimeout(() => setConnecting(null), 2000);
     }
   };
 
