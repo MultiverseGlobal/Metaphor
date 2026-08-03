@@ -988,6 +988,15 @@ function OnboardingContent() {
           </div>
         )}
 
+      {toastMessage && (
+        <div className="fixed bottom-4 right-4 bg-foreground text-background px-4 py-3 rounded-lg shadow-lg text-sm font-medium animate-in fade-in slide-in-from-bottom-4 z-50 flex items-center gap-2">
+          <div className="w-4 h-4 rounded-full border border-background flex items-center justify-center text-[10px]">!</div>
+          {toastMessage}
+          <button onClick={() => setToastMessage(null)} className="ml-2 hover:opacity-70 transition-opacity">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
       </div>
     );
   }
@@ -998,7 +1007,15 @@ function OnboardingContent() {
 export default function OnboardingPage() {
   return (
     <Suspense fallback={<div className="min-h-screen w-full bg-background" />}>
-      <OnboardingContent />
+      <OnboardingContentWrapper />
     </Suspense>
+  );
+}
+
+function OnboardingContentWrapper() {
+  return (
+    <div className="relative w-full h-full">
+      <OnboardingContent />
+    </div>
   );
 }
