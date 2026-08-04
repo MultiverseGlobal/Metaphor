@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Network, Database, Key, Plug, Settings, Sidebar, User, ChevronDown, Layers, Terminal, Inbox, LogOut } from "lucide-react";
+import { Network, Database, Key, Plug, Settings, Sidebar, User, ChevronDown, Layers, Terminal, Inbox, LogOut, Folder } from "lucide-react";
 
 import { Kbd } from "@/components/ui/Kbd";
 import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
@@ -28,7 +28,15 @@ export default function LinearLayout({
         const { data: { session } } = await supabase.auth.getSession();
         const sbUser = session?.user;
         const storedCustomName = typeof window !== "undefined" ? localStorage.getItem("metaphor_user_name") : null;
-        const fallbackName = sbUser?.user_metadata?.full_name || sbUser?.email?.split("@")[0] || "multiverseglobals";
+        // Prefer Google full_name → first name from email → generic fallback (never the raw email prefix)
+        const googleFullName = sbUser?.user_metadata?.full_name || sbUser?.user_metadata?.name;
+        const emailPrefix = sbUser?.email ? sbUser.email.split("@")[0] : null;
+        // Only use email prefix if it looks like an actual personal name (short, no numbers, no compound words)
+        const emailFirstWord = emailPrefix ? emailPrefix.replace(/[^a-zA-Z]/g, " ").trim().split(" ")[0] : null;
+        const cleanEmailName = emailFirstWord && emailFirstWord.length >= 3 && emailFirstWord.length <= 10
+          ? emailFirstWord.charAt(0).toUpperCase() + emailFirstWord.slice(1)
+          : null;
+        const fallbackName = googleFullName || cleanEmailName || "Your Workspace";
         const fallbackEmail = sbUser?.email || "workspace@metaphor.os";
 
         const isGenericName = !data?.name || data.name === "Developer User" || data.name === "Supabase User";
@@ -86,6 +94,7 @@ export default function LinearLayout({
             </div>
             <NavItem href="/dashboard" icon={<Database />} label="Context Dashboard" shortcut="⌘D" pathname={pathname} exact />
             <NavItem href="/dashboard/graph" icon={<Network />} label="Knowledge Graph" shortcut="⌘G" pathname={pathname} />
+            <NavItem href="/dashboard/projects" icon={<Folder />} label="Projects" shortcut="⌘J" pathname={pathname} />
             <NavItem href="/dashboard/inbox" icon={<Inbox />} label="Context Inbox" shortcut="⌘I" pathname={pathname} />
           </div>
 

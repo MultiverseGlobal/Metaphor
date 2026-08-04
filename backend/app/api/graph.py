@@ -1,5 +1,7 @@
 import uuid
-from fastapi import APIRouter, Depends, HTTPException
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, func
 from app.database.session import get_session
@@ -162,3 +164,77 @@ async def reject_node(
     db.add(node)
     await db.commit()
     return {"status": "success"}
+
+
+# ── The Binding Phase: Project Node CRUD ────────────────────────────────────
+
+class CreateNodeRequest(BaseModel):
+    type: str
+    title: str
+    summary: Optional[str] = ""
+    content: Optional[str] = ""
+    metadata: Optional[dict] = {}
+
+
+@router.post("/nodes")
+async def create_node(
+    req: CreateNodeRequest,
+    user: User = Depends(get_user_via_api_key),
+    db: AsyncSession = Depends(get_session)
+):
+    """
+    Create a new node directly — used during The Binding Phase of onboarding
+    to register user-defined projects into the Knowledge Graph.
+    """
+    org = await get_user_org(user, db)
+    node = Node(
+        id=uuid.uuid4(),
+        organization_id=org.id,
+        type=req.type,
+        title=req.title,
+        summary=req.summary or "",
+        content=req.content or "",
+        created_by=user.id,
+        status="approved",
+    )
+    db.add(node)
+    await db.commit()
+    await db.refresh(node)
+    return {
+        "id": str(node.id),
+        "type": node.type,
+        "title": node.title,
+        "summary": node.summary,
+        "created_at": node.created_at.isoformat()
+    }
+
+
+@router.get("/nodes")
+async def list_nodes(
+    type: Optional[str] = Query(None, description="Filter nodes by type, e.g. 'project'"),
+    user: User = Depends(get_user_via_api_key),
+    db: AsyncSession = Depends(get_session)
+):
+    """
+    List all nodes for the user's organization, optionally filtered by type.
+    Used by /dashboard/projects to display user-created projects.
+    """
+    org = await get_user_org(user, db)
+    stmt = select(Node).where(Node.organization_id == org.id)
+    if type:
+        stmt = stmt.where(Node.type == type)
+    res = await db.execute(stmt)
+    nodes = res.scalars().all()
+    return {
+        "nodes": [
+            {
+                "id": str(n.id),
+                "type": n.type,
+                "title": n.title,
+                "summary": n.summary,
+                "status": n.status,
+                "created_at": n.created_at.isoformat()
+            }
+            for n in nodes
+        ]
+    }

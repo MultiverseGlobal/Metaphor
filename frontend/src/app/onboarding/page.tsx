@@ -34,7 +34,7 @@ const AppleIcon = () => (
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Phase = "connect" | "analyzing" | "resolving" | "complete";
+type Phase = "connect" | "analyzing" | "resolving" | "complete" | "projects";
 
 const AMBIGUITY_QUESTIONS = [
   "What is the most important thing you're working on?",
@@ -122,6 +122,13 @@ function OnboardingContent() {
   const [copiedSnippet, setCopiedSnippet] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [testResults, setTestResults] = useState<any>(null);
+
+  // Binding Phase State
+  const [projects, setProjects] = useState<{ name: string; attachedAIs: string[]; id?: string }[]>([]);
+  const [currentProjectName, setCurrentProjectName] = useState("");
+  const [currentProjectAIs, setCurrentProjectAIs] = useState<string[]>([]);
+  const [isSavingProject, setIsSavingProject] = useState(false);
+  const [projectError, setProjectError] = useState<string | null>(null);
 
   const handleTestConnection = async () => {
     setIsTestingConnection(true);
@@ -828,7 +835,9 @@ function OnboardingContent() {
             </p>
 
             <button
-              onClick={finalize}
+              onClick={() => {
+              setPhase("projects");
+            }}
               disabled={isSubmitting}
               className="px-10 py-4 bg-foreground text-background text-sm font-medium rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm flex items-center gap-2 cursor-pointer"
             >
@@ -998,6 +1007,165 @@ function OnboardingContent() {
           </button>
         </div>
       )}
+      </div>
+    );
+  }
+
+  // ── PHASE: PROJECTS (The Binding Phase) ────────────────────────────────
+  if (phase === "projects") {
+    const AI_TOOLS = ["ChatGPT", "Claude", "Cursor"];
+
+    const toggleAI = (ai: string) => {
+      setCurrentProjectAIs(prev =>
+        prev.includes(ai) ? prev.filter(a => a !== ai) : [...prev, ai]
+      );
+    };
+
+    const handleAddProject = async () => {
+      const name = currentProjectName.trim();
+      if (!name) return;
+      setIsSavingProject(true);
+      setProjectError(null);
+      let nodeId: string | undefined;
+      try {
+        const res = await fetchFromMetaphor("/graph/nodes", {
+          type: "project",
+          title: name,
+          summary: `Bound to: ${currentProjectAIs.join(", ") || "No AI tools yet"}`,
+          content: "",
+          metadata: { attached_ais: currentProjectAIs }
+        }, "POST");
+        nodeId = res?.id;
+      } catch (e) {
+        // Non-fatal — save locally anyway
+        console.warn("Could not persist project to graph:", e);
+      }
+      const newProject = { name, attachedAIs: currentProjectAIs, id: nodeId };
+      setProjects(prev => {
+        const updated = [...prev, newProject];
+        if (typeof window !== "undefined") {
+          localStorage.setItem("metaphor_projects", JSON.stringify(updated));
+        }
+        return updated;
+      });
+      setCurrentProjectName("");
+      setCurrentProjectAIs([]);
+      setIsSavingProject(false);
+    };
+
+    return (
+      <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center font-sans px-6 py-12 animate-in fade-in duration-700">
+        <div className="w-full max-w-2xl flex flex-col items-center">
+
+          <div className="w-full text-left mb-10">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-6 h-6 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold">2</div>
+              <span className="text-xs font-bold text-muted uppercase tracking-widest">The Binding Phase</span>
+            </div>
+            <h1 className="text-3xl font-medium tracking-tight text-foreground mb-3 leading-snug">
+              Now, define your projects.
+            </h1>
+            <p className="text-sm text-muted leading-relaxed max-w-lg">
+              Each project gets its own context scope. Bind AI tools to a project — they’ll automatically pull relevant context when you’re working inside it.
+            </p>
+          </div>
+
+          {/* Project Input */}
+          <div className="w-full mb-8 p-6 bg-surface-1 border border-border-subtle rounded-2xl">
+            <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-3">Project Name</label>
+            <div className="flex items-center gap-3 border-b border-border-strong pb-3 mb-6 focus-within:border-foreground transition-colors">
+              <input
+                value={currentProjectName}
+                onChange={e => setCurrentProjectName(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && currentProjectName.trim()) handleAddProject(); }}
+                placeholder="e.g. Atlas Platform, Metaphor OS, Client Launch…"
+                className="flex-1 bg-transparent text-foreground text-base font-normal placeholder:text-muted focus:outline-none"
+              />
+            </div>
+
+            <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-3">Bind AI Tools</label>
+            <div className="flex gap-3 mb-6">
+              {AI_TOOLS.map(ai => {
+                const active = currentProjectAIs.includes(ai);
+                return (
+                  <button
+                    key={ai}
+                    onClick={() => toggleAI(ai)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-medium transition-all ${
+                      active
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-surface-2 text-muted border-border-subtle hover:border-border-strong hover:text-foreground"
+                    }`}
+                  >
+                    {active && <Check className="w-3 h-3 stroke-[2.5]" />}
+                    {ai}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={handleAddProject}
+              disabled={!currentProjectName.trim() || isSavingProject}
+              className="w-full py-3 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-all disabled:opacity-30 flex items-center justify-center gap-2"
+            >
+              {isSavingProject ? (
+                <><div className="w-4 h-4 rounded-full border-2 border-background border-t-transparent animate-spin" /> Saving…</>
+              ) : (
+                <>Add Project <ChevronRight className="w-4 h-4" /></>
+              )}
+            </button>
+          </div>
+
+          {/* Added Projects List */}
+          {projects.length > 0 && (
+            <div className="w-full mb-8">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-4">Added Projects</p>
+              <div className="space-y-2">
+                {projects.map((p, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-4 bg-surface-1 border border-border-subtle rounded-xl">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-semibold text-foreground tracking-tight">{p.name}</span>
+                      <div className="flex gap-1.5">
+                        {p.attachedAIs.length > 0 ? (
+                          p.attachedAIs.map(ai => (
+                            <span key={ai} className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-surface-2 border border-border-subtle text-foreground">
+                              {ai}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[10px] text-muted">No AI tools bound</span>
+                        )}
+                      </div>
+                    </div>
+                    <CheckCircle2 className="w-4 h-4 text-foreground shrink-0" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Footer Actions */}
+          <div className="flex flex-col items-center gap-3 w-full">
+            <button
+              onClick={finalize}
+              disabled={isSubmitting}
+              className="px-10 py-4 bg-foreground text-background text-sm font-medium rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {isSubmitting ? (
+                <><div className="w-4 h-4 rounded-full border-2 border-background border-t-transparent animate-spin" /> Opening workspace…</>
+              ) : projects.length > 0 ? (
+                <>Open workspace with {projects.length} project{projects.length > 1 ? "s" : ""} <ArrowRight className="w-4 h-4" /></>
+              ) : (
+                "Skip and open workspace →"
+              )}
+            </button>
+            {projects.length === 0 && (
+              <p className="text-xs text-muted">You can always create projects from the dashboard later.</p>
+            )}
+          </div>
+
+        </div>
       </div>
     );
   }
