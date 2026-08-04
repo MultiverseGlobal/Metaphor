@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Folder, Plus, CheckCircle2, ChevronRight, ArrowRight } from "lucide-react";
-import { ChatGPTIcon, ClaudeIcon, CursorIcon, GeminiIcon } from "@/components/ui/BrandIcons";
+import { ChatGPTIcon, ClaudeIcon, CursorIcon, GeminiIcon, AntigravityIcon } from "@/components/ui/BrandIcons";
 import { fetchFromMetaphor } from "@/app/api";
 import { useRouter } from "next/navigation";
 
@@ -21,6 +21,7 @@ const AI_ICON_MAP: Record<string, React.ReactNode> = {
   Claude:  <ClaudeIcon  className="w-3.5 h-3.5" />,
   Cursor:  <CursorIcon  className="w-3.5 h-3.5" />,
   Gemini:  <GeminiIcon  className="w-3.5 h-3.5" />,
+  Antigravity: <AntigravityIcon className="w-3.5 h-3.5" />,
 };
 
 function AIBadge({ label }: { label: string }) {

@@ -58,3 +58,9 @@ export const GeminiIcon = ({ className = "w-5 h-5 opacity-90" }: { className?: s
     <path d="M22.05 11.26a11.1 11.1 0 0 1-9.31-9.31 1.05 1.05 0 0 0-2.08 0 11.1 11.1 0 0 1-9.31 9.31 1.05 1.05 0 0 0 0 2.08 11.1 11.1 0 0 1 9.31 9.31 1.05 1.05 0 0 0 2.08 0 11.1 11.1 0 0 1 9.31-9.31 1.05 1.05 0 0 0 0-2.08zM11.7 18.27a8.9 8.9 0 0 0-6.02-6.02 8.9 8.9 0 0 0 6.02-6.02 8.9 8.9 0 0 0 6.02 6.02 8.9 8.9 0 0 0-6.02 6.02z" />
   </svg>
 );
+
+export const AntigravityIcon = ({ className = "w-5 h-5 opacity-90" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className={className}>
+    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+  </svg>
+);
