@@ -447,6 +447,20 @@ function OnboardingContent() {
             <ConnectCard name="Notion" icon={<NotionIcon />} connected={!!connections["notion"]} connecting={connecting === "notion"} onToggle={() => toggleConnection("notion")} />
             <ConnectCard name="Google Drive" icon={<GoogleDriveIcon />} connected={!!connections["google"]} connecting={connecting === "google"} onToggle={() => toggleConnection("google")} />
             <ConnectCard name="GitHub" icon={<GithubIcon className="opacity-80" />} connected={!!connections["github"]} connecting={connecting === "github"} onToggle={() => toggleConnection("github")} />
+            
+            {!!connections["github"] && (
+              <div className="mt-4 p-4 border border-border-subtle bg-surface-1 rounded-xl animate-in fade-in zoom-in-95 duration-200">
+                <label className="text-xs font-semibold text-foreground mb-2 block">GitHub Repository</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. octocat/hello-world" 
+                  value={githubRepo} 
+                  onChange={(e) => setGithubRepo(e.target.value)}
+                  className="w-full bg-background border border-border-strong rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-foreground transition-colors"
+                />
+                <p className="text-[10px] text-muted mt-2">Required for GitHub syncing.</p>
+              </div>
+            )}
           </div>
 
           <button
@@ -664,8 +678,8 @@ function OnboardingContent() {
       Claude: {
         title: "Connect Claude",
         description: "Connect Claude via Remote MCP to reason over your complete workspace context graph.",
-        instruction: "1. Open Claude Settings > Connectors > Add custom connector.\n2. Name: Metaphor\n3. Remote MCP server URL: https://metaphor-backend.onrender.com/api/v1/mcp\n4. Advanced settings: Leave Client ID & Secret blank (auto-discovered).\n5. Click Add.",
-        snippet: "https://metaphor-backend.onrender.com/api/v1/mcp",
+        instruction: "1. Open Claude Settings > Connectors > Add custom connector.\n2. Name: Metaphor\n3. Remote MCP server URL: https://metaphor-backend.onrender.com/api/v1/mcp/sse\n4. Advanced settings: Leave Client ID & Secret blank (auto-discovered).\n5. Click Add.",
+        snippet: "https://metaphor-backend.onrender.com/api/v1/mcp/sse",
         capabilities: [
           "Perform architectural reviews",
           "Search documentation and decisions",

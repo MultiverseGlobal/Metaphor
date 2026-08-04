@@ -37,6 +37,14 @@ async def _ensure_user_in_db(user_id_str: str, email: Optional[str], metadata: O
     if user is not None:
         return user
 
+    # Fallback lookup by email to avoid UniqueViolation if Supabase ID changed but email exists
+    if email:
+        stmt = select(User).where(User.email == email)
+        res = await session.execute(stmt)
+        existing_user = res.scalars().first()
+        if existing_user:
+            return existing_user
+
     name = (metadata or {}).get("full_name") or (metadata or {}).get("name") or (email.split("@")[0] if email else "Metaphor Developer")
     user = User(
         id=user_uuid,
