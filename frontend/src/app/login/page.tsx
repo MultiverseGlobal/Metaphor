@@ -63,7 +63,7 @@ function LoginForm() {
     setMessage("");
 
     if (isSignUp) {
-      const { error: signUpErr } = await supabase.auth.signUp({
+      const { data, error: signUpErr } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -73,6 +73,8 @@ function LoginForm() {
       setLoading(false);
       if (signUpErr) {
         setError(signUpErr.message);
+      } else if (data?.session) {
+        router.push(redirectTarget);
       } else {
         setMessage(`Success! Please check ${email} for a confirmation link.`);
         setPassword("");
@@ -111,8 +113,12 @@ function LoginForm() {
         <div className="bg-surface-1 border border-border-subtle rounded-2xl p-8 shadow-xl space-y-6">
           
           <div className="text-center space-y-1 pb-2">
-            <h1 className="text-lg font-semibold tracking-tight text-foreground">Sign in to Metaphor</h1>
-            <p className="text-sm text-muted">Welcome back. Please sign in to continue.</p>
+            <h1 className="text-lg font-semibold tracking-tight text-foreground">
+              {isSignUp ? "Create your account" : "Sign in to Metaphor"}
+            </h1>
+            <p className="text-sm text-muted">
+              {isSignUp ? "Welcome! Please enter your details." : "Welcome back. Please sign in to continue."}
+            </p>
           </div>
 
           {error && (
