@@ -408,8 +408,13 @@ function OnboardingContent() {
       }
     } catch (e) {
       console.error("Failed to start sync:", e);
-      setPhase("connect");
-      setToastMessage("Unable to start sync. Please check your connection and try again.");
+      setPhase(prev => {
+        if (prev === "analyzing") {
+          setTimeout(() => setToastMessage("Unable to start sync. Please check your connection and try again."), 0);
+          return "connect";
+        }
+        return prev;
+      });
     }
   };
 
