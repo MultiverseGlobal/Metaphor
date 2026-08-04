@@ -1013,7 +1013,11 @@ function OnboardingContent() {
 
   // ── PHASE: PROJECTS (The Binding Phase) ────────────────────────────────
   if (phase === "projects") {
-    const AI_TOOLS = ["ChatGPT", "Claude", "Cursor"];
+    const AI_TOOLS = [
+      { name: "ChatGPT", icon: <ChatGPTIcon className="w-4 h-4" /> },
+      { name: "Claude",  icon: <ClaudeIcon  className="w-4 h-4" /> },
+      { name: "Cursor",  icon: <CursorIcon  className="w-4 h-4" /> },
+    ];
 
     const toggleAI = (ai: string) => {
       setCurrentProjectAIs(prev =>
@@ -1084,21 +1088,26 @@ function OnboardingContent() {
             </div>
 
             <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-3">Bind AI Tools</label>
-            <div className="flex gap-3 mb-6">
+            <div className="flex gap-2 mb-6">
               {AI_TOOLS.map(ai => {
-                const active = currentProjectAIs.includes(ai);
+                const active = currentProjectAIs.includes(ai.name);
                 return (
                   <button
-                    key={ai}
-                    onClick={() => toggleAI(ai)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-medium transition-all ${
+                    key={ai.name}
+                    onClick={() => toggleAI(ai.name)}
+                    title={ai.name}
+                    className={`relative w-12 h-12 rounded-xl border flex items-center justify-center transition-all duration-150 ${
                       active
-                        ? "bg-foreground text-background border-foreground"
+                        ? "bg-foreground text-background border-foreground shadow-sm"
                         : "bg-surface-2 text-muted border-border-subtle hover:border-border-strong hover:text-foreground"
                     }`}
                   >
-                    {active && <Check className="w-3 h-3 stroke-[2.5]" />}
-                    {ai}
+                    {ai.icon}
+                    {active && (
+                      <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-foreground border-2 border-background flex items-center justify-center">
+                        <Check className="w-2 h-2 text-background stroke-[3]" />
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -1128,11 +1137,24 @@ function OnboardingContent() {
                       <span className="text-sm font-semibold text-foreground tracking-tight">{p.name}</span>
                       <div className="flex gap-1.5">
                         {p.attachedAIs.length > 0 ? (
-                          p.attachedAIs.map(ai => (
-                            <span key={ai} className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-surface-2 border border-border-subtle text-foreground">
-                              {ai}
-                            </span>
-                          ))
+                          <div className="flex gap-1.5 items-center">
+                            {p.attachedAIs.map(ai => {
+                              const iconMap: Record<string, React.ReactNode> = {
+                                ChatGPT: <ChatGPTIcon className="w-3.5 h-3.5" />,
+                                Claude:  <ClaudeIcon  className="w-3.5 h-3.5" />,
+                                Cursor:  <CursorIcon  className="w-3.5 h-3.5" />,
+                              };
+                              return (
+                                <span
+                                  key={ai}
+                                  title={ai}
+                                  className="w-6 h-6 rounded-full bg-surface-2 border border-border-subtle flex items-center justify-center text-foreground"
+                                >
+                                  {iconMap[ai] ?? <span className="text-[9px] font-bold">{ai[0]}</span>}
+                                </span>
+                              );
+                            })}
+                          </div>
                         ) : (
                           <span className="text-[10px] text-muted">No AI tools bound</span>
                         )}

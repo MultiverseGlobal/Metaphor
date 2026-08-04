@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState } from "react";
 import { Folder, Plus, CheckCircle2, ChevronRight, ArrowRight } from "lucide-react";
+import { ChatGPTIcon, ClaudeIcon, CursorIcon } from "@/components/ui/BrandIcons";
 import { fetchFromMetaphor } from "@/app/api";
 import { useRouter } from "next/navigation";
 
@@ -15,13 +16,23 @@ type Project = {
   attachedAIs?: string[];
 };
 
+const AI_ICON_MAP: Record<string, React.ReactNode> = {
+  ChatGPT: <ChatGPTIcon className="w-3.5 h-3.5" />,
+  Claude:  <ClaudeIcon  className="w-3.5 h-3.5" />,
+  Cursor:  <CursorIcon  className="w-3.5 h-3.5" />,
+};
+
 function AIBadge({ label }: { label: string }) {
   return (
-    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-surface-2 border border-border-subtle text-foreground tracking-tight">
-      {label}
+    <span
+      title={label}
+      className="w-7 h-7 rounded-full bg-surface-2 border border-border-subtle flex items-center justify-center text-foreground shrink-0"
+    >
+      {AI_ICON_MAP[label] ?? <span className="text-[9px] font-bold">{label[0]}</span>}
     </span>
   );
 }
+
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -166,3 +177,4 @@ export default function ProjectsPage() {
     </div>
   );
 }
+
