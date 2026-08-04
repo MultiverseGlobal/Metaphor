@@ -338,10 +338,15 @@ async def authorize_integration(
     org_id = str(org_member.organization_id)
     
     # Create state token
+    frontend_url = request.headers.get("origin") or settings.FRONTEND_URL
+    if frontend_url and frontend_url.endswith("/"):
+        frontend_url = frontend_url[:-1]
+        
     state_payload = {
         "org_id": org_id,
         "user_id": str(user.id),
         "provider": provider,
+        "frontend_url": frontend_url,
         "exp": int(datetime.now(timezone.utc).timestamp()) + 3600
     }
     state_token = jwt.encode(state_payload, settings.SECRET_KEY, algorithm="HS256")
@@ -390,7 +395,7 @@ async def integration_callback(
     provider: str,
     code: str,
     state: str,
-    request: Request = None,
+    request: Request,
     session: AsyncSession = Depends(get_session)
 ):
     from app.core.config import settings
@@ -404,6 +409,7 @@ async def integration_callback(
         payload = jwt.decode(state, settings.SECRET_KEY, algorithms=["HS256"])
         org_id = payload.get("org_id")
         user_id = payload.get("user_id")
+        frontend_url = payload.get("frontend_url", settings.FRONTEND_URL)
         if not org_id or not user_id or payload.get("provider") != provider:
             raise ValueError("Invalid state payload")
     except Exception as e:
@@ -503,4 +509,4 @@ async def integration_callback(
             
         await session.commit()
         
-    return RedirectResponse(url=f"{settings.FRONTEND_URL}/onboarding?success={provider}")
+    return RedirectResponse(url=f"{frontend_url}/onboarding?success={provider}")

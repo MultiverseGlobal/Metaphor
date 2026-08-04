@@ -6,6 +6,7 @@ import os
 from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.concurrency import run_in_threadpool
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from supabase import create_client, Client
@@ -82,9 +83,19 @@ async def _ensure_user_in_db(user_id_str: str, email: Optional[str], metadata: O
     )
     session.add(default_key)
 
+    from sqlalchemy.exc import IntegrityError
     try:
         await session.commit()
         await session.refresh(user)
+    except IntegrityError:
+        await session.rollback()
+        user = await session.get(User, user_uuid)
+        if user:
+            return user
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database user sync failed due to concurrent insert, but user was not found."
+        )
     except Exception as commit_err:
         await session.rollback()
         # Fallback fetch in case of concurrent insert
@@ -106,7 +117,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSe
     )
 
     try:
-        user_res = supabase.auth.get_user(token)
+        user_res = await run_in_threadpool(supabase.auth.get_user, token)
         if not user_res or not user_res.user:
             raise credentials_exception
         user_id = user_res.user.id
@@ -131,7 +142,7 @@ async def get_user_via_api_key(request: Request, session: AsyncSession = Depends
         token = auth_header[7:].strip()
         if token and token not in ("null", "undefined", "none"):
             try:
-                user_res = supabase.auth.get_user(token)
+                user_res = await run_in_threadpool(supabase.auth.get_user, token)
                 if user_res and user_res.user:
                     return await _ensure_user_in_db(
                         user_id_str=user_res.user.id,
