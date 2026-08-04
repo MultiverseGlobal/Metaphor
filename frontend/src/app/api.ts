@@ -22,13 +22,30 @@ export function clearApiCache() {
   apiCache.clear();
 }
 
+// Cache Supabase session client-side to avoid a round-trip on every request
+let _sessionCache: { token: string | null; expiry: number } | null = null;
+
+async function getCachedSession(): Promise<string | null> {
+  const now = Date.now();
+  if (_sessionCache && now < _sessionCache.expiry) {
+    return _sessionCache.token;
+  }
+  const supabase = createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  _sessionCache = { token: session?.access_token ?? null, expiry: now + 30_000 };
+  return _sessionCache.token;
+}
+
 // Simple client-side API helper with lightweight GET caching
 export async function fetchFromMetaphor(endpoint: string, body?: any, method?: string, allowAnonymous: boolean = false, skipCache: boolean = false) {
   const reqMethod = (method || (body ? "POST" : "GET")).toUpperCase();
   const cacheKey = `${reqMethod}:${endpoint}`;
 
+  // Skip caching for /authorize endpoints — stale failures would silently block the user
+  const isCacheable = reqMethod === "GET" && !endpoint.includes("/authorize") && !skipCache;
+
   // In-memory cache lookup for GET requests
-  if (reqMethod === "GET" && !skipCache) {
+  if (isCacheable) {
     const cached = apiCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
       return cached.data;
@@ -40,14 +57,7 @@ export async function fetchFromMetaphor(endpoint: string, body?: any, method?: s
 
   if (typeof window !== 'undefined') {
     apiKey = localStorage.getItem("metaphor_api_key");
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      token = session.access_token;
-    } else if (!apiKey && !allowAnonymous && !endpoint.includes("/oauth/") && !endpoint.includes("/auth/apikeys")) {
-      // Allow fallback request without blocking
-    }
-
+    token = await getCachedSession();
   }
 
   const headers: Record<string, string> = {
@@ -72,7 +82,9 @@ export async function fetchFromMetaphor(endpoint: string, body?: any, method?: s
   }
 
   const backendUrl = getBackendUrl();
-  const res = await fetch(`${backendUrl}${endpoint}`, options);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15_000);
+  const res = await fetch(`${backendUrl}${endpoint}`, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
   
   if (!res.ok) {
     const errText = await res.text();
@@ -93,7 +105,7 @@ export async function fetchFromMetaphor(endpoint: string, body?: any, method?: s
   }
 
   const resData = await res.json();
-  if (reqMethod === "GET") {
+  if (isCacheable) {
     apiCache.set(cacheKey, { data: resData, timestamp: Date.now() });
   }
 
