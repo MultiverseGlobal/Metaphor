@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 import { ArrowRight, CheckCircle2, ChevronRight, Database, LayoutTemplate, Zap, Mail, Copy, Check, X, Terminal, ExternalLink } from "lucide-react";
 import { fetchFromMetaphor } from "@/app/api";
 import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
-import { ChatGPTIcon, ClaudeIcon, CursorIcon, GithubIcon } from "@/components/ui/BrandIcons";
+import { ChatGPTIcon, ClaudeIcon, CursorIcon, GithubIcon, GeminiIcon } from "@/components/ui/BrandIcons";
 import { createClient } from "@/utils/supabase/client";
 
 const NotionIcon = () => (
@@ -1017,6 +1017,7 @@ function OnboardingContent() {
       { name: "ChatGPT", icon: <ChatGPTIcon className="w-4 h-4" /> },
       { name: "Claude",  icon: <ClaudeIcon  className="w-4 h-4" /> },
       { name: "Cursor",  icon: <CursorIcon  className="w-4 h-4" /> },
+      { name: "Gemini",  icon: <GeminiIcon  className="w-4 h-4" /> },
     ];
 
     const toggleAI = (ai: string) => {
@@ -1143,6 +1144,7 @@ function OnboardingContent() {
                                 ChatGPT: <ChatGPTIcon className="w-3.5 h-3.5" />,
                                 Claude:  <ClaudeIcon  className="w-3.5 h-3.5" />,
                                 Cursor:  <CursorIcon  className="w-3.5 h-3.5" />,
+                                Gemini:  <GeminiIcon  className="w-3.5 h-3.5" />,
                               };
                               return (
                                 <span

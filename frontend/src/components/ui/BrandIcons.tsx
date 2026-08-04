@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 export const ChatGPTIcon = ({ className = "w-5 h-5 opacity-90" }: { className?: string }) => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className={className}>
@@ -52,3 +52,9 @@ export const GmailIcon = ({ className = "w-5 h-5 opacity-90" }: { className?: st
   </svg>
 );
 
+
+export const GeminiIcon = ({ className = "w-5 h-5 opacity-90" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className={className}>
+    <path d="M22.05 11.26a11.1 11.1 0 0 1-9.31-9.31 1.05 1.05 0 0 0-2.08 0 11.1 11.1 0 0 1-9.31 9.31 1.05 1.05 0 0 0 0 2.08 11.1 11.1 0 0 1 9.31 9.31 1.05 1.05 0 0 0 2.08 0 11.1 11.1 0 0 1 9.31-9.31 1.05 1.05 0 0 0 0-2.08zM11.7 18.27a8.9 8.9 0 0 0-6.02-6.02 8.9 8.9 0 0 0 6.02-6.02 8.9 8.9 0 0 0 6.02 6.02 8.9 8.9 0 0 0-6.02 6.02z" />
+  </svg>
+);
