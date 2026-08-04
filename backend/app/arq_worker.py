@@ -9,7 +9,7 @@ from app.core.config import settings
 from app.database.session import get_session_context
 from sqlmodel import select
 from app.models.operations import Integration, SyncJob, WebhookEvent
-from app.services.integrations.github import fetch_public_repository
+from app.services.integrations.github import fetch_public_repository, fetch_all_user_repositories
 from app.services.integrations.notion import fetch_notion_workspace
 from app.services.integrations.linear import fetch_linear_workspace
 from app.services.integrations.google import fetch_google_workspace
@@ -75,19 +75,19 @@ async def process_integration_sync(
                     tokens[provider] = decrypt_token(integ.access_token)
 
             if "github" in sources:
-                if not github_repo:
-                    job.status = "failed: GitHub repository not specified"
-                    from datetime import datetime
-                    job.completed_at = datetime.utcnow()
-                    session.add(job)
-                    await session.commit()
-                    logger.error(f"Sync job {job_id} failed: GitHub repository not specified.")
-                    return "failed"
-                logger.info(f"Fetching GitHub repo: {github_repo}")
-                job.status = "Analyzing GitHub repository..."
+                logger.info("Fetching all GitHub repositories for user")
+                job.status = "Analyzing GitHub repositories..."
                 session.add(job)
                 await session.commit()
-                github_content = await fetch_public_repository(github_repo, tokens.get("github"))
+                github_token = tokens.get("github")
+                if github_token:
+                    # Auto-fetch ALL repos the user has access to via OAuth token
+                    github_content = await fetch_all_user_repositories(github_token)
+                elif github_repo:
+                    # Fallback: manual repo name was specified (legacy)
+                    github_content = await fetch_public_repository(github_repo, None)
+                else:
+                    github_content = "GitHub connected but no token or repo available to sync."
                 combined_content += github_content + "\n\n"
                 
             if "notion" in sources:

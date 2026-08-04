@@ -95,7 +95,6 @@ function OnboardingContent() {
   // Connect State
   const [connections, setConnections] = useState<Record<string, boolean>>({});
   const [connecting, setConnecting] = useState<string | null>(null);
-  const [githubRepo, setGithubRepo] = useState("");
   const [githubToken, setGithubToken] = useState("");
   const [notionToken, setNotionToken] = useState("");
   
@@ -385,10 +384,6 @@ function OnboardingContent() {
 
   const startIntegrationSync = async () => {
     const connectedSources = Object.keys(connections).filter(k => connections[k]);
-    if (connectedSources.includes("github") && !githubRepo.trim()) {
-      setToastMessage("Please enter a GitHub repository name.");
-      return;
-    }
     setPhase("analyzing");
     try {
       let apiKey = localStorage.getItem("metaphor_api_key");
@@ -405,7 +400,6 @@ function OnboardingContent() {
       if (connectedSources.length > 0) {
         await fetchFromMetaphor("/integrations/sync", {
           sources: connectedSources,
-          github_repo: githubRepo.trim() || undefined, 
           github_token: githubToken.trim() || session?.provider_token || undefined,
           notion_token: notionToken.trim() || undefined
         });
@@ -447,20 +441,6 @@ function OnboardingContent() {
             <ConnectCard name="Notion" icon={<NotionIcon />} connected={!!connections["notion"]} connecting={connecting === "notion"} onToggle={() => toggleConnection("notion")} />
             <ConnectCard name="Google Drive" icon={<GoogleDriveIcon />} connected={!!connections["google"]} connecting={connecting === "google"} onToggle={() => toggleConnection("google")} />
             <ConnectCard name="GitHub" icon={<GithubIcon className="opacity-80" />} connected={!!connections["github"]} connecting={connecting === "github"} onToggle={() => toggleConnection("github")} />
-            
-            {!!connections["github"] && (
-              <div className="mt-4 p-4 border border-border-subtle bg-surface-1 rounded-xl animate-in fade-in zoom-in-95 duration-200">
-                <label className="text-xs font-semibold text-foreground mb-2 block">GitHub Repository</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. octocat/hello-world" 
-                  value={githubRepo} 
-                  onChange={(e) => setGithubRepo(e.target.value)}
-                  className="w-full bg-background border border-border-strong rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-foreground transition-colors"
-                />
-                <p className="text-[10px] text-muted mt-2">Required for GitHub syncing.</p>
-              </div>
-            )}
           </div>
 
           <button
@@ -743,20 +723,19 @@ function OnboardingContent() {
           <MetaphorLogo size={44} className="mb-6 text-foreground" />
 
           <h1 className="text-3xl md:text-4xl font-medium tracking-tight text-foreground mb-3">
-            Your workspace is ready.
+            Now, bridge your AI models.
           </h1>
           <p className="text-muted text-sm md:text-base max-w-xl leading-relaxed mb-12">
-            Metaphor has indexed and understood your workspace. Connect your AI tools to bring this context wherever you work — your projects, documentation, code, and decisions will be available without manually searching for them.
+            This is the whole point. Add Metaphor to ChatGPT <span className="text-foreground font-medium">and</span> Claude. Once both are connected, context flows between them automatically — you stop re-explaining yourself every time you switch.
           </p>
 
-          {/* Section Heading */}
           <div className="w-full text-left mb-6 flex items-center justify-between border-b border-border-subtle pb-4">
             <div>
-              <h2 className="text-lg font-semibold text-foreground tracking-tight">Connect your AI workspace</h2>
-              <p className="text-xs text-muted">Bring Metaphor to your favorite tools to automatically inject project memory.</p>
+              <h2 className="text-lg font-semibold text-foreground tracking-tight">Connect your AI models</h2>
+              <p className="text-xs text-muted">Add Metaphor MCP to at least two models to unlock cross-model memory.</p>
             </div>
             <span className="text-[11px] font-mono text-muted uppercase tracking-wider bg-surface-1 px-3 py-1 rounded-full border border-border-subtle">
-              Optional Step
+              Step 1 of 1
             </span>
           </div>
 
@@ -838,10 +817,9 @@ function OnboardingContent() {
             </div>
           </div>
 
-          {/* Bottom helper & Main CTA */}
           <div className="flex flex-col items-center gap-4">
             <p className="text-xs text-muted">
-              You can connect additional tools later from <span className="text-foreground font-medium">Settings</span>.
+              Connect at least one model now, or do it later from <span className="text-foreground font-medium">Settings</span>.
             </p>
 
             <button
@@ -852,10 +830,14 @@ function OnboardingContent() {
               {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 rounded-full border-2 border-background border-t-transparent animate-spin" />
-                  Synchronizing...
+                  Opening workspace...
                 </>
+              ) : Object.keys(aiConnected).filter(k => aiConnected[k]).length >= 2 ? (
+                <>Start your first shared session <ArrowRight className="w-4 h-4" /></>
+              ) : Object.keys(aiConnected).filter(k => aiConnected[k]).length === 1 ? (
+                <>Connect one more model, or enter workspace <ArrowRight className="w-4 h-4" /></>
               ) : (
-                "Enter Workspace"
+                "Enter Workspace →"
               )}
             </button>
           </div>
