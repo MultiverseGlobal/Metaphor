@@ -8,12 +8,15 @@ import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
 import { createClient } from "@/utils/supabase/client";
 
 function LoginForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const isAlreadyOnboarded = typeof window !== "undefined" && (localStorage.getItem("metaphor_onboarded") === "true" || document.cookie.includes("metaphor_onboarded=true"));
   const defaultTarget = isAlreadyOnboarded ? "/dashboard" : "/onboarding";
   const redirectTarget = searchParams.get("redirect") || defaultTarget;
 
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -50,8 +53,8 @@ function LoginForm() {
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) {
-      setError("Please enter your email address");
+    if (!email || !password) {
+      setError("Please enter your email and password");
       return;
     }
 
@@ -59,19 +62,32 @@ function LoginForm() {
     setError("");
     setMessage("");
 
-    const { error: otpErr } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTarget)}`,
-      },
-    });
-
-    setLoading(false);
-    if (otpErr) {
-      setError(otpErr.message);
+    if (isSignUp) {
+      const { error: signUpErr } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTarget)}`,
+        },
+      });
+      setLoading(false);
+      if (signUpErr) {
+        setError(signUpErr.message);
+      } else {
+        setMessage(`Success! Please check ${email} for a confirmation link.`);
+        setPassword("");
+      }
     } else {
-      setMessage(`We sent a secure sign-in link to ${email}. Check your inbox!`);
-      setEmail(""); // clear the input on success
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      setLoading(false);
+      if (signInErr) {
+        setError(signInErr.message);
+      } else {
+        router.push(redirectTarget);
+      }
     }
   };
 
@@ -146,7 +162,7 @@ function LoginForm() {
 
           {/* Email Form */}
           <form onSubmit={handleEmailAuth} className="space-y-4">
-            <div className="space-y-1.5">
+            <div className="space-y-3">
               <div className="relative">
                 <Mail className="w-4 h-4 text-muted absolute left-3.5 top-3.5" />
                 <input 
@@ -158,6 +174,17 @@ function LoginForm() {
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border-subtle bg-background text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-border-strong transition-colors shadow-sm"
                 />
               </div>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-muted absolute left-3.5 top-3.5" />
+                <input 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  required
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border-subtle bg-background text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-border-strong transition-colors shadow-sm"
+                />
+              </div>
             </div>
 
             <button 
@@ -165,10 +192,20 @@ function LoginForm() {
               disabled={loading}
               className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-foreground text-background text-sm font-medium rounded-xl hover:opacity-90 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50 shadow-md"
             >
-              <span>{loading ? "Processing..." : "Continue with Email"}</span>
+              <span>{loading ? "Processing..." : isSignUp ? "Create Account" : "Sign In"}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
+
+          <div className="text-center pt-2">
+            <button
+              type="button"
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-xs text-muted hover:text-foreground transition-colors"
+            >
+              {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
+            </button>
+          </div>
 
         </div>
 

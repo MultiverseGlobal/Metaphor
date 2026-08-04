@@ -47,13 +47,20 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  const hasOnboarded = request.cookies.has("metaphor_onboarded");
+
   if (user && isLoginRoute) {
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    url.pathname = hasOnboarded ? '/dashboard' : '/onboarding'
     return NextResponse.redirect(url)
   }
 
-  const hasOnboarded = request.cookies.has("metaphor_onboarded");
+  if (user && isProtectedRoute && !hasOnboarded) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/onboarding'
+    return NextResponse.redirect(url)
+  }
+
   if (user && hasOnboarded && request.nextUrl.pathname === '/onboarding') {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
