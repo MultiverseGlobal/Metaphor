@@ -60,18 +60,7 @@ export default function KnowledgeGraphPage() {
         let nodesList = data?.nodes || [];
         let edgesList = data?.edges || [];
 
-        // Fallback baseline nodes if workspace has zero nodes
-        if (nodesList.length === 0) {
-          nodesList = [
-            { id: "node-1", name: "Metaphor OS Architecture", type: "architecture", summary: "Core Cognitive Operating System memory layer with Graph RAG." },
-            { id: "node-2", name: "Remote MCP Integration", type: "project", summary: "OAuth 2.1 PKCE server connecting ChatGPT and Claude Desktop." },
-            { id: "node-3", name: "Linear Design System Enforcer", type: "rule", summary: "UI/UX rule enforcement with semantic design tokens." }
-          ];
-          edgesList = [
-            { id: "edge-1", source: "node-1", target: "node-2", type: "ENABLES" },
-            { id: "edge-2", source: "node-1", target: "node-3", type: "ENFORCES" }
-          ];
-        }
+
 
         const radiusStep = 160;
         const flowNodes: FlowNode[] = nodesList.map((n: any, i: number) => {
