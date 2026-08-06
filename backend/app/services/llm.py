@@ -33,7 +33,7 @@ class LLMService:
             raise ValueError("LLM not configured: missing GEMINI_API_KEY for embedding generation")
             
         result = await self.client.aio.models.embed_content(
-            model="models/gemini-embedding-001",
+            model="text-embedding-004",
             contents=text,
             config=types.EmbedContentConfig(
                 task_type="RETRIEVAL_DOCUMENT"

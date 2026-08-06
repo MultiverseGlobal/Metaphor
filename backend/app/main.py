@@ -45,7 +45,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.core.rate_limiter import RateLimiter
+global_rate_limiter = RateLimiter(requests_per_minute=200)
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    if request.url.path.startswith("/api/") or request.url.path.startswith("/.well-known/"):
+        try:
+            await global_rate_limiter(request)
+        except Exception as e:
+            if hasattr(e, "status_code") and e.status_code == 429:
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": str(e.detail)},
+                    headers=e.headers
+                )
+            raise e
+    return await call_next(request)
+
 app.include_router(api_router, prefix=settings.API_PREFIX)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}")
+    logger.error(traceback.format_exc())
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error"}
+    )
 
 @app.get("/.well-known/oauth-protected-resource")
 @app.get("/api/v1/mcp/.well-known/oauth-protected-resource")

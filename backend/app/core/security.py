@@ -124,12 +124,21 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSe
     except Exception:
         raise credentials_exception
 
-    return await _ensure_user_in_db(
+    user = await _ensure_user_in_db(
         user_id_str=user_id,
         email=user_res.user.email,
         metadata=getattr(user_res.user, "user_metadata", None),
         session=session
     )
+    
+    from app.models.identity import OrganizationMember
+    stmt = select(OrganizationMember).where(OrganizationMember.user_id == user.id)
+    member = (await session.execute(stmt)).scalars().first()
+    if member:
+        from sqlalchemy import text
+        await session.execute(text(f"SET LOCAL app.current_org_id = '{member.organization_id}'"))
+        
+    return user
 
 
 async def get_user_via_api_key(request: Request, session: AsyncSession = Depends(get_session)) -> User:
@@ -144,12 +153,20 @@ async def get_user_via_api_key(request: Request, session: AsyncSession = Depends
             try:
                 user_res = await run_in_threadpool(supabase.auth.get_user, token)
                 if user_res and user_res.user:
-                    return await _ensure_user_in_db(
+                    user = await _ensure_user_in_db(
                         user_id_str=user_res.user.id,
                         email=user_res.user.email,
                         metadata=getattr(user_res.user, "user_metadata", None),
                         session=session
                     )
+                    # Set Postgres RLS context
+                    from app.models.identity import OrganizationMember
+                    stmt = select(OrganizationMember).where(OrganizationMember.user_id == user.id)
+                    member = (await session.execute(stmt)).scalars().first()
+                    if member:
+                        from sqlalchemy import text
+                        await session.execute(text(f"SET LOCAL app.current_org_id = '{member.organization_id}'"))
+                    return user
             except Exception as e:
                 logger.warning(f"Bearer token validation failed: {e}. Falling back to API key / default user.")
 
@@ -171,6 +188,8 @@ async def get_user_via_api_key(request: Request, session: AsyncSession = Depends
             result = await session.execute(stmt)
             org_user = result.scalars().first()
             if org_user:
+                from sqlalchemy import text
+                await session.execute(text(f"SET LOCAL app.current_org_id = '{db_key.organization_id}'"))
                 return org_user
 
     # No valid credentials found — fail explicitly.

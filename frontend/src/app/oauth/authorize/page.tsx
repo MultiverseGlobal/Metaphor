@@ -22,9 +22,11 @@ function OAuthAuthorizeContent() {
   const [authorized, setAuthorized] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const clientName = clientId.toLowerCase().includes("claude") 
+  const clientString = `${clientId} ${redirectUri}`.toLowerCase();
+  
+  const clientName = clientString.includes("claude") 
     ? "Claude Desktop" 
-    : clientId.toLowerCase().includes("cursor") 
+    : clientString.includes("cursor") 
     ? "Cursor IDE" 
     : "ChatGPT";
 

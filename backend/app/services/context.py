@@ -48,8 +48,13 @@ class ContextService:
         
         # 2. Search for relevant nodes via Vector Search
         from app.services.llm import llm_service
-        query_embedding = await llm_service.generate_embedding(query)
-        nodes = await self.graph.vector_search(org_id, query_embedding, limit=20)
+        try:
+            query_embedding = await llm_service.generate_embedding(query)
+            nodes = await self.graph.vector_search(org_id, query_embedding, limit=20)
+        except Exception as e:
+            print(f"Warning: Failed to generate embeddings or search graph: {e}")
+            nodes = []
+
         
         # 3. Filter out nodes we already sent in this session to reduce token bloat
         previously_sent = set(ctx_session.state.get("previously_sent_node_ids", []))
