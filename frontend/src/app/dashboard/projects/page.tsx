@@ -103,9 +103,9 @@ function ProjectRouterPanel({
   onDelete: () => void; onUpdate: (u: Partial<Project>) => void;
 }) {
   const [project, setProject] = useState(initialProject);
-  const [ais, setAIs] = useState(initialAIs);
   const [handoffs, setHandoffs] = useState<TaskHandoff[]>([]);
   const [loadingHandoffs, setLoadingHandoffs] = useState(true);
+  const [historicalClients, setHistoricalClients] = useState<{client_name: string, last_seen: string}[]>([]);
   const [activeTab, setActiveTab] = useState<"queue" | "history">("queue");
   const [showConfig, setShowConfig] = useState(false);
   const [copiedConfig, setCopiedConfig] = useState(false);
@@ -114,9 +114,6 @@ function ProjectRouterPanel({
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(project.title);
   const renameRef = useRef<HTMLInputElement>(null);
-  const [isEditingAIs, setIsEditingAIs] = useState(false);
-  const [pendingAIs, setPendingAIs] = useState(ais);
-  const [isSavingAIs, setIsSavingAIs] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [projectStatus, setProjectStatus] = useState<ProjectStatus>((initialProject.project_status as ProjectStatus) || "active");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -124,16 +121,20 @@ function ProjectRouterPanel({
   const [isArchiving, setIsArchiving] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
 
-  const loadHandoffs = () => {
+  const loadData = () => {
     if (!project.id) return;
     setLoadingHandoffs(true);
     fetchFromMetaphor(`/graph/nodes/${project.id}/handoffs`, undefined, "GET")
       .then(res => setHandoffs(res?.handoffs || []))
       .catch(console.error)
       .finally(() => setLoadingHandoffs(false));
+      
+    fetchFromMetaphor(`/graph/nodes/${project.id}/connected-clients`, undefined, "GET")
+      .then(res => setHistoricalClients(res?.clients || []))
+      .catch(console.error);
   };
 
-  useEffect(() => { loadHandoffs(); }, [project.id]);
+  useEffect(() => { loadData(); }, [project.id]);
   useEffect(() => { if (isRenaming && renameRef.current) renameRef.current.focus(); }, [isRenaming]);
 
   const pendingHandoffs  = handoffs.filter(h => h.status === "pending");
@@ -154,18 +155,7 @@ function ProjectRouterPanel({
     finally { setIsRenaming(false); }
   };
 
-  const handleSaveAIs = async () => {
-    if (!project.id) return;
-    setIsSavingAIs(true);
-    const newSummary = `Bound to: ${pendingAIs.join(", ") || "No AI tools yet"}`;
-    try {
-      await fetchFromMetaphor(`/graph/nodes/${project.id}`, { summary: newSummary }, "PATCH");
-      setAIs(pendingAIs);
-      onUpdate({ attachedAIs: pendingAIs, summary: newSummary });
-      setIsEditingAIs(false);
-    } catch (e) { console.error(e); }
-    finally { setIsSavingAIs(false); }
-  };
+
 
   const handleStatusChange = async (s: ProjectStatus) => {
     if (!project.id) return;
@@ -196,7 +186,7 @@ function ProjectRouterPanel({
   const handleClearQueue = async () => {
     if (!project.id) return;
     setIsClearing(true);
-    try { await fetchFromMetaphor(`/graph/nodes/${project.id}/handoffs/clear`, undefined, "POST"); loadHandoffs(); }
+    try { await fetchFromMetaphor(`/graph/nodes/${project.id}/handoffs/clear`, undefined, "POST"); loadData(); }
     catch (e) { console.error(e); }
     finally { setIsClearing(false); }
   };
@@ -262,7 +252,7 @@ function ProjectRouterPanel({
           ) : (
             <div className="flex items-center gap-1">
               <span className="text-[10px] text-muted">Archive?</span>
-              <button onClick={handleArchive} disabled={isArchiving} className="text-[10px] font-bold text-amber-400 border border-amber-400/40 px-1.5 py-0.5 rounded disabled:opacity-50">{isArchiving ? "â€¦" : "Yes"}</button>
+              <button onClick={handleArchive} disabled={isArchiving} className="text-[10px] font-bold text-amber-400 border border-amber-400/40 px-1.5 py-0.5 rounded disabled:opacity-50">{isArchiving ? "…" : "Yes"}</button>
               <button onClick={() => setConfirmArchive(false)} className="text-[10px] font-bold text-muted border border-border-subtle px-1.5 py-0.5 rounded">No</button>
             </div>
           )}
@@ -274,7 +264,7 @@ function ProjectRouterPanel({
           ) : (
             <div className="flex items-center gap-1">
               <span className="text-[10px] text-muted">Delete?</span>
-              <button onClick={handleDelete} disabled={isDeleting} className="text-[10px] font-bold text-red-400 border border-red-400/40 px-1.5 py-0.5 rounded disabled:opacity-50">{isDeleting ? "â€¦" : "Yes"}</button>
+              <button onClick={handleDelete} disabled={isDeleting} className="text-[10px] font-bold text-red-400 border border-red-400/40 px-1.5 py-0.5 rounded disabled:opacity-50">{isDeleting ? "…" : "Yes"}</button>
               <button onClick={() => setConfirmDelete(false)} className="text-[10px] font-bold text-muted border border-border-subtle px-1.5 py-0.5 rounded">No</button>
             </div>
           )}
@@ -283,42 +273,24 @@ function ProjectRouterPanel({
 
       <div className="p-6 space-y-6">
 
-        {/* â”€â”€ Edit Bound AIs â”€â”€ */}
+        {/* — Bound AI Tools (Auto-tracked via MCP) — */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Bound AI Tools</p>
-            {!isEditingAIs ? (
-              <button onClick={() => { setIsEditingAIs(true); setPendingAIs(ais); }}
-                className="text-[10px] font-bold text-muted hover:text-foreground border border-border-subtle px-2 py-0.5 rounded-md transition-colors">Edit</button>
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <button onClick={handleSaveAIs} disabled={isSavingAIs}
-                  className="text-[10px] font-bold text-foreground border border-border-strong px-2 py-0.5 rounded-md disabled:opacity-50">
-                  {isSavingAIs ? "Savingâ€¦" : "Save"}
-                </button>
-                <button onClick={() => { setIsEditingAIs(false); setPendingAIs(ais); }}
-                  className="text-[10px] font-bold text-muted border border-border-subtle px-2 py-0.5 rounded-md">Cancel</button>
-              </div>
-            )}
+            <span className="text-[10px] text-muted border border-border-subtle bg-surface-2 px-2 py-0.5 rounded-full">Auto-tracked via MCP</span>
           </div>
           <div className="flex gap-2 flex-wrap">
             {ALL_AI_TOOLS.map(ai => {
-              const isSelected = isEditingAIs ? pendingAIs.includes(ai) : ais.includes(ai);
-              const isLive = !isEditingAIs && activeClients.some(c => c.project_id === project.id && c.client_name?.toLowerCase() === ai.toLowerCase());
+              const hasConnected = historicalClients.some(c => c.client_name?.toLowerCase() === ai.toLowerCase());
+              const isLive = activeClients.some(c => c.project_id === project.id && c.client_name?.toLowerCase() === ai.toLowerCase());
               return (
-                <button key={ai} title={ai} disabled={!isEditingAIs}
-                  onClick={() => { if (!isEditingAIs) return; setPendingAIs(prev => prev.includes(ai) ? prev.filter(a => a !== ai) : [...prev, ai]); }}
-                  className={`relative w-10 h-10 rounded-xl border flex items-center justify-center transition-all duration-150 ${isEditingAIs ? isSelected ? "bg-foreground text-background border-foreground" : "bg-surface-2 text-muted border-border-subtle hover:border-border-strong" : isSelected ? isLive ? "bg-surface-1 border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)] text-foreground opacity-100" : "bg-surface-1 border-border-subtle text-foreground opacity-60" : "bg-surface-2 border-border-subtle text-muted opacity-25"} ${!isEditingAIs ? "cursor-default" : "cursor-pointer"}`}>
+                <div key={ai} title={ai}
+                  className={`relative w-10 h-10 rounded-xl border flex items-center justify-center transition-all duration-150 cursor-default ${hasConnected ? isLive ? "bg-surface-1 border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)] text-foreground opacity-100" : "bg-surface-1 border-border-subtle text-foreground opacity-60" : "bg-surface-2 border-border-subtle text-muted opacity-25"}`}>
                   {AI_ICON_MAP[ai]}
-                  {isEditingAIs && isSelected && (
-                    <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-foreground border-2 border-background flex items-center justify-center">
-                      <Check className="w-1.5 h-1.5 text-background stroke-[3]" />
-                    </span>
-                  )}
-                  {!isEditingAIs && isLive && (
+                  {isLive && (
                     <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-background" />
                   )}
-                </button>
+                </div>
               );
             })}
           </div>

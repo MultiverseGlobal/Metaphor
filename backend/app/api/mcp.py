@@ -697,10 +697,19 @@ async def remote_mcp_jsonrpc_endpoint(
 
     elapsed_ms = (time.time() - start_time) * 1000.0
     
-    # Audit log entry
+    # Audit log entry — include project_id if the client is scoped to a project
+    audit_project_id = None
+    if project_id:
+        try:
+            import uuid as _uuid
+            audit_project_id = _uuid.UUID(project_id)
+        except Exception:
+            pass
+
     audit = MCPAuditLog(
         organization_id=token_obj.organization_id,
         token_id=token_obj.id,
+        project_id=audit_project_id,
         client_name=token_obj.client_id,
         call_type=call_type,
         name=name_called,

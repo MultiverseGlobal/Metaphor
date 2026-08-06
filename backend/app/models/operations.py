@@ -130,6 +130,7 @@ class MCPAuditLog(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     organization_id: uuid.UUID = Field(foreign_key="organizations.id", index=True)
     token_id: Optional[uuid.UUID] = Field(default=None, index=True)
+    project_id: Optional[uuid.UUID] = Field(default=None, index=True)
     client_name: str
     call_type: str # "resource" or "tool"
     name: str # e.g. "search_context" or "workspace://graph"
@@ -137,3 +138,4 @@ class MCPAuditLog(SQLModel, table=True):
     status_code: int = Field(default=200)
     response_time_ms: float = Field(default=0.0)
     timestamp: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
+

@@ -9,7 +9,7 @@ from sqlmodel import select, func, or_
 from app.database.session import get_session
 from app.services.identity import IdentityService
 from app.models.graph import Node, Edge
-from app.models.operations import WebhookEvent
+from app.models.operations import WebhookEvent, MCPAuditLog
 from app.models.context import ContextSession
 
 from app.core.security import get_user_via_api_key
@@ -398,3 +398,34 @@ async def delete_node(
     await db.delete(node)
     await db.commit()
     return {"status": "deleted", "id": str(node_id)}
+
+
+@router.get("/nodes/{project_id}/connected-clients")
+async def get_project_connected_clients(
+    project_id: uuid.UUID,
+    user: User = Depends(get_user_via_api_key),
+    db: AsyncSession = Depends(get_session)
+):
+    """Return distinct AI client names that have ever called MCP tools scoped to this project."""
+    org = await get_user_org(user, db)
+    node = await db.get(Node, project_id)
+    if not node or node.organization_id != org.id:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    stmt = (
+        select(MCPAuditLog.client_name, func.max(MCPAuditLog.timestamp).label("last_seen"))
+        .where(
+            MCPAuditLog.organization_id == org.id,
+            MCPAuditLog.project_id == project_id
+        )
+        .group_by(MCPAuditLog.client_name)
+        .order_by(func.max(MCPAuditLog.timestamp).desc())
+    )
+    res = await db.execute(stmt)
+    rows = res.all()
+    return {
+        "clients": [
+            {"client_name": row.client_name, "last_seen": row.last_seen.isoformat()}
+            for row in rows
+        ]
+    }
