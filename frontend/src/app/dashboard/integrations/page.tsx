@@ -113,7 +113,7 @@ export default function IntegrationsPage() {
   const handleSync = async (provider: string) => {
     setSyncing(prev => ({ ...prev, [provider]: true }));
     try {
-      await fetchFromMetaphor(`/integrations/${provider}/sync`, undefined, "POST");
+      await fetchFromMetaphor(`/integrations/sync`, { sources: [provider] }, "POST");
       setFeedbackMsg(`Synced ${provider} successfully!`);
       setTimeout(() => setFeedbackMsg(null), 3000);
       await loadIntegrations();

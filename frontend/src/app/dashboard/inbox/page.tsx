@@ -27,31 +27,14 @@ export default function InboxPage() {
     fetchInbox();
   }, []);
 
-  const getProcessedNodeIds = (): string[] => {
-    if (typeof window === "undefined") return [];
-    try {
-      return JSON.parse(localStorage.getItem("metaphor_processed_nodes") || "[]");
-    } catch {
-      return [];
-    }
-  };
 
-  const markNodesAsProcessed = (items: (string | undefined)[]) => {
-    if (typeof window === "undefined") return;
-    const valid = items.filter(Boolean) as string[];
-    const existing = getProcessedNodeIds();
-    const updated = Array.from(new Set([...existing, ...valid]));
-    localStorage.setItem("metaphor_processed_nodes", JSON.stringify(updated));
-  };
 
   const fetchInbox = async () => {
     setLoading(true);
     try {
       const data = await fetchFromMetaphor("/graph/inbox");
-      const processed = getProcessedNodeIds();
       if (data && Array.isArray(data.nodes)) {
-        const remaining = data.nodes.filter((n: any) => !processed.includes(n.id) && !processed.includes(n.title));
-        setNodes(remaining);
+        setNodes(data.nodes);
       } else {
         setNodes([]);
       }
@@ -67,7 +50,6 @@ export default function InboxPage() {
     const nodeObj = nodes.find(n => n.id === nodeId);
     setActionLoading(nodeId);
     setNodes((prev) => prev.filter((n) => n.id !== nodeId));
-    markNodesAsProcessed([nodeId, nodeObj?.title]);
 
     try {
       await fetchFromMetaphor(`/graph/nodes/${nodeId}/${action}`, undefined, "POST");
@@ -82,9 +64,7 @@ export default function InboxPage() {
   const handleBatchAction = async (action: "approve" | "reject") => {
     setBatching(true);
     const targetIds = filteredNodes.map(n => n.id);
-    const targetTitles = filteredNodes.map(n => n.title);
     setNodes(prev => prev.filter(n => !targetIds.includes(n.id)));
-    markNodesAsProcessed([...targetIds, ...targetTitles]);
 
     try {
       await Promise.all(
