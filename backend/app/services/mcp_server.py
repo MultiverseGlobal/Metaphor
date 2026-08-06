@@ -274,6 +274,48 @@ async def list_mcp_tools() -> List[Dict[str, Any]]:
             },
             "annotations": {"readOnly": False, "destructive": False}
         },
+        {
+            "name": "push_handoff",
+            "description": "Push a task, error, or context state to another AI model in the same project queue.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "source_ai": {"type": "string"},
+                    "target_ai": {"type": "string"},
+                    "project_id": {"type": "string"},
+                    "payload": {"type": "string", "description": "The state, error, or context to hand off"},
+                    "instructions": {"type": "string", "description": "Instructions for the target AI"}
+                },
+                "required": ["source_ai", "target_ai", "project_id", "payload"]
+            },
+            "annotations": {"readOnly": False, "destructive": False}
+        },
+        {
+            "name": "pull_handoffs",
+            "description": "Check the project queue for any tasks or context handed off to you by other AIs.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "my_ai_name": {"type": "string", "description": "Your AI name (e.g. claude, antigravity, cursor)"},
+                    "project_id": {"type": "string"}
+                },
+                "required": ["my_ai_name", "project_id"]
+            },
+            "annotations": {"readOnly": True, "destructive": False}
+        },
+        {
+            "name": "resolve_handoff",
+            "description": "Mark a handoff task as resolved and provide a summary.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "handoff_id": {"type": "string"},
+                    "resolution_summary": {"type": "string"}
+                },
+                "required": ["handoff_id", "resolution_summary"]
+            },
+            "annotations": {"readOnly": False, "destructive": False}
+        },
     ]
 
 
@@ -483,6 +525,83 @@ async def call_mcp_tool(
         nodes = res.scalars().all()
         return {"content": [{"type": "text", "text": json.dumps([{"id": str(n.id), "title": n.title, "node_type": n.type} for n in nodes], indent=2)}]}
 
+    elif name == "push_handoff":
+        from app.models.task_handoff import TaskHandoff
+        source_ai = arguments.get("source_ai")
+        target_ai = arguments.get("target_ai")
+        project_id_raw = arguments.get("project_id")
+        payload = arguments.get("payload")
+        instructions = arguments.get("instructions")
+        
+        try:
+            pid = uuid.UUID(project_id_raw)
+        except Exception:
+            raise HTTPException(400, detail="Invalid project_id UUID")
+
+        handoff = TaskHandoff(
+            project_id=pid,
+            source_ai=source_ai.lower(),
+            target_ai=target_ai.lower(),
+            payload=payload,
+            instructions=instructions,
+            status="pending"
+        )
+        session.add(handoff)
+        await session.commit()
+        return {"content": [{"type": "text", "text": f"Handoff successfully pushed to {target_ai}. Handoff ID: {handoff.id}"}]}
+
+    elif name == "pull_handoffs":
+        from app.models.task_handoff import TaskHandoff
+        my_ai_name = arguments.get("my_ai_name")
+        project_id_raw = arguments.get("project_id")
+        
+        try:
+            pid = uuid.UUID(project_id_raw)
+        except Exception:
+            raise HTTPException(400, detail="Invalid project_id UUID")
+
+        stmt = select(TaskHandoff).where(
+            TaskHandoff.project_id == pid,
+            TaskHandoff.target_ai == my_ai_name.lower(),
+            TaskHandoff.status == "pending"
+        ).order_by(TaskHandoff.created_at.asc())
+        
+        res = await session.execute(stmt)
+        tasks = res.scalars().all()
+        data = [{
+            "id": str(t.id),
+            "source_ai": t.source_ai,
+            "payload": t.payload,
+            "instructions": t.instructions,
+            "created_at": t.created_at.isoformat()
+        } for t in tasks]
+        
+        return {"content": [{"type": "text", "text": json.dumps(data, indent=2)}]}
+
+    elif name == "resolve_handoff":
+        from app.models.task_handoff import TaskHandoff
+        handoff_id_raw = arguments.get("handoff_id")
+        summary = arguments.get("resolution_summary")
+        
+        try:
+            hid = uuid.UUID(handoff_id_raw)
+        except Exception:
+            raise HTTPException(400, detail="Invalid handoff_id UUID")
+            
+        stmt = select(TaskHandoff).where(TaskHandoff.id == hid)
+        res = await session.execute(stmt)
+        handoff = res.scalar_one_or_none()
+        
+        if not handoff:
+            raise HTTPException(404, detail="Handoff not found")
+            
+        handoff.status = "resolved"
+        handoff.resolution_summary = summary
+        handoff.resolved_at = datetime.now(timezone.utc)
+        
+        session.add(handoff)
+        await session.commit()
+        return {"content": [{"type": "text", "text": "Handoff resolved successfully."}]}
 
     elif name == "list_recent_changes":
         stmt = select(Node).where(Node.organization_id == organization_id).order_by(Node.updated_at.desc()).limit(10)

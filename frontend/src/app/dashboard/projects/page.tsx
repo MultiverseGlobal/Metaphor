@@ -33,37 +33,147 @@ const AI_LAUNCH_URL: Record<string, string> = {
 
 const ALL_AI_TOOLS = ["ChatGPT", "Claude", "Cursor", "Gemini", "Antigravity"];
 
-function buildActivationPrompt(projectName: string, projectId: string): string {
-  return `# Metaphor Session — ${projectName}
+type TaskHandoff = {
+  id: string;
+  source_ai: string;
+  target_ai: string;
+  payload: string;
+  instructions: string;
+  status: string;
+  created_at: string;
+};
 
-You are starting a Metaphor-scoped session for project: **${projectName}**
+function ProjectRouterPanel({ project, ais }: { project: Project; ais: string[] }) {
+  const [handoffs, setHandoffs] = useState<TaskHandoff[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showConfig, setShowConfig] = useState(false);
+  const [copiedConfig, setCopiedConfig] = useState(false);
 
-## On session start — always run:
-\`\`\`
-get_active_session_context(project_id="${projectId}", limit=5)
-\`\`\`
-This loads the latest context drops from other AI tools (Claude, Cursor, ChatGPT) working on this project so you start with shared awareness.
+  useEffect(() => {
+    if (project.id) {
+      setLoading(true);
+      fetchFromMetaphor(`/graph/nodes/${project.id}/handoffs`, undefined, "GET")
+        .then(res => setHandoffs(res?.handoffs || []))
+        .catch(err => console.error(err))
+        .finally(() => setLoading(false));
+    }
+  }, [project.id]);
 
-## When finishing a significant task — always run:
-\`\`\`
-sync_chat_drop(
-  source_model="<your model name>",
-  project_id="${projectId}",
-  summary="<what you did, decisions made, files changed>",
-  session_title="${projectName} — <brief task description>"
-)
-\`\`\`
-This saves your progress into Metaphor so other tools can pick up exactly where you left off.
+  if (!project.id) {
+    return (
+      <div className="border-t border-border-subtle bg-background p-6">
+        <p className="text-xs text-muted italic">
+          This project was created locally and hasn't been saved to the backend yet.
+          Re-create it using the form above to get a project ID.
+        </p>
+      </div>
+    );
+  }
 
-## Project context:
-\`\`\`
-search_context(query="${projectName}")
-\`\`\`
-Run this to load project-specific documentation, decisions, and architecture into your context window.
+  const activeHandoffs = handoffs.filter(h => h.status === "pending");
 
----
-Project ID: ${projectId}
-Powered by Metaphor OS`;
+  const configSnippet = `{
+  "mcpServers": {
+    "metaphor-os": {
+      "command": "uvx",
+      "args": ["fastmcp", "run", "mcp_server.py"],
+      "env": {
+        "METAPHOR_PROJECT_ID": "${project.id}"
+      }
+    }
+  }
+}`;
+
+  const copyConfig = () => {
+    navigator.clipboard.writeText(configSnippet);
+    setCopiedConfig(true);
+    setTimeout(() => setCopiedConfig(false), 2000);
+  };
+
+  return (
+    <div className="border-t border-border-subtle bg-background p-6 animate-in fade-in slide-in-from-top-1 duration-150">
+      
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Terminal className="w-4 h-4 text-emerald-400" />
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
+            Multi-Agent Router Hub
+          </p>
+        </div>
+        <button 
+          onClick={() => setShowConfig(!showConfig)}
+          className="text-[10px] uppercase font-bold text-muted hover:text-foreground border border-border-subtle px-2 py-1 rounded-md transition-colors"
+        >
+          {showConfig ? "Hide Config" : "MCP Config"}
+        </button>
+      </div>
+
+      {showConfig && (
+        <div className="mb-6 bg-surface-1 border border-border-subtle rounded-xl p-4">
+          <p className="text-xs font-medium text-foreground mb-2">Bind {project.title} to your AI tools</p>
+          <p className="text-xs text-muted leading-relaxed mb-4">
+            Paste this configuration into your AI client's MCP settings (e.g., Cursor, Claude Desktop). 
+            This strictly scopes the MCP connection so tasks handed off to this project queue are automatically pulled.
+          </p>
+          <div className="relative group">
+            <pre className="font-mono text-[11px] text-muted whitespace-pre-wrap">{configSnippet}</pre>
+            <button 
+              onClick={copyConfig}
+              className="absolute top-0 right-0 p-1.5 bg-background border border-border-subtle rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              {copiedConfig ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-muted" />}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Queue View */}
+      <div className="space-y-4">
+        {loading ? (
+          <p className="text-xs text-muted animate-pulse">Loading handoff queue...</p>
+        ) : activeHandoffs.length === 0 ? (
+          <div className="bg-surface-1 border border-border-subtle rounded-xl p-6 text-center">
+            <Zap className="w-5 h-5 text-muted mx-auto mb-2 opacity-50" />
+            <p className="text-sm font-medium text-foreground">Queue is empty</p>
+            <p className="text-xs text-muted mt-1">No active tasks are waiting to be picked up in {project.title}.</p>
+          </div>
+        ) : (
+          activeHandoffs.map(h => (
+            <div key={h.id} className="bg-surface-1 border border-border-strong rounded-xl p-4 flex gap-4">
+              <div className="shrink-0 flex flex-col items-center gap-1">
+                <span className="w-8 h-8 rounded-full bg-surface-2 border border-border-subtle flex items-center justify-center text-foreground" title={h.source_ai}>
+                  {AI_ICON_MAP[
+                    Object.keys(AI_ICON_MAP).find(k => k.toLowerCase() === h.source_ai) || ""
+                  ] ?? <span className="text-[9px] font-bold">{h.source_ai.charAt(0).toUpperCase()}</span>}
+                </span>
+                <div className="w-px h-3 bg-border-strong"></div>
+                <span className="w-8 h-8 rounded-full bg-foreground border border-background flex items-center justify-center text-background" title={h.target_ai}>
+                  {AI_ICON_MAP[
+                    Object.keys(AI_ICON_MAP).find(k => k.toLowerCase() === h.target_ai) || ""
+                  ] ?? <span className="text-[9px] font-bold">{h.target_ai.charAt(0).toUpperCase()}</span>}
+                </span>
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">
+                  {h.source_ai} ➔ {h.target_ai}
+                </p>
+                <p className="text-sm text-foreground font-medium mb-1">Pending Handoff</p>
+                <p className="text-xs text-muted line-clamp-2">{h.payload}</p>
+                {h.instructions && (
+                  <p className="text-[11px] text-emerald-400 mt-2 font-mono break-words">
+                    Cmd: {h.instructions}
+                  </p>
+                )}
+                <p className="text-[10px] text-muted mt-3 italic">Pushed {new Date(h.created_at).toLocaleTimeString()}</p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+    </div>
+  );
 }
 
 export default function ProjectsPage() {
@@ -323,86 +433,7 @@ export default function ProjectsPage() {
                     }
                   </button>
 
-                  {/* Expanded: Launch Session panel */}
-                  {isOpen && (
-                    <div className="border-t border-border-subtle bg-background p-6 animate-in fade-in slide-in-from-top-1 duration-150">
-
-                      {/* Project ID pill */}
-                      {project.id && (
-                        <div className="mb-6 flex items-center gap-2">
-                          <span className="text-[10px] font-mono text-muted bg-surface-1 border border-border-subtle px-2 py-1 rounded-md">
-                            ID: {project.id}
-                          </span>
-                          <span className="text-[10px] text-muted">— used in activation prompt below</span>
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-2 mb-4">
-                        <Terminal className="w-3.5 h-3.5 text-muted" />
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
-                          Launch Session
-                        </p>
-                      </div>
-                      <p className="text-sm text-muted leading-relaxed mb-6">
-                        Copy this activation prompt and paste it into your AI tool at the start of a session.
-                        It tells the AI to load this project's shared context and sync back when it finishes.
-                      </p>
-
-                      {/* Activation Prompt Preview */}
-                      {project.id ? (
-                        <>
-                          <div className="mb-4 bg-surface-1 border border-border-subtle rounded-xl p-4 font-mono text-[11px] text-muted leading-relaxed max-h-52 overflow-y-auto custom-scrollbar whitespace-pre-wrap">
-                            {buildActivationPrompt(title, project.id)}
-                          </div>
-
-                          {/* AI selector + action row */}
-                          <div className="flex items-center gap-3 flex-wrap">
-                            {/* AI picker */}
-                            <div className="flex gap-1.5">
-                              {(ais.length > 0 ? ais : ALL_AI_TOOLS.slice(0, 3)).map(ai => (
-                                <button
-                                  key={ai}
-                                  title={ai}
-                                  onClick={() => setSelectedAI(prev => ({ ...prev, [id]: ai }))}
-                                  className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-all ${
-                                    launchAI === ai
-                                      ? "bg-foreground text-background border-foreground"
-                                      : "bg-surface-1 text-foreground border-border-subtle hover:border-border-strong"
-                                  }`}
-                                >
-                                  {AI_ICON_MAP[ai] ?? <span className="text-[9px] font-bold">{ai[0]}</span>}
-                                </button>
-                              ))}
-                            </div>
-
-                            {/* Copy prompt */}
-                            <button
-                              onClick={() => handleCopy(project.id!, title)}
-                              className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border-subtle bg-surface-1 hover:border-border-strong text-xs font-medium text-foreground transition-all"
-                            >
-                              {hasCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                              {hasCopied ? "Copied!" : "Copy Prompt"}
-                            </button>
-
-                            {/* Launch in AI */}
-                            <button
-                              onClick={() => handleLaunch(project.id!, title, launchAI)}
-                              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-foreground text-background text-xs font-semibold hover:opacity-90 transition-all"
-                            >
-                              <Zap className="w-3.5 h-3.5" />
-                              Launch in {launchAI}
-                              <ExternalLink className="w-3 h-3 opacity-70" />
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <p className="text-xs text-muted italic">
-                          This project was created locally and hasn't been saved to the backend yet.
-                          Re-create it using the form above to get a project ID.
-                        </p>
-                      )}
-                    </div>
-                  )}
+                  {isOpen && <ProjectRouterPanel project={project} ais={ais} />}
                 </div>
               );
             })}

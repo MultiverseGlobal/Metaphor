@@ -238,3 +238,38 @@ async def list_nodes(
             for n in nodes
         ]
     }
+
+@router.get("/nodes/{project_id}/handoffs")
+async def get_project_handoffs(
+    project_id: uuid.UUID,
+    user: User = Depends(get_user_via_api_key),
+    db: AsyncSession = Depends(get_session)
+):
+    """Get active multi-agent handoffs for a project."""
+    org = await get_user_org(user, db)
+    # verify project ownership
+    node = await db.get(Node, project_id)
+    if not node or node.organization_id != org.id:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    from app.models.task_handoff import TaskHandoff
+    stmt = select(TaskHandoff).where(TaskHandoff.project_id == project_id).order_by(TaskHandoff.created_at.desc())
+    res = await db.execute(stmt)
+    handoffs = res.scalars().all()
+    
+    return {
+        "handoffs": [
+            {
+                "id": str(h.id),
+                "source_ai": h.source_ai,
+                "target_ai": h.target_ai,
+                "payload": h.payload,
+                "instructions": h.instructions,
+                "status": h.status,
+                "resolution_summary": h.resolution_summary,
+                "created_at": h.created_at.isoformat(),
+                "resolved_at": h.resolved_at.isoformat() if h.resolved_at else None
+            }
+            for h in handoffs
+        ]
+    }
