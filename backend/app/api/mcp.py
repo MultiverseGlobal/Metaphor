@@ -20,7 +20,7 @@ from jwt import PyJWKClient
 from app.core.config import settings
 from app.database.session import get_session
 from app.models.identity import User, Organization
-from app.models.operations import MCPOAuthClient, MCPOAuthAuthCode, MCPOAuthToken, MCPAuditLog
+from app.models.operations import MCPOAuthClient, MCPOAuthAuthCode, MCPOAuthToken, MCPAuditLog, APIKey
 from app.services.identity import IdentityService
 from app.services.mcp_server import (
     enforce_token_rate_limit,
@@ -504,6 +504,8 @@ async def authenticate_mcp_token(request: Request, token_query: Optional[str] = 
         raw_token = token_query
     elif request.headers.get("X-MCP-Token"):
         raw_token = request.headers.get("X-MCP-Token")
+    elif request.headers.get("X-API-Key"):
+        raw_token = request.headers.get("X-API-Key")
         
     base_url = str(request.base_url).rstrip("/")
     resource_id = getattr(settings, "WORKOS_MCP_RESOURCE_ID", None) or f"{base_url}/api/v1/mcp"
@@ -537,6 +539,28 @@ async def authenticate_mcp_token(request: Request, token_query: Optional[str] = 
                 headers={"WWW-Authenticate": www_auth_header}
             )
         return token_obj
+
+    # Check APIKey table
+    stmt = select(APIKey).where(APIKey.hashed_key == token_h)
+    res = await session.execute(stmt)
+    api_key_obj = res.scalar_one_or_none()
+    
+    if api_key_obj:
+        # We need to return an MCPTokenContext equivalent
+        # For an API Key, the user is the owner of the organization
+        from app.models.identity import OrganizationMember
+        stmt = select(OrganizationMember).where(OrganizationMember.organization_id == api_key_obj.organization_id, OrganizationMember.role == "owner")
+        res = await session.execute(stmt)
+        owner_member = res.scalars().first()
+        
+        return MCPTokenContext(
+            token_id=api_key_obj.id,
+            organization_id=api_key_obj.organization_id,
+            user_id=owner_member.user_id if owner_member else uuid.uuid4(),
+            client_id="API Key Client",
+            scope="mcp:write read:workspace",
+            preview=f"{raw_token[:12]}..."
+        )
 
 
     # Verify WorkOS AuthKit JWT
