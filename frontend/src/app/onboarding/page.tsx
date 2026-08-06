@@ -401,40 +401,40 @@ function OnboardingContent() {
   };
 
   const startIntegrationSync = async () => {
-    const connectedSources = Object.keys(connections).filter(k => connections[k]);
     setPhase("analyzing");
-    try {
-      let apiKey = localStorage.getItem("metaphor_api_key");
-      if (!apiKey || apiKey === "undefined" || apiKey === "null") {
-        const keyData = await fetchFromMetaphor("/auth/apikeys", undefined, "POST").catch(() => null);
-        if (keyData && (keyData.raw_token || keyData.key)) {
-          localStorage.setItem("metaphor_api_key", keyData.raw_token || keyData.key);
-        }
-      }
 
-      const connectedSources = Object.keys(connections).filter(k => connections[k]);
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (connectedSources.length > 0) {
-        await fetchFromMetaphor("/integrations/sync", {
-          sources: connectedSources,
-          github_token: githubToken.trim() || session?.provider_token || undefined,
-          notion_token: notionToken.trim() || undefined
-        });
-      } else {
-        await fetchFromMetaphor("/context/lore", { content: "User skipped source connection during onboarding." });
-      }
-    } catch (e) {
-      console.error("Failed to start sync:", e);
-      setPhase(prev => {
-        if (prev === "analyzing") {
-          setTimeout(() => setToastMessage("Unable to start sync. Please check your connection and try again."), 0);
-          return "connect";
+    // Fire-and-forget: kick off the sync in the background.
+    // Failures here are non-fatal — the analyzing phase polling runs
+    // independently and advances after 3 attempts regardless.
+    (async () => {
+      try {
+        let apiKey = localStorage.getItem("metaphor_api_key");
+        if (!apiKey || apiKey === "undefined" || apiKey === "null") {
+          const keyData = await fetchFromMetaphor("/auth/apikeys", undefined, "POST").catch(() => null);
+          if (keyData && (keyData.raw_token || keyData.key)) {
+            localStorage.setItem("metaphor_api_key", keyData.raw_token || keyData.key);
+          }
         }
-        return prev;
-      });
-    }
+
+        const connectedSources = Object.keys(connections).filter(k => connections[k]);
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (connectedSources.length > 0) {
+          await fetchFromMetaphor("/integrations/sync", {
+            sources: connectedSources,
+            github_token: githubToken.trim() || session?.provider_token || undefined,
+            notion_token: notionToken.trim() || undefined
+          });
+        } else {
+          await fetchFromMetaphor("/context/lore", { content: "User skipped source connection during onboarding." }).catch(() => null);
+        }
+      } catch (e) {
+        // Sync failed (e.g. cold backend) — analyzing phase will still advance via polling
+        console.warn("Background sync failed (non-fatal):", e);
+      }
+    })();
   };
+
 
   const finalize = async () => {
     setIsSubmitting(true);
