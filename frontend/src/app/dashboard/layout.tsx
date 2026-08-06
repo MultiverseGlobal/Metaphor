@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Network, Database, Key, Plug, Settings, Sidebar, User, ChevronDown, Layers, Terminal, Inbox, LogOut, Folder } from "lucide-react";
+import { Network, Database, Key, Plug, Settings, Sidebar, User, ChevronDown, Layers, Terminal, Inbox, LogOut, Folder, Activity } from "lucide-react";
 
 import { Kbd } from "@/components/ui/Kbd";
 import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
@@ -105,6 +105,14 @@ export default function LinearLayout({
             </div>
             <NavItem href="/dashboard/playground" icon={<Terminal />} label="The Context Layer" shortcut="⌘P" pathname={pathname} />
             <NavItem href="/dashboard/models" icon={<Layers />} label="Context Models" shortcut="⌘M" pathname={pathname} />
+          </div>
+
+          {/* Section 2.5: Pseudonyms */}
+          <div className="space-y-0.5">
+            <div className="px-3 py-1 text-[10px] font-bold text-muted/70 uppercase tracking-widest">
+              Pseudonyms
+            </div>
+            <NavItem href="/dashboard/pipeline" icon={<Activity />} label="Cognitive Pipeline" shortcut="⌘O" pathname={pathname} />
           </div>
 
           {/* Section 3: Integrations & MCP */}
