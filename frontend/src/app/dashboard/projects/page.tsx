@@ -364,10 +364,10 @@ export default function ProjectsPage() {
                                   key={ai}
                                   title={ai}
                                   onClick={() => setSelectedAI(prev => ({ ...prev, [id]: ai }))}
-                                  className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-all text-foreground ${
+                                  className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-all ${
                                     launchAI === ai
                                       ? "bg-foreground text-background border-foreground"
-                                      : "bg-surface-1 border-border-subtle hover:border-border-strong"
+                                      : "bg-surface-1 text-foreground border-border-subtle hover:border-border-strong"
                                   }`}
                                 >
                                   {AI_ICON_MAP[ai] ?? <span className="text-[9px] font-bold">{ai[0]}</span>}
