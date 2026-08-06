@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Settings, Moon, Sun, Monitor, Bell, Database } from "lucide-react";
+import { Settings, Moon, Sun, Monitor, Bell, Database, Key, Copy, Shield } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { fetchFromMetaphor } from "@/app/api";
 
