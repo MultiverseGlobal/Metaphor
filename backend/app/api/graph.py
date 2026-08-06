@@ -1,9 +1,11 @@
 import uuid
+import json
+from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select, func
+from sqlmodel import select, func, or_
 from app.database.session import get_session
 from app.services.identity import IdentityService
 from app.models.graph import Node, Edge
@@ -233,11 +235,77 @@ async def list_nodes(
                 "title": n.title,
                 "summary": n.summary,
                 "status": n.status,
+                "project_status": _parse_project_status(n.content),
                 "created_at": n.created_at.isoformat()
             }
             for n in nodes
+            if n.status != "archived"
         ]
     }
+
+
+def _parse_project_status(content: str) -> str:
+    """Extract project_status from content JSON blob, default to 'active'."""
+    try:
+        data = json.loads(content or "{}")
+        return data.get("project_status", "active")
+    except Exception:
+        return "active"
+
+
+class UpdateNodeRequest(BaseModel):
+    title: Optional[str] = None
+    summary: Optional[str] = None     # used to update bound AIs
+    project_status: Optional[str] = None  # "active", "paused", "completed"
+    archive: Optional[bool] = None
+
+
+@router.patch("/nodes/{node_id}")
+async def update_node(
+    node_id: uuid.UUID,
+    req: UpdateNodeRequest,
+    user: User = Depends(get_user_via_api_key),
+    db: AsyncSession = Depends(get_session)
+):
+    """
+    Update a project node: rename, edit bound AIs, change status, or archive.
+    """
+    org = await get_user_org(user, db)
+    node = await db.get(Node, node_id)
+    if not node or node.organization_id != org.id:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    if req.title is not None:
+        node.title = req.title
+    if req.summary is not None:
+        node.summary = req.summary
+    if req.project_status is not None:
+        try:
+            data = json.loads(node.content or "{}")
+        except Exception:
+            data = {}
+        data["project_status"] = req.project_status
+        node.content = json.dumps(data)
+    if req.archive is True:
+        node.status = "archived"
+        node.archived_at = datetime.utcnow()
+    elif req.archive is False and node.status == "archived":
+        node.status = "approved"
+        node.archived_at = None
+
+    node.updated_at = datetime.utcnow()
+    db.add(node)
+    await db.commit()
+    await db.refresh(node)
+    return {
+        "id": str(node.id),
+        "title": node.title,
+        "summary": node.summary,
+        "status": node.status,
+        "project_status": _parse_project_status(node.content),
+        "updated_at": node.updated_at.isoformat()
+    }
+
 
 @router.get("/nodes/{project_id}/handoffs")
 async def get_project_handoffs(
@@ -273,3 +341,60 @@ async def get_project_handoffs(
             for h in handoffs
         ]
     }
+
+
+@router.post("/nodes/{project_id}/handoffs/clear")
+async def clear_handoff_queue(
+    project_id: uuid.UUID,
+    user: User = Depends(get_user_via_api_key),
+    db: AsyncSession = Depends(get_session)
+):
+    """Bulk-cancel all pending handoffs for a project."""
+    org = await get_user_org(user, db)
+    node = await db.get(Node, project_id)
+    if not node or node.organization_id != org.id:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    from app.models.task_handoff import TaskHandoff
+    stmt = select(TaskHandoff).where(
+        TaskHandoff.project_id == project_id,
+        TaskHandoff.status == "pending"
+    )
+    res = await db.execute(stmt)
+    pending = res.scalars().all()
+    now = datetime.utcnow()
+    for h in pending:
+        h.status = "cancelled"
+        h.resolved_at = now
+        h.resolution_summary = "Manually cleared by user."
+        db.add(h)
+    await db.commit()
+    return {"cleared": len(pending)}
+
+
+@router.delete("/nodes/{node_id}")
+async def delete_node(
+    node_id: uuid.UUID,
+    user: User = Depends(get_user_via_api_key),
+    db: AsyncSession = Depends(get_session)
+):
+    """
+    Delete a node and all its associated edges.
+    Chat history (TaskHandoffs) is intentionally orphaned, not deleted.
+    """
+    org = await get_user_org(user, db)
+    node = await db.get(Node, node_id)
+    if not node or node.organization_id != org.id:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    # Delete all edges connected to this node (both directions)
+    edges_res = await db.execute(
+        select(Edge).where(or_(Edge.from_node == node_id, Edge.to_node == node_id))
+    )
+    edges = edges_res.scalars().all()
+    for edge in edges:
+        await db.delete(edge)
+
+    await db.delete(node)
+    await db.commit()
+    return {"status": "deleted", "id": str(node_id)}

@@ -18,7 +18,13 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                document.documentElement.setAttribute('data-theme', 'light');
+                const stored = localStorage.getItem('metaphor_theme');
+                const effective = stored || 'dark';
+                if (!stored) localStorage.setItem('metaphor_theme', 'dark');
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const resolved = effective === 'system' ? (prefersDark ? 'dark' : 'light') : effective;
+                document.documentElement.setAttribute('data-theme', resolved);
+                if (resolved === 'dark') document.documentElement.classList.add('dark');
               } catch (e) {}
             `,
           }}

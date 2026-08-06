@@ -22,6 +22,11 @@ export default function SettingsPage() {
   useEffect(() => {
     async function loadSettings() {
       try {
+        // Read localStorage first — this is the source of truth, defaults to dark
+        const localTheme = localStorage.getItem("metaphor_theme") || "dark";
+        applyTheme(localTheme);
+        setSettings(prev => ({ ...prev, theme: localTheme }));
+
         const storedName = localStorage.getItem("metaphor_user_name");
         const user = await fetchFromMetaphor("/auth/me", undefined, "GET", false, true);
         if (user) {
@@ -30,12 +35,10 @@ export default function SettingsPage() {
             : user.email ? user.email.split("@")[0] : "multiverseglobals");
           setUserName(cleanName);
           setUserEmail(user.email || "");
-
-          if (user.settings) {
+          // Only override if user has explicitly saved a theme to the backend AND nothing is in localStorage
+          if (user.settings?.theme && !localStorage.getItem("metaphor_theme")) {
+            applyTheme(user.settings.theme);
             setSettings(prev => ({ ...prev, ...user.settings }));
-            if (user.settings.theme) {
-              applyTheme(user.settings.theme);
-            }
           }
         }
       } catch (e) {
@@ -49,7 +52,7 @@ export default function SettingsPage() {
 
   const applyTheme = (themeName: string) => {
     if (typeof window === "undefined") return;
-    const root = document.documentElement;
+    const root = document.documentElement; // <html>
     const body = document.body;
 
     if (themeName === "dark") {
@@ -61,6 +64,7 @@ export default function SettingsPage() {
       body.classList.remove("dark");
       root.setAttribute("data-theme", "light");
     } else {
+      // system
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       if (prefersDark) {
         root.classList.add("dark");
