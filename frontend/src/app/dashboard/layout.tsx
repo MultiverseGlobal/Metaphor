@@ -132,10 +132,10 @@ export default function LinearLayout({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-[12px] font-medium text-foreground truncate">
-                    {user?.name || "Developer User"}
+                    {user ? user.name : "Loading..."}
                   </div>
                   <div className="text-[10px] text-muted truncate">
-                    {user?.email || "workspace@metaphor.os"}
+                    {user ? user.email : "..."}
                   </div>
                 </div>
               </div>

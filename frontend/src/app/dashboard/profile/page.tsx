@@ -28,8 +28,8 @@ export default function ProfilePage() {
     router.push("/");
   };
 
-  const name = user?.name || "Metaphor Dev User";
-  const email = user?.email || "dev@metaphor.local";
+  const name = user ? (user.name || "Your Workspace") : "Loading...";
+  const email = user ? (user.email || "") : "...";
   const initial = name.charAt(0).toUpperCase();
   const memberSince = user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Loading...';
 

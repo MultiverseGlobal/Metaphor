@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Key, Copy, Check, Terminal, ExternalLink, Shield, Plus, Lock, Trash2, Activity } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { fetchFromMetaphor } from "@/app/api";
+import { fetchFromMetaphor, BACKEND_URL } from "@/app/api";
 import { ChatGPTIcon, ClaudeIcon, CursorIcon, GeminiIcon, AntigravityIcon } from "@/components/ui/BrandIcons";
 
 import { CardSkeleton } from "@/components/ui/SkeletonLoader";
@@ -96,7 +96,7 @@ export default function ApiAccessPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const getMcpCommand = (preview: string) => `https://metaphor-backend.onrender.com/api/v1/mcp`;
+  const getMcpCommand = (preview: string) => `${BACKEND_URL}/mcp`;
 
   return (
     <div className="flex flex-col h-full bg-background animate-in fade-in duration-150 max-w-4xl mx-auto p-8 overflow-y-auto">
@@ -128,11 +128,11 @@ export default function ApiAccessPage() {
           
           <div className="divide-y divide-border-subtle bg-surface-1">
             {[
-              { id: "chatgpt", name: "ChatGPT", icon: <ChatGPTIcon className="w-5 h-5" />, type: "Custom MCP Connector", desc: "In Settings → Plugins → Add Custom Connector", data: "https://metaphor-backend.onrender.com/api/v1/mcp", label: "Copy URL" },
-              { id: "claude", name: "Claude Desktop", icon: <ClaudeIcon className="w-5 h-5" />, type: "claude_desktop_config.json", desc: "Add to `mcpServers.metaphor`", data: JSON.stringify({ mcpServers: { metaphor: { url: "https://metaphor-backend.onrender.com/api/v1/mcp" } } }, null, 2), label: "Copy Config" },
-              { id: "cursor", name: "Cursor IDE", icon: <CursorIcon className="w-5 h-5" />, type: ".cursor/mcp.json", desc: "Add to Cursor Features → MCP Servers", data: "https://metaphor-backend.onrender.com/api/v1/mcp", label: "Copy URL" },
-              { id: "gemini", name: "Gemini", icon: <GeminiIcon className="w-5 h-5" />, type: "Gemini Extension", desc: "Add to Gemini extensions configuration", data: "https://metaphor-backend.onrender.com/api/v1/mcp", label: "Copy URL" },
-              { id: "antigravity", name: "Antigravity IDE", icon: <AntigravityIcon className="w-5 h-5" />, type: "MCP Settings", desc: "Add to Antigravity MCP config", data: "https://metaphor-backend.onrender.com/api/v1/mcp", label: "Copy URL" }
+              { id: "chatgpt", name: "ChatGPT", icon: <ChatGPTIcon className="w-5 h-5" />, type: "Custom MCP Connector", desc: "In Settings → Plugins → Add Custom Connector", data: `${BACKEND_URL}/mcp`, label: "Copy URL" },
+              { id: "claude", name: "Claude Desktop", icon: <ClaudeIcon className="w-5 h-5" />, type: "claude_desktop_config.json", desc: "Add to `mcpServers.metaphor`", data: JSON.stringify({ mcpServers: { metaphor: { url: `${BACKEND_URL}/mcp` } } }, null, 2), label: "Copy Config" },
+              { id: "cursor", name: "Cursor IDE", icon: <CursorIcon className="w-5 h-5" />, type: ".cursor/mcp.json", desc: "Add to Cursor Features → MCP Servers", data: `${BACKEND_URL}/mcp`, label: "Copy URL" },
+              { id: "gemini", name: "Gemini", icon: <GeminiIcon className="w-5 h-5" />, type: "Gemini Extension", desc: "Add to Gemini extensions configuration", data: `${BACKEND_URL}/mcp`, label: "Copy URL" },
+              { id: "antigravity", name: "Antigravity IDE", icon: <AntigravityIcon className="w-5 h-5" />, type: "MCP Settings", desc: "Add to Antigravity MCP config", data: `${BACKEND_URL}/mcp`, label: "Copy URL" }
             ].map((ai) => (
               <div key={ai.id} className="p-4 flex items-center justify-between hover:bg-surface-2/30 transition-colors">
                 <div className="flex items-center gap-4">
@@ -170,10 +170,10 @@ export default function ApiAccessPage() {
           <div className="p-6 bg-surface-1">
             <div className="relative group">
               <pre className="p-4 bg-background border border-border-subtle text-foreground rounded-xl text-xs font-mono overflow-x-auto">
-                <code>https://metaphor-backend.onrender.com/api/v1/mcp</code>
+                <code>{BACKEND_URL}/mcp</code>
               </pre>
               <button 
-                onClick={() => handleCopy("mcp_url", "https://metaphor-backend.onrender.com/api/v1/mcp")}
+                onClick={() => handleCopy("mcp_url", `${BACKEND_URL}/mcp`)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-surface-2 hover:bg-foreground hover:text-background rounded-md text-muted transition-colors shadow-sm cursor-pointer"
               >
                 {copiedId === "mcp_url" ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
