@@ -603,6 +603,7 @@ async def authenticate_mcp_token(request: Request, token_query: Optional[str] = 
 
 @router.post("")
 @router.post("/")
+@router.post("/sse")
 async def remote_mcp_jsonrpc_endpoint(
     request: Request,
     token: Optional[str] = Query(None),
