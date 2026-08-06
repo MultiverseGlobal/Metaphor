@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Folder, Plus, ChevronRight, ChevronDown, Copy, Check, X, ExternalLink, Terminal, Zap } from "lucide-react";
 import { ChatGPTIcon, ClaudeIcon, CursorIcon, GeminiIcon, AntigravityIcon } from "@/components/ui/BrandIcons";
-import { fetchFromMetaphor } from "@/app/api";
+import { fetchFromMetaphor, getBackendUrl } from "@/app/api";
 
 type Project = {
   id?: string;
@@ -74,11 +74,10 @@ function ProjectRouterPanel({ project, ais }: { project: Project; ais: string[] 
 
   const configSnippet = `{
   "mcpServers": {
-    "metaphor-os": {
-      "command": "uvx",
-      "args": ["fastmcp", "run", "mcp_server.py"],
-      "env": {
-        "METAPHOR_PROJECT_ID": "${project.id}"
+    "metaphor": {
+      "url": "${getBackendUrl()}/mcp/sse?project_id=${project.id}&client_name=Cursor",
+      "headers": {
+        "X-API-Key": "YOUR_API_KEY_HERE"
       }
     }
   }
@@ -178,6 +177,7 @@ function ProjectRouterPanel({ project, ais }: { project: Project; ais: string[] 
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [activeClients, setActiveClients] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedAI, setSelectedAI] = useState<Record<string, string>>({});
@@ -189,7 +189,19 @@ export default function ProjectsPage() {
   const [newAIs, setNewAIs] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => { loadProjects(); }, []);
+  useEffect(() => { 
+    loadProjects(); 
+    loadActiveClients();
+    const interval = setInterval(loadActiveClients, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function loadActiveClients() {
+    try {
+      const res = await fetchFromMetaphor("/mcp/active-clients", undefined, "GET");
+      if (res?.clients) setActiveClients(res.clients);
+    } catch (e) {}
+  }
 
   async function loadProjects() {
     setIsLoading(true);
@@ -413,15 +425,18 @@ export default function ProjectsPage() {
                       <div className="flex flex-col gap-1.5">
                         <span className="text-sm font-semibold text-foreground tracking-tight">{title}</span>
                         <div className="flex gap-1.5 items-center">
-                          {ais.length > 0 ? ais.map(ai => (
+                          {ais.length > 0 ? ais.map(ai => {
+                            const isActive = activeClients.some(c => c.project_id === id && c.client_name?.toLowerCase() === ai.toLowerCase());
+                            return (
                             <span
                               key={ai}
-                              title={ai}
-                              className="w-6 h-6 rounded-full bg-surface-2 border border-border-subtle flex items-center justify-center text-foreground"
+                              title={isActive ? `${ai} (Active)` : ai}
+                              className={`w-6 h-6 rounded-full bg-surface-2 border flex items-center justify-center text-foreground transition-all duration-300 ${isActive ? 'border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] opacity-100' : 'border-border-subtle opacity-40'}`}
                             >
                               {AI_ICON_MAP[ai] ?? <span className="text-[9px] font-bold">{ai[0]}</span>}
                             </span>
-                          )) : (
+                            );
+                          }) : (
                             <span className="text-[11px] text-muted italic">No AI tools bound</span>
                           )}
                         </div>

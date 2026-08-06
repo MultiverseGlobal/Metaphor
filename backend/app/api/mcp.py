@@ -32,7 +32,9 @@ from app.services.mcp_server import (
     list_mcp_tools,
     call_mcp_tool,
     list_mcp_prompts,
-    get_mcp_prompt
+    get_mcp_prompt,
+    get_active_clients_for_org,
+    get_project_id_for_token
 )
 
 logger = logging.getLogger("metaphor.api.mcp")
@@ -416,8 +418,6 @@ async def oauth_revoke_token(
         
     return {"status": "revoked"}
 
-    return {"status": "revoked"}
-
 
 # ── Token Management & Audit Logs for UI ──────────────────────────────────────
 @router.get("/oauth/tokens")
@@ -614,6 +614,8 @@ async def remote_mcp_jsonrpc_endpoint(
     # Enforce sliding window rate limit (30 req/min)
     enforce_token_rate_limit(str(token_obj.id))
     
+    project_id = get_project_id_for_token(str(token_obj.id))
+
     start_time = time.time()
     try:
         body = await request.json()
@@ -662,7 +664,14 @@ async def remote_mcp_jsonrpc_endpoint(
         name_called = tool_name
         arguments = params.get("arguments", {})
         token_scopes = token_obj.scope.split() if getattr(token_obj, "scope", None) else []
-        tool_res = await call_mcp_tool(tool_name, arguments, token_obj.organization_id, session, scopes=token_scopes)
+        tool_res = await call_mcp_tool(
+            tool_name, 
+            arguments, 
+            token_obj.organization_id, 
+            session, 
+            scopes=token_scopes,
+            project_id=project_id
+        )
         response_payload = {"jsonrpc": "2.0", "id": req_id, "result": tool_res}
 
     elif method == "prompts/list":
@@ -705,6 +714,17 @@ async def remote_mcp_jsonrpc_endpoint(
     return response_payload
 
 
+@router.get("/active-clients")
+async def get_active_clients(
+    request: Request,
+    token: Optional[str] = Query(None),
+    session: AsyncSession = Depends(get_session)
+):
+    token_obj = await authenticate_mcp_token(request, token, session)
+    clients = get_active_clients_for_org(str(token_obj.organization_id))
+    return {"clients": clients}
+
+
 @router.get("/health-check")
 @router.post("/health-check")
 async def mcp_health_check(session: AsyncSession = Depends(get_session)):
@@ -739,12 +759,20 @@ async def mcp_health_check(session: AsyncSession = Depends(get_session)):
 async def remote_mcp_sse_endpoint(
     request: Request,
     token: Optional[str] = Query(None),
+    project_id: Optional[str] = Query(None),
+    client_name: Optional[str] = Query(None),
     session: AsyncSession = Depends(get_session)
 ):
     token_obj = await authenticate_mcp_token(request, token, session)
     enforce_token_rate_limit(str(token_obj.id))
     
-    shutdown_event = register_sse_stream(str(token_obj.id))
+    shutdown_event = register_sse_stream(
+        token_id=str(token_obj.id),
+        org_id=str(token_obj.organization_id),
+        project_id=project_id,
+        client_name=client_name or token_obj.client_id
+    )
+
     
     async def sse_generator():
         try:

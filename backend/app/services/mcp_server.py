@@ -21,30 +21,51 @@ def hash_token(raw_token: str) -> str:
     return hashlib.sha256(raw_token.encode()).hexdigest()
 
 # ── In-Memory Active SSE Stream Tracker for Immediate Revocation Termination ─────
-# Maps token_id (str) -> List of shutdown events
-ACTIVE_SSE_STREAMS: Dict[str, List[asyncio.Event]] = {}
+# Maps token_id (str) -> List of Dict containing connection details
+ACTIVE_SSE_STREAMS: Dict[str, List[Dict[str, Any]]] = {}
 
-def register_sse_stream(token_id: str) -> asyncio.Event:
+def register_sse_stream(token_id: str, org_id: str, project_id: Optional[str] = None, client_name: Optional[str] = None) -> asyncio.Event:
     shutdown_event = asyncio.Event()
     if token_id not in ACTIVE_SSE_STREAMS:
         ACTIVE_SSE_STREAMS[token_id] = []
-    ACTIVE_SSE_STREAMS[token_id].append(shutdown_event)
+    ACTIVE_SSE_STREAMS[token_id].append({
+        "event": shutdown_event,
+        "org_id": org_id,
+        "project_id": project_id,
+        "client_name": client_name,
+        "connected_at": datetime.utcnow().isoformat()
+    })
     return shutdown_event
 
 def unregister_sse_stream(token_id: str, shutdown_event: asyncio.Event):
     if token_id in ACTIVE_SSE_STREAMS:
-        if shutdown_event in ACTIVE_SSE_STREAMS[token_id]:
-            ACTIVE_SSE_STREAMS[token_id].remove(shutdown_event)
+        ACTIVE_SSE_STREAMS[token_id] = [s for s in ACTIVE_SSE_STREAMS[token_id] if s["event"] != shutdown_event]
         if not ACTIVE_SSE_STREAMS[token_id]:
             del ACTIVE_SSE_STREAMS[token_id]
 
 def terminate_active_sse_streams(token_id: str):
     if token_id in ACTIVE_SSE_STREAMS:
         logger.info(f"Terminating active SSE streams for revoked token {token_id}")
-        for event in ACTIVE_SSE_STREAMS[token_id]:
-            event.set()
+        for s in ACTIVE_SSE_STREAMS[token_id]:
+            s["event"].set()
         del ACTIVE_SSE_STREAMS[token_id]
 
+def get_active_clients_for_org(org_id: str) -> List[Dict[str, Any]]:
+    active_clients = []
+    for token_id, streams in ACTIVE_SSE_STREAMS.items():
+        for s in streams:
+            if s["org_id"] == str(org_id):
+                active_clients.append({
+                    "project_id": s["project_id"],
+                    "client_name": s["client_name"],
+                    "connected_at": s["connected_at"]
+                })
+    return active_clients
+
+def get_project_id_for_token(token_id: str) -> Optional[str]:
+    if token_id in ACTIVE_SSE_STREAMS and ACTIVE_SSE_STREAMS[token_id]:
+        return ACTIVE_SSE_STREAMS[token_id][0].get("project_id")
+    return None
 
 # ── Sliding Window Rate Limiter (30 requests / 60 seconds per token) ───────────
 RATE_LIMIT_STORE: Dict[str, List[float]] = {}
@@ -324,7 +345,8 @@ async def call_mcp_tool(
     arguments: Dict[str, Any],
     organization_id: uuid.UUID,
     session: AsyncSession,
-    scopes: Optional[List[str]] = None
+    scopes: Optional[List[str]] = None,
+    project_id: Optional[str] = None
 ) -> Dict[str, Any]:
     # Every tool query strictly filters by organization_id
     if name == "sync_chat_drop":
@@ -460,7 +482,7 @@ async def call_mcp_tool(
         graph = GraphService(session)
         ctx_service = ContextService(session, graph)
         try:
-            package = await ctx_service.generate_context_package(organization_id, "mcp", query)
+            package = await ctx_service.generate_context_package(organization_id, "mcp", query, project_id=project_id)
             pkg_data = package.package_json
         except Exception as e:
             logger.warning(f"Context package generation fallback: {e}")
@@ -502,9 +524,9 @@ async def call_mcp_tool(
         try:
             is_decision = any(q in question.lower() for q in ["why did we choose", "what was the reasoning", "why did we decide", "decision behind"])
             if is_decision:
-                package = await ctx_service.generate_decision_package(organization_id, "mcp", question)
+                package = await ctx_service.generate_decision_package(organization_id, "mcp", question, project_id=project_id)
             else:
-                package = await ctx_service.generate_context_package(organization_id, "mcp", question)
+                package = await ctx_service.generate_context_package(organization_id, "mcp", question, project_id=project_id)
             pkg_data = package.package_json
         except Exception as e:
             logger.warning(f"Workspace answer generation fallback: {e}")
