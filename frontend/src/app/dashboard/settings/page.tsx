@@ -15,6 +15,8 @@ export default function SettingsPage() {
   const [userEmail, setUserEmail] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
+  const [apiKey, setApiKey] = useState("");
+  const [generatingKey, setGeneratingKey] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -111,7 +113,19 @@ export default function SettingsPage() {
     }
   };
 
-
+  const handleGenerateApiKey = async () => {
+    setGeneratingKey(true);
+    try {
+      const res = await fetchFromMetaphor("/auth/apikeys", {}, "POST");
+      if (res && res.key) {
+        setApiKey(res.key);
+      }
+    } catch (e) {
+      console.error("Failed to generate API key:", e);
+    } finally {
+      setGeneratingKey(false);
+    }
+  };
 
 
   if (loading) return null;
@@ -165,6 +179,54 @@ export default function SettingsPage() {
                 disabled
                 className="w-full px-3.5 py-2 rounded-xl bg-surface-2 border border-border-subtle text-sm text-muted cursor-not-allowed opacity-75"
               />
+            </div>
+          </Card>
+        </section>
+
+        {/* API Keys */}
+        <section>
+          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 border-b border-border-subtle pb-2">API Keys & Authentication</h2>
+          <Card className="p-6">
+            <div className="flex flex-col gap-4">
+              <div>
+                <p className="text-sm text-muted mb-4">
+                  Generate an API key to securely connect external AI assistants (like Antigravity or Cursor) to your Metaphor context engine.
+                </p>
+                
+                {apiKey ? (
+                  <div className="p-4 bg-surface-2 border border-primary/30 rounded-xl space-y-3 relative group">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-primary uppercase tracking-wider">Your New API Key</span>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(apiKey);
+                          const el = document.getElementById("copy-key-text");
+                          if (el) el.innerText = "Copied!";
+                          setTimeout(() => { if (el) el.innerText = "Copy"; }, 2000);
+                        }}
+                        className="text-xs font-medium text-muted hover:text-foreground flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <Copy className="w-3.5 h-3.5" /> <span id="copy-key-text">Copy</span>
+                      </button>
+                    </div>
+                    <code className="block text-sm text-foreground font-mono break-all bg-background p-3 rounded-lg border border-border-subtle">
+                      {apiKey}
+                    </code>
+                    <p className="text-[11px] text-accent-red font-medium flex items-center gap-1.5 mt-2">
+                      <Shield className="w-3.5 h-3.5" /> Please copy this key now. You won't be able to see it again!
+                    </p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleGenerateApiKey}
+                    disabled={generatingKey}
+                    className="flex items-center justify-center gap-2 w-full py-3 bg-primary text-primary-foreground font-medium text-sm rounded-xl hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <Key className="w-4 h-4" />
+                    {generatingKey ? "Generating Key..." : "Generate New API Key"}
+                  </button>
+                )}
+              </div>
             </div>
           </Card>
         </section>
