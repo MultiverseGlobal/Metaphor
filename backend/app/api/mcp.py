@@ -9,6 +9,21 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 
+# Fix 5: Whitelist of allowed redirect_uri values.
+# Prevents open-redirect attacks where a malicious site steals auth codes.
+ALLOWED_REDIRECT_URIS: set[str] = {
+    # Standard AI clients
+    "https://chatgpt.com/connector/oauth/callback",
+    "https://claude.ai/oauth/callback",
+    # Cursor IDE (varies by OS)
+    "http://localhost:9222/callback",
+    # Atlas (local dev)
+    "http://localhost:5173/auth/metaphor/callback",
+    # William (local dev)
+    "http://localhost:5174",
+    # Production (add Vercel URLs here when deployed)
+}
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header, status
 from fastapi.responses import JSONResponse, StreamingResponse, RedirectResponse
 from pydantic import BaseModel, Field
@@ -175,7 +190,11 @@ async def oauth_authorize_get(
     code_challenge: Optional[str] = Query(None),
     code_challenge_method: str = Query("S256"),
 ):
-    # Always redirect user to Metaphor Frontend Authorization Consent Page
+    # Fix 5: Validate redirect_uri against whitelist to prevent open-redirect.
+    if redirect_uri not in ALLOWED_REDIRECT_URIS:
+        raise HTTPException(status_code=400, detail=f"redirect_uri not whitelisted: {redirect_uri}")
+
+    # Redirect user to Metaphor Frontend Authorization Consent Page
     frontend_base = getattr(settings, "FRONTEND_URL", None) or "https://metaphor-three.vercel.app"
     params = urllib.parse.urlencode({
         "client_id": client_id,
@@ -195,6 +214,10 @@ async def oauth_authorize_post(
     payload: AuthorizeConsentRequest,
     session: AsyncSession = Depends(get_session)
 ):
+    # Fix 5: Validate redirect_uri on the POST consent endpoint too.
+    if payload.redirect_uri not in ALLOWED_REDIRECT_URIS:
+        raise HTTPException(status_code=400, detail=f"redirect_uri not whitelisted: {payload.redirect_uri}")
+
     identity_svc = IdentityService(session)
     org = await identity_svc.get_or_create_default_organization()
     user = await identity_svc.get_or_create_default_user()

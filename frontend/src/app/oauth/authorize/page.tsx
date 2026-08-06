@@ -28,6 +28,10 @@ function OAuthAuthorizeContent() {
     ? "Claude Desktop" 
     : clientString.includes("cursor") 
     ? "Cursor IDE" 
+    : clientString.includes("atlas")
+    ? "Atlas"
+    : clientString.includes("william")
+    ? "William"
     : "ChatGPT";
 
   const handleAuthorize = async () => {
@@ -76,6 +80,10 @@ function OAuthAuthorizeContent() {
               <ClaudeIcon className="w-6 h-6 text-foreground" />
             ) : clientId.toLowerCase().includes("cursor") ? (
               <CursorIcon className="w-6 h-6 text-foreground" />
+            ) : clientId.toLowerCase().includes("atlas") ? (
+              <span className="font-bold text-lg font-serif">A</span>
+            ) : clientId.toLowerCase().includes("william") ? (
+              <span className="font-bold text-lg font-serif">W</span>
             ) : (
               <ChatGPTIcon className="w-6 h-6 text-foreground" />
             )}
