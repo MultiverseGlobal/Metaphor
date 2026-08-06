@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { GitBranch as Github, FileText, Calendar, Box, HardDrive, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { fetchFromMetaphor } from "@/app/api";
+import { fetchFromMetaphor, getBackendUrl } from "@/app/api";
 
 type IntegrationState = {
   provider: string;
@@ -257,7 +257,7 @@ export default function IntegrationsPage() {
                       }
                     }, "POST");
                     alert("Test webhook sent successfully! Ingested 1 new commit event.");
-                    fetchIntegrations();
+                    loadIntegrations();
                   } catch (e) {
                     console.error("Test webhook error:", e);
                     alert("Webhook sent to backend.");
