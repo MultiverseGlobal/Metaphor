@@ -17,11 +17,12 @@ ALLOWED_REDIRECT_URIS: set[str] = {
     "https://claude.ai/oauth/callback",
     # Cursor IDE (varies by OS)
     "http://localhost:9222/callback",
-    # Atlas (local dev)
+    # Atlas
     "http://localhost:5173/auth/metaphor/callback",
-    # William (local dev)
+    "https://atlas-scale.vercel.app/auth/metaphor/callback",
+    # William
     "http://localhost:5174",
-    # Production (add Vercel URLs here when deployed)
+    "https://william.pseudonyms.ai",
 }
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header, status
