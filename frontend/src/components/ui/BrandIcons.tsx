@@ -60,7 +60,18 @@ export const GeminiIcon = ({ className = "w-5 h-5 opacity-90" }: { className?: s
 );
 
 export const AntigravityIcon = ({ className = "w-5 h-5 opacity-90" }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" className={className}>
-    <path d="M12 1.5a2 2 0 0 0-1.79 1.1l-8.5 17A2 2 0 0 0 3.5 22.5h17a2 2 0 0 0 1.79-2.9l-8.5-17A2 2 0 0 0 12 1.5zm0 3.73l6.57 13.14H5.43L12 5.23zm-3.5 9.1a1 1 0 0 0 0 2h7a1 1 0 0 0 0-2h-7z" />
+  <svg viewBox="0 0 24 24" width="20" height="20" className={className}>
+    <defs>
+      <linearGradient id="antigravity-grad" x1="0%" y1="100%" x2="0%" y2="0%">
+        <stop offset="0%" stopColor="#3b82f6" />
+        <stop offset="40%" stopColor="#10b981" />
+        <stop offset="70%" stopColor="#eab308" />
+        <stop offset="100%" stopColor="#ef4444" />
+      </linearGradient>
+    </defs>
+    <path 
+      d="M 3 20 C 6 10, 8 4, 12 4 C 16 4, 18 10, 21 20 C 18 17, 14 13, 12 13 C 10 13, 6 17, 3 20 Z" 
+      fill="url(#antigravity-grad)" 
+    />
   </svg>
 );
