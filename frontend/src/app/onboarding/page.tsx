@@ -122,6 +122,10 @@ function OnboardingContent() {
   const [copiedSnippet, setCopiedSnippet] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [testResults, setTestResults] = useState<any>(null);
+  const [mcpVerified, setMcpVerified] = useState<Record<string, boolean | "checking" | "failed">>({});
+
+  // Analyzing escape hatch — show after 10 s on slow backends
+  const [showEscapeHatch, setShowEscapeHatch] = useState(false);
 
   // Binding Phase State
   const [projects, setProjects] = useState<{ name: string; attachedAIs: string[]; id?: string }[]>([]);
@@ -253,6 +257,11 @@ function OnboardingContent() {
   // Handle Analysis Animation, Progress Bar & Polling
   useEffect(() => {
     if (phase === "analyzing") {
+      setShowEscapeHatch(false);
+
+      // Show escape hatch after 10 s so slow cold-starts don't trap users
+      const escapeTimer = setTimeout(() => setShowEscapeHatch(true), 10000);
+
       // Smooth percentage ticker advancing to 100%
       const progressInterval = setInterval(() => {
         setProgressPercent(p => {
@@ -286,6 +295,7 @@ function OnboardingContent() {
               isPolling = false;
               clearInterval(animationInterval);
               clearInterval(progressInterval);
+              clearTimeout(escapeTimer);
               setProgressPercent(100);
               setAnalysisStep(3);
               
@@ -327,6 +337,7 @@ function OnboardingContent() {
         isPolling = false;
         clearInterval(animationInterval);
         clearInterval(progressInterval);
+        clearTimeout(escapeTimer);
       };
     }
   }, [phase]);
@@ -548,6 +559,16 @@ function OnboardingContent() {
               <span className="text-xl font-light text-foreground mb-0.5 font-mono">{stats.node_count}</span>
               <span className="text-[11px] text-muted font-medium">Nodes created</span>
             </div>
+          </div>
+
+          {/* Escape hatch — appears after 10 s if backend is slow */}
+          <div className={`mt-8 transition-all duration-500 ${showEscapeHatch ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}>
+            <button
+              onClick={() => setPhase("resolving")}
+              className="text-xs text-muted hover:text-foreground underline underline-offset-2 transition-colors"
+            >
+              Taking longer than expected — continue without waiting →
+            </button>
           </div>
 
         </div>
@@ -980,18 +1001,45 @@ function OnboardingContent() {
                 </button>
               </div>
 
-              {/* Modal Footer */}
-              <div className="flex items-center justify-end pt-4 mt-4 border-t border-border-subtle gap-2">
+              {/* Modal Footer — verify then mark connected */}
+              <div className="flex items-center justify-between pt-4 mt-4 border-t border-border-subtle gap-2">
+                {/* Verification status badge */}
+                <div className="text-[11px] flex items-center gap-1.5">
+                  {mcpVerified[activeAiModal] === "checking" && (
+                    <><div className="w-3 h-3 rounded-full border-2 border-foreground border-t-transparent animate-spin" /><span className="text-muted">Verifying connection…</span></>
+                  )}
+                  {mcpVerified[activeAiModal] === true && (
+                    <><span className="w-2 h-2 rounded-full bg-emerald-400" /><span className="text-emerald-400 font-medium">Connection verified</span></>
+                  )}
+                  {mcpVerified[activeAiModal] === "failed" && (
+                    <><span className="w-2 h-2 rounded-full bg-orange-400" /><span className="text-orange-400 font-medium">Not yet detected — try again after setup</span></>
+                  )}
+                </div>
+
                 <button
-                  onClick={() => {
-                    setAiConnected(prev => ({ ...prev, [activeAiModal]: true }));
-                    setActiveAiModal(null);
-                    setTestResults(null);
-                    setToastMessage(`✓ ${activeAiModal} connection configured.`);
+                  onClick={async () => {
+                    const name = activeAiModal;
+                    setMcpVerified(prev => ({ ...prev, [name]: "checking" }));
+                    try {
+                      const res = await fetchFromMetaphor("/mcp/health-check", undefined, "GET");
+                      const ok = res && (res.status === "online" || res.tools_count > 0);
+                      setMcpVerified(prev => ({ ...prev, [name]: ok ? true : "failed" }));
+                      if (ok) {
+                        setAiConnected(prev => ({ ...prev, [name]: true }));
+                        setToastMessage(`✓ ${name} connection verified & active.`);
+                        setTimeout(() => {
+                          setActiveAiModal(null);
+                          setTestResults(null);
+                        }, 1200);
+                      }
+                    } catch {
+                      setMcpVerified(prev => ({ ...prev, [name]: "failed" }));
+                    }
                   }}
-                  className="px-4 py-2 bg-surface-2 text-foreground hover:bg-surface-3 text-xs font-medium rounded-xl transition-colors cursor-pointer"
+                  disabled={mcpVerified[activeAiModal] === "checking"}
+                  className="px-4 py-2 bg-foreground text-background text-xs font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
                 >
-                  Close & Mark Connected
+                  {mcpVerified[activeAiModal] === true ? "✓ Connected" : "Verify & Mark Connected"}
                 </button>
               </div>
             </div>

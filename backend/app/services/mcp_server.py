@@ -246,11 +246,12 @@ async def list_mcp_tools() -> List[Dict[str, Any]]:
         },
         {
             "name": "get_active_session_context",
-            "description": "Retrieve recent chat drops and active cross-model session context across workspace AI assistants (Cursor, Claude, ChatGPT).",
+            "description": "Retrieve recent chat drops and active cross-model session context across workspace AI assistants (Cursor, Claude, ChatGPT). Pass project_id to only retrieve sessions scoped to a specific project.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "target_model": {"type": "string", "description": "Optional model filter (e.g. cursor, claude, chatgpt)"},
+                    "project_id": {"type": "string", "description": "Optional project UUID to only retrieve drops from a specific project session"},
                     "limit": {"type": "integer", "default": 10}
                 }
             },
@@ -258,7 +259,7 @@ async def list_mcp_tools() -> List[Dict[str, Any]]:
         },
         {
             "name": "sync_chat_drop",
-            "description": "Drop active chat session context or task progress from your current AI client (Claude, Cursor, ChatGPT) into Metaphor shared memory.",
+            "description": "Drop active chat session context or task progress from your current AI client (Claude, Cursor, ChatGPT) into Metaphor shared memory. Pass project_id to scope this drop to a specific project.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -266,7 +267,8 @@ async def list_mcp_tools() -> List[Dict[str, Any]]:
                     "summary": {"type": "string", "description": "Summary of active task, decisions, code changes, or context"},
                     "active_files": {"type": "array", "items": {"type": "string"}, "description": "List of active file paths"},
                     "session_title": {"type": "string", "description": "Optional title for this session drop"},
-                    "context_payload": {"type": "object", "description": "Optional additional structured context payload"}
+                    "context_payload": {"type": "object", "description": "Optional additional structured context payload"},
+                    "project_id": {"type": "string", "description": "Optional Metaphor project UUID to scope this session drop to a specific project"}
                 },
                 "required": ["source_model", "summary"]
             },
@@ -300,6 +302,7 @@ async def call_mcp_tool(
         active_files = arguments.get("active_files", [])
         session_title = arguments.get("session_title", "Cross-Model Session Drop")
         context_payload = arguments.get("context_payload", {})
+        raw_project_id = arguments.get("project_id")
 
         # 2. Secret Detection Scan
         secret_found = scan_payload_for_secrets({
@@ -313,7 +316,26 @@ async def call_mcp_tool(
                 detail=f"Security violation: Sensitive credential pattern ('{secret_found[:6]}...') detected in payload. Please remove API keys, tokens, or private secrets before dropping context."
             )
 
-        # 3. Store ChatSession in DB
+        # 3. Resolve + validate project_id (must belong to same org, must be type=project)
+        resolved_project_id: Optional[uuid.UUID] = None
+        if raw_project_id:
+            try:
+                pid = uuid.UUID(raw_project_id)
+                proj_stmt = select(Node).where(
+                    Node.id == pid,
+                    Node.organization_id == organization_id,
+                    Node.type == "project"
+                )
+                proj_res = await session.execute(proj_stmt)
+                project_node = proj_res.scalar_one_or_none()
+                if project_node:
+                    resolved_project_id = pid
+                else:
+                    logger.warning(f"sync_chat_drop: project_id {raw_project_id} not found or not owned by org {organization_id}; dropping without project scope.")
+            except (ValueError, Exception) as e:
+                logger.warning(f"sync_chat_drop: invalid project_id '{raw_project_id}': {e}")
+
+        # 4. Store ChatSession in DB
         from app.models.chat_session import ChatSession
         from app.services.context import ContextService
         from app.services.graph import GraphService
@@ -324,7 +346,8 @@ async def call_mcp_tool(
             model_name=source_model.lower(),
             session_title=session_title,
             summary=summary,
-            context_payload=full_payload
+            context_payload=full_payload,
+            project_id=resolved_project_id
         )
         session.add(chat_sess)
         await session.commit()
@@ -346,12 +369,14 @@ async def call_mcp_tool(
             "status": "success",
             "chat_session_id": str(chat_sess.id),
             "model_name": source_model,
+            "project_id": str(resolved_project_id) if resolved_project_id else None,
             "expires_at": chat_sess.expires_at.isoformat(),
             "message": "Context drop recorded and indexed into cognitive graph."
         }, indent=2)}]}
 
     elif name == "get_active_session_context":
         target_model = arguments.get("target_model")
+        raw_filter_project_id = arguments.get("project_id")
         limit = arguments.get("limit", 10)
 
         from app.models.chat_session import ChatSession
@@ -363,6 +388,11 @@ async def call_mcp_tool(
         )
         if target_model:
             stmt = stmt.where(ChatSession.model_name == target_model.lower())
+        if raw_filter_project_id:
+            try:
+                stmt = stmt.where(ChatSession.project_id == uuid.UUID(raw_filter_project_id))
+            except ValueError:
+                pass  # Invalid UUID — ignore filter, return all
         stmt = stmt.order_by(ChatSession.updated_at.desc()).limit(limit)
 
         res = await session.execute(stmt)
@@ -374,6 +404,7 @@ async def call_mcp_tool(
                 "model_name": s.model_name,
                 "session_title": s.session_title,
                 "summary": s.summary,
+                "project_id": str(s.project_id) if s.project_id else None,
                 "context_payload": s.context_payload,
                 "created_at": s.created_at.isoformat(),
                 "updated_at": s.updated_at.isoformat(),

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any
 from sqlmodel import SQLModel, Field
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID as pg_UUID
 from sqlalchemy import Column as SAColumn, Text, DateTime
 
 from app.core.config import settings
@@ -22,6 +22,12 @@ class ChatSession(SQLModel, table=True):
     session_title: str = Field(default="Cross-Model Session Drop", nullable=False)
     summary: str = Field(sa_column=SAColumn(Text, nullable=False))
     context_payload: Dict[str, Any] = Field(default_factory=dict, sa_column=SAColumn(JSONB, nullable=False))
+
+    # Optional project scope — when set, this drop belongs to a specific project node
+    project_id: Optional[uuid.UUID] = Field(
+        default=None,
+        sa_column=SAColumn(pg_UUID(as_uuid=True), index=True, nullable=True)
+    )
 
     # All datetimes stored as TIMESTAMPTZ (timezone-aware)
     created_at: datetime = Field(

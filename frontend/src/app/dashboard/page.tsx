@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CheckCircle2, Plug, Database, Sparkles, Server, Folder, FileText, Calendar, Activity, Command } from "lucide-react";
+import { CheckCircle2, Plug, Database, Sparkles, Server, Folder, FileText, Calendar, Activity, Command, Terminal } from "lucide-react";
 import { Kbd } from "@/components/ui/Kbd";
 import { fetchFromMetaphor } from "@/app/api";
 import GraphViewer from "./GraphViewer";
+import Link from "next/link";
 
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
@@ -157,6 +158,38 @@ export default function SynchronizationDashboard() {
                 alert={stats.active_sessions > 0} 
               />
             </div>
+          </div>
+
+          {/* Start a Session CTA — always visible, prominent when graph is empty */}
+          <div className="col-span-1 md:col-span-2">
+            <Link
+              href="/dashboard/playground"
+              id="start-session-cta"
+              className={`group flex items-center justify-between w-full p-5 rounded-xl border transition-all duration-200 hover:-translate-y-[2px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+                stats.node_count === 0
+                  ? "bg-primary/5 border-primary/20 hover:border-primary/40"
+                  : "bg-surface-1 border-border-subtle hover:border-border-strong"
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
+                  stats.node_count === 0 ? "bg-primary/10 text-primary" : "bg-surface-2 text-muted group-hover:text-foreground"
+                }`}>
+                  <Terminal className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground tracking-tight">
+                    {stats.node_count === 0 ? "Start your first session" : "Open The Context Layer"}
+                  </p>
+                  <p className="text-xs text-muted mt-0.5">
+                    {stats.node_count === 0
+                      ? "Ask a question — Metaphor will route it through your context graph."
+                      : "Query your knowledge graph or test MCP tool calls."}
+                  </p>
+                </div>
+              </div>
+              <span className="text-muted group-hover:text-foreground transition-colors text-lg leading-none">→</span>
+            </Link>
           </div>
 
           {/* Connected Intelligence (Integrations) */}
