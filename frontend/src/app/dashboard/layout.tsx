@@ -57,8 +57,14 @@ export default function LinearLayout({
       }
     }
     fetchUser();
+    
+    // Cloud Sync
+    import("@/lib/settings").then(m => m.pullSettingsFromCloud());
 
-    const handleProfileUpdate = () => fetchUser();
+    const handleProfileUpdate = () => {
+      fetchUser();
+      import("@/lib/settings").then(m => m.pushSettingsToCloud());
+    };
     window.addEventListener("user-profile-updated", handleProfileUpdate);
     return () => window.removeEventListener("user-profile-updated", handleProfileUpdate);
   }, []);
