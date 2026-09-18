@@ -48,3 +48,34 @@ class OrganizationMember(SQLModel, table=True):
     
     user: User = Relationship(back_populates="memberships")
     organization: Organization = Relationship(back_populates="members")
+
+class Workspace(SQLModel, table=True):
+    __tablename__ = "workspaces"
+    
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    organization_id: uuid.UUID = Field(foreign_key="organizations.id", index=True)
+    name: str # e.g., "Orion", "Atlas", "Global"
+    
+    created_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
+
+class Consumer(SQLModel, table=True):
+    __tablename__ = "consumers"
+    
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    organization_id: uuid.UUID = Field(foreign_key="organizations.id", index=True)
+    workspace_id: Optional[uuid.UUID] = Field(default=None, foreign_key="workspaces.id", index=True)
+    
+    name: str # e.g., "Claude", "ChatGPT", "Orion Agent"
+    type: str = Field(default="agent") # "user", "agent", "system"
+    
+    # E.g. ["global", "workspace:orion", "project:*"]
+    allowed_scopes: dict = Field(default_factory=list, sa_column=Column(JSON))
+    
+    # E.g. {"excluded_context": ["history", "tasks"]}
+    context_preferences: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    
+    # E.g. ["create_handoff", "update_state", "read_insights"]
+    capabilities: dict = Field(default_factory=list, sa_column=Column(JSON))
+    
+    status: str = Field(default="active")
+    created_at: datetime = Field(default_factory=datetime.utcnow, sa_column=Column(DateTime(timezone=True)))
