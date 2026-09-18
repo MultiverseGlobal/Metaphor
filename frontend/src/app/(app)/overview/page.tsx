@@ -48,6 +48,7 @@ export default function SynchronizationDashboard() {
     edge_count: 0,
     active_sessions: 0,
     total_events: 0,
+    pending_approvals: 0,
   });
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
   const [activeClients, setActiveClients] = useState<ActiveClient[]>([]);
@@ -68,7 +69,7 @@ export default function SynchronizationDashboard() {
         setActiveClients(clientsData.value.clients);
       }
       if (statsData.status === "fulfilled" && statsData.value) {
-        setStats(statsData.value);
+        setStats({ ...statsData.value, pending_approvals: 12 }); // Mocking pending approvals
       }
       const [handoffData, nodeData] = await Promise.allSettled([
         fetchFromMetaphor("/graph/handoffs?limit=5"),
@@ -200,62 +201,40 @@ export default function SynchronizationDashboard() {
         <div className="flex flex-col items-center text-center pt-28 sm:pt-36 pb-12">
           
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-foreground mb-3 font-sans">
-            Launch Context Engine
+            System Overview
           </h1>
           <p className="text-muted text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-            Define your memory scope below. Metaphor will autonomously resolve relational concepts, extract decisions, and stream context to your AI stack.
+            Metaphor OS is actively monitoring your knowledge graph and serving context.
           </p>
 
-          {/* Floating Command / Intent Capsule */}
-          <form onSubmit={handleQuerySubmit} className="w-full mt-8 max-w-2xl">
-            <div className="flex items-center gap-2 p-1.5 pl-5 rounded-2xl bg-surface-1/90 border border-border-subtle shadow-[0_16px_45px_-12px_rgba(0,0,0,0.6)] focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-all backdrop-blur-xl">
-              <Search className="w-4 h-4 text-muted shrink-0" />
-              <input
-                type="text"
-                value={queryInput}
-                onChange={(e) => setQueryInput(e.target.value)}
-                placeholder="Query your context graph (e.g. 'Synthesize project architecture and active decisions')..."
-                className="flex-1 bg-transparent text-sm sm:text-base text-foreground placeholder:text-muted/60 focus:outline-none min-w-0"
-              />
-
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-2/80 border border-border-subtle/80 text-[11px] font-medium text-foreground">
-                  <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-                  <span>Sovereign Node</span>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={!queryInput.trim()}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-foreground text-background text-xs font-semibold hover:opacity-90 active:scale-95 disabled:opacity-35 disabled:pointer-events-none transition-all cursor-pointer shadow-sm shrink-0"
-                >
-                  <span>Query Graph</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          </form>
+          <div className="mt-8 flex items-center justify-center">
+            <Link 
+              href="/explorer"
+              className="flex items-center gap-2 py-3 px-6 bg-foreground text-background text-sm font-medium rounded-xl hover:opacity-90 active:scale-[0.99] transition-all cursor-pointer shadow-md"
+            >
+              <span>Launch Context Explorer</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
 
           {/* Real-Time Telemetry Signal Pill */}
           <div className="mt-5 inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-surface-1/80 border border-border-subtle/80 text-xs text-muted shadow-xs">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-            <span className="font-semibold text-foreground">System Online:</span>
+            <span className="font-semibold text-foreground">MCP Online:</span>
+            <span>Ready for connections</span>
+            <span className="opacity-40">·</span>
             <span>{stats.node_count} concepts</span>
-            <span className="opacity-40">·</span>
-            <span>{stats.edge_count} relational links</span>
-            <span className="opacity-40">·</span>
-            <span>{activeClients.length} AI clients</span>
           </div>
         </div>
 
         {/* ── Architecture Telemetry Metrics ───────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
           <div className="p-5 rounded-2xl bg-surface-1/70 border border-border-subtle/80 backdrop-blur-md hover:border-border-strong transition-all shadow-xs group">
             <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-3">
               <Activity className="w-4 h-4" />
             </div>
             <p className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1">Graph Nodes</p>
-            <p className="text-xl font-semibold text-foreground tracking-tight">{stats.node_count} Concepts</p>
+            <p className="text-xl font-semibold text-foreground tracking-tight">{stats.node_count}</p>
           </div>
 
           <div className="p-5 rounded-2xl bg-surface-1/70 border border-border-subtle/80 backdrop-blur-md hover:border-border-strong transition-all shadow-xs group">
@@ -263,7 +242,15 @@ export default function SynchronizationDashboard() {
               <Network className="w-4 h-4" />
             </div>
             <p className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1">Graph Edges</p>
-            <p className="text-xl font-semibold text-foreground tracking-tight">{stats.edge_count} Links</p>
+            <p className="text-xl font-semibold text-foreground tracking-tight">{stats.edge_count}</p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-surface-1/70 border border-border-subtle/80 backdrop-blur-md hover:border-border-strong transition-all shadow-xs group">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 mb-3">
+              <Inbox className="w-4 h-4" />
+            </div>
+            <p className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1">Pending Approvals</p>
+            <p className="text-xl font-semibold text-foreground tracking-tight">{stats.pending_approvals}</p>
           </div>
 
           <div className="p-5 rounded-2xl bg-surface-1/70 border border-border-subtle/80 backdrop-blur-md hover:border-border-strong transition-all shadow-xs group">
@@ -271,7 +258,7 @@ export default function SynchronizationDashboard() {
               <Server className="w-4 h-4" />
             </div>
             <p className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1">Active AI Sessions</p>
-            <p className="text-xl font-semibold text-foreground tracking-tight">{stats.active_sessions} Active</p>
+            <p className="text-xl font-semibold text-foreground tracking-tight">{stats.active_sessions}</p>
           </div>
         </div>
 
@@ -279,16 +266,16 @@ export default function SynchronizationDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
           {/* Connected AI Clients */}
-          <div className="p-6 rounded-2xl bg-surface-1/70 border border-border-subtle/80 backdrop-blur-md shadow-xs">
+          <div className="p-6 rounded-2xl bg-surface-1/70 border border-border-subtle/80 backdrop-blur-md shadow-xs flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Bot className="w-4 h-4 text-primary" />
                 <h2 className="text-xs font-semibold text-muted uppercase tracking-widest">
-                  Connected AI Clients
+                  Connected MCP Clients
                 </h2>
               </div>
               <Link
-                href="/dashboard/api"
+                href="/api"
                 className="text-[10px] font-mono uppercase tracking-widest text-muted hover:text-foreground transition-colors"
               >
                 Manage Tokens →
@@ -296,7 +283,7 @@ export default function SynchronizationDashboard() {
             </div>
 
             {activeClients.length === 0 ? (
-              <div className="p-8 text-center rounded-xl bg-surface-2/30 border border-border-subtle/40">
+              <div className="flex-1 p-8 text-center rounded-xl bg-surface-2/30 border border-border-subtle/40 flex flex-col items-center justify-center">
                 <Bot className="w-7 h-7 text-muted/50 mx-auto mb-2" />
                 <p className="text-xs font-medium text-muted">No external AI clients connected.</p>
                 <p className="text-[11px] text-muted/60 mt-1">
@@ -304,7 +291,7 @@ export default function SynchronizationDashboard() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2 flex-1">
                 {activeClients.map((client, i) => (
                   <div
                     key={i}
@@ -324,38 +311,44 @@ export default function SynchronizationDashboard() {
           </div>
 
           {/* Connected Ingestion Sources */}
-          <div className="p-6 rounded-2xl bg-surface-1/70 border border-border-subtle/80 backdrop-blur-md shadow-xs">
+          <div className="p-6 rounded-2xl bg-surface-1/70 border border-border-subtle/80 backdrop-blur-md shadow-xs flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Plug className="w-4 h-4 text-primary" />
                 <h2 className="text-xs font-semibold text-muted uppercase tracking-widest">
-                  Active Data Connectors
+                  Data Connectors
                 </h2>
               </div>
               <Link
-                href="/dashboard/integrations"
+                href="/integrations"
                 className="text-[10px] font-mono uppercase tracking-widest text-muted hover:text-foreground transition-colors"
               >
                 Configure →
               </Link>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 flex-1">
               <IntegrationRow
                 name="Notion Context Vault"
                 status={`${stats.total_events} documents ingested`}
+                freshness="Updated 2m ago"
+                health="healthy"
                 loading={syncing["notion"]}
                 onSync={() => syncIntegration("notion")}
               />
               <IntegrationRow
                 name="GitHub Workspace Repo"
                 status="Connected & Watching"
+                freshness="Updated 15m ago"
+                health="warning"
                 loading={syncing["github"]}
                 onSync={() => syncIntegration("github")}
               />
               <IntegrationRow
                 name="Gmail Intelligence"
                 status="Ready to Connect"
+                freshness="Never synced"
+                health="error"
                 loading={syncing["gmail"]}
                 onSync={() => syncIntegration("gmail")}
               />
@@ -372,19 +365,33 @@ export default function SynchronizationDashboard() {
 function IntegrationRow({
   name,
   status,
+  freshness,
+  health = "healthy",
   loading = false,
   onSync,
 }: {
   name: string;
   status: string;
+  freshness: string;
+  health?: "healthy" | "warning" | "error";
   loading?: boolean;
   onSync?: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-surface-2/30 border border-border-subtle/50 hover:bg-surface-2/50 transition-colors">
-      <div>
-        <p className="text-xs font-semibold text-foreground tracking-tight">{name}</p>
-        <p className="text-[11px] text-muted mt-0.5">{status}</p>
+    <div className="flex items-center justify-between px-3.5 py-3 rounded-xl bg-surface-2/30 border border-border-subtle/50 hover:bg-surface-2/50 transition-colors">
+      <div className="flex items-center gap-3">
+        <div className={`w-2 h-2 rounded-full ${
+          health === "healthy" ? "bg-emerald-500" :
+          health === "warning" ? "bg-amber-500" : "bg-danger"
+        }`} />
+        <div>
+          <p className="text-xs font-semibold text-foreground tracking-tight">{name}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-[11px] text-muted">{status}</p>
+            <span className="text-muted/40">•</span>
+            <p className="text-[10px] text-muted flex items-center gap-1"><Clock className="w-3 h-3"/>{freshness}</p>
+          </div>
+        </div>
       </div>
       {onSync && (
         <button

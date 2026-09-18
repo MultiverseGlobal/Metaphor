@@ -65,10 +65,17 @@ export default function KnowledgeGraphPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
   const [selectedNodes, setSelectedNodes] = useState<FlowNode[]>([]);
+  const [detailNode, setDetailNode] = useState<any | null>(null);
 
   const onSelectionChange = useCallback(({ nodes }: { nodes: FlowNode[] }) => {
     setSelectedNodes(nodes);
-  }, []);
+    if (nodes.length === 1) {
+      const raw = rawNodes.find(r => r.id === nodes[0].id);
+      setDetailNode(raw || null);
+    } else {
+      setDetailNode(null);
+    }
+  }, [rawNodes]);
 
   const handlePush = (model: string) => {
     console.log(`Pushing context with model ${model}`, selectedNodes);
@@ -205,6 +212,52 @@ export default function KnowledgeGraphPage() {
             <Background color="var(--color-border-strong)" gap={24} size={1} />
             <Controls className="!bg-surface-1 !border-border-subtle !shadow-sm" />
           </ReactFlow>
+
+          {/* Node Type Legend */}
+          <div className="absolute bottom-4 left-4 bg-surface-1/90 backdrop-blur-sm border border-border-subtle rounded-xl p-3 flex flex-col gap-2 shadow-sm">
+            <div className="text-[9px] font-mono uppercase tracking-widest text-muted mb-1">Node Types</div>
+            {[
+              { label: "Identity", color: "bg-primary" },
+              { label: "Project", color: "bg-cyan-500" },
+              { label: "Document", color: "bg-emerald-500" },
+              { label: "Other", color: "bg-rose-500" },
+            ].map(({ label, color }) => (
+              <div key={label} className="flex items-center gap-2 text-[10px] text-muted">
+                <div className={`w-2 h-2 rounded-full ${color}`} />
+                {label}
+              </div>
+            ))}
+          </div>
+
+          {/* Provenance Detail Drawer */}
+          {detailNode && (
+            <div className="absolute top-4 right-4 w-72 bg-surface-1/95 backdrop-blur-md border border-border-subtle rounded-2xl shadow-2xl p-5 animate-in slide-in-from-right-4 fade-in duration-300 z-20">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <div className="text-[9px] font-mono uppercase tracking-widest text-muted mb-1">Node Provenance</div>
+                  <h3 className="text-sm font-semibold text-foreground">{detailNode.name}</h3>
+                </div>
+                <button onClick={() => setDetailNode(null)} className="text-muted hover:text-foreground text-xs cursor-pointer">✕</button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <div className="text-[9px] font-mono uppercase tracking-widest text-muted mb-1">Type</div>
+                  <span className="px-2 py-0.5 rounded bg-surface-2 border border-border-subtle text-[10px] font-mono capitalize">{detailNode.type}</span>
+                </div>
+                {detailNode.summary && (
+                  <div>
+                    <div className="text-[9px] font-mono uppercase tracking-widest text-muted mb-1">Summary</div>
+                    <p className="text-xs text-muted leading-relaxed">{detailNode.summary}</p>
+                  </div>
+                )}
+                <div>
+                  <div className="text-[9px] font-mono uppercase tracking-widest text-muted mb-1">Connections</div>
+                  <p className="text-xs text-foreground">{detailNode.connections} edges</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <PushPanel 
             selectedNodes={selectedNodes}
             onPush={handlePush}

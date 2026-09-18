@@ -9,7 +9,9 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState({
     theme: "system",
     passiveIngestion: true,
-    clarificationNotifications: false
+    clarificationNotifications: false,
+    sovereignMode: true,
+    retentionDays: 90,
   });
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -142,7 +144,7 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-2 flex items-center gap-2">
           <Settings className="w-6 h-6 text-primary" /> Settings
         </h1>
-        <p className="text-sm text-muted">Manage your OS preferences and profile identity.</p>
+        <p className="text-sm text-muted">Control your trust model, data governance, and workspace preferences.</p>
       </header>
 
       <div className="space-y-8 mb-12">
@@ -260,6 +262,63 @@ export default function SettingsPage() {
               <span className={`text-xs font-semibold ${settings.theme === 'system' ? 'text-foreground' : 'text-muted'}`}>System</span>
             </button>
           </div>
+        </section>
+
+        {/* Sovereign Trust Model */}
+        <section>
+          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 border-b border-border-subtle pb-2 flex items-center gap-2">
+            <Shield className="w-4 h-4 text-emerald-500" /> Trust & Sovereign Mode
+          </h2>
+          <Card noPadding className="divide-y divide-border-subtle">
+            <div onClick={() => updateSetting("sovereignMode", !settings.sovereignMode)} className="p-5 flex items-center justify-between hover:bg-surface-2/50 transition-colors cursor-pointer">
+              <div className="flex items-center gap-4">
+                <Shield className="w-5 h-5 text-emerald-500" />
+                <div>
+                  <h3 className="text-sm font-medium text-foreground">Sovereign Mode</h3>
+                  <p className="text-xs text-muted mt-0.5">Credentials stay local. Raw document text never leaves your machine.</p>
+                </div>
+              </div>
+              <div className={`w-10 h-6 rounded-full relative shadow-inner transition-colors ${settings.sovereignMode ? 'bg-emerald-500' : 'bg-surface-2 border border-border-strong'}`}>
+                <div className={`absolute top-1 w-4 h-4 rounded-full transition-all ${settings.sovereignMode ? 'right-1 bg-white shadow-sm' : 'left-1 bg-muted'}`} />
+              </div>
+            </div>
+
+            <div className="p-5">
+              <div className="flex items-center gap-4 mb-3">
+                <Database className="w-5 h-5 text-muted" />
+                <div>
+                  <h3 className="text-sm font-medium text-foreground">Data Retention</h3>
+                  <p className="text-xs text-muted mt-0.5">Graph nodes older than this are automatically archived.</p>
+                </div>
+              </div>
+              <div className="flex gap-2 pl-9">
+                {[30, 90, 180, 365].map(days => (
+                  <button
+                    key={days}
+                    onClick={() => updateSetting("retentionDays", days)}
+                    className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
+                      settings.retentionDays === days
+                        ? 'border-primary text-foreground bg-primary/10'
+                        : 'border-border-subtle text-muted hover:text-foreground hover:border-border-strong'
+                    }`}
+                  >
+                    {days}d
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Card>
+        </section>
+
+        {/* Developer Access */}
+        <section>
+          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 border-b border-border-subtle pb-2">Developer Access</h2>
+          <Card className="p-6 space-y-4">
+            <p className="text-xs text-muted">Use the danger zone below only if you want to fully purge your context graph and start from scratch. This action is irreversible.</p>
+            <button className="w-full py-2.5 border border-destructive/40 text-destructive hover:bg-destructive/5 rounded-xl text-xs font-medium transition-colors cursor-pointer">
+              Delete All Graph Data
+            </button>
+          </Card>
         </section>
 
         {/* Behavior */}

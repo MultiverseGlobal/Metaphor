@@ -29,13 +29,13 @@ interface FloatingNavProps {
 }
 
 const ROUTES = [
-  { path: "/dashboard", label: "Command", icon: Command, exact: true },
-  { path: "/dashboard/graph", label: "Graph", icon: Network, exact: false },
-  { path: "/dashboard/editor", label: "Editor", icon: Terminal, exact: false },
-  { path: "/dashboard/playground", label: "Engine", icon: Layers, exact: false },
-  { path: "/dashboard/pipeline", label: "Pipeline", icon: Activity, exact: false },
-  { path: "/dashboard/integrations", label: "Connectors", icon: Plug, exact: false },
-  { path: "/dashboard/settings", label: "Settings", icon: Settings, exact: false },
+  { path: "/explorer", label: "Explorer", icon: Terminal, exact: false },
+  { path: "/overview", label: "Overview", icon: Command, exact: true },
+  { path: "/integrations", label: "Sources", icon: Plug, exact: false },
+  { path: "/graph", label: "Graph", icon: Network, exact: false },
+  { path: "/partitions", label: "Partitions", icon: Layers, exact: false },
+  { path: "/inbox", label: "Inbox", icon: Activity, exact: false },
+  { path: "/settings", label: "Settings", icon: Settings, exact: false },
 ];
 
 export function FloatingNav({
@@ -47,13 +47,13 @@ export function FloatingNav({
   const router = useRouter();
 
   const [theme, setTheme] = useState<"dark" | "light">("dark");
-  const [activeNode, setActiveNode] = useState("Sovereign Node");
+  const [activePartition, setActivePartition] = useState("Global Identity");
   const [isBrandDropdownOpen, setIsBrandDropdownOpen] = useState(false);
   const [user, setUser] = useState<{ name: string; email: string } | null>(initialUser || null);
 
   const brandRef = useRef<HTMLDivElement>(null);
 
-  const nodes = ["Sovereign Node", "Core Enterprise", "Research Lab"];
+  const partitions = ["Global Identity", "Engineering", "Research Lab"];
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -89,7 +89,7 @@ export function FloatingNav({
       return;
     }
     const stored = typeof window !== "undefined" ? localStorage.getItem("metaphor_user_name") : null;
-    setUser({ name: stored || "Sovereign User", email: "sovereign@local" });
+    setUser({ name: stored || "Local User", email: "user@local" });
   }, [initialUser]);
 
   useEffect(() => {
@@ -148,38 +148,43 @@ export function FloatingNav({
             <div className="absolute top-full left-0 mt-1.5 w-56 bg-surface-1/95 backdrop-blur-xl border border-border-subtle rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in duration-100">
               <div className="px-3 py-2 border-b border-border-subtle/50">
                 <div className="text-xs font-semibold text-foreground truncate">
-                  {user?.name || "Sovereign User"}
+                  {user?.name || "Local User"}
                 </div>
                 <div className="text-[10px] text-muted truncate">
-                  {user?.email || "sovereign@local"}
+                  {user?.email || "user@local"}
                 </div>
               </div>
 
               <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest text-muted">
-                Workspace Node
+                Active Partition
               </div>
-              {nodes.map((node) => (
+              {partitions.map((partition) => (
                 <button
-                  key={node}
+                  key={partition}
                   onClick={() => {
-                    setActiveNode(node);
+                    setActivePartition(partition);
                     setIsBrandDropdownOpen(false);
                   }}
                   className={`w-full text-left px-3 py-1.5 text-xs transition-colors flex items-center justify-between cursor-pointer ${
-                    activeNode === node
+                    activePartition === partition
                       ? "text-primary font-semibold bg-primary/10"
                       : "text-muted hover:text-foreground hover:bg-surface-2/60"
                   }`}
                 >
-                  <span>{node}</span>
-                  {activeNode === node && <Check className="w-3 h-3 text-primary" />}
+                  <span>{partition}</span>
+                  {activePartition === partition && <Check className="w-3 h-3 text-primary" />}
                 </button>
               ))}
 
               <div className="border-t border-border-subtle/50 my-1" />
+              
+              <div className="px-3 py-1 text-[9px] font-mono text-muted/60 text-right">
+                BUILD 49f2b1a (v0.1.0)
+              </div>
+              <div className="border-t border-border-subtle/50 my-1" />
 
               <Link
-                href="/dashboard/profile"
+                href="/settings"
                 onClick={() => setIsBrandDropdownOpen(false)}
                 className="w-full text-left px-3 py-1.5 text-xs text-muted hover:text-foreground hover:bg-surface-2/60 transition-colors flex items-center gap-2 cursor-pointer"
               >

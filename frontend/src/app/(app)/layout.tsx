@@ -41,7 +41,7 @@ export default function DashboardLayout({
         });
       } catch (e) {
         const storedCustomName = typeof window !== "undefined" ? localStorage.getItem("metaphor_user_name") : null;
-        setUser({ name: storedCustomName || "Sovereign User", email: "sovereign@local" });
+        setUser({ name: storedCustomName || "Local User", email: "user@local" });
       }
     }
     fetchUser();

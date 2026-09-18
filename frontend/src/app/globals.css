@@ -1,12 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
-
 /* Metaphor — PDS-v5
  * Font: Times New Roman MT (display) + Inter (body)
  * Personality: The writer's canvas. Canonical literary serif. Wide margins. Distraction-free.
  * Mode: Light by default. Dark via .dark class on <html>.
  * ─────────────────────────────────────────────────────────────────────────── */
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @theme {
   /* ── Light Mode Tokens ────────────────────────────────────────────────── */
@@ -23,15 +21,15 @@
 
   --color-muted: #9CA3AF;
 
-  /* PDS unified ink accent (light canvas) */
-  --color-accent:     #111318;
-  --color-accent-dim: rgba(17, 19, 24, 0.06);
+  /* PDS unified accent (cooler spectral blue-violet) */
+  --color-accent:     #4f46e5; /* Indigo 600 */
+  --color-accent-dim: rgba(79, 70, 229, 0.08);
 
-  /* Status */
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-danger:  #ef4444;
-  --color-info:    #38bdf8;
+  /* Status Semantic Colors (Antigravity Brief) */
+  --color-success: #22c55e; /* Green: Grounded, healthy, sync */
+  --color-warning: #f59e0b; /* Amber: Pending, review */
+  --color-danger:  #f43f5e; /* Coral/Red: Conflict, stale, denied */
+  --color-info:    #94a3b8; /* Pale blue-gray: neutral system info */
 
   /* ── Typography ────────────────────────────────────────────────────────── */
   /* Metaphor display: Times New Roman MT — canonical literary serif */
@@ -99,8 +97,9 @@
 
   --color-muted: rgba(238, 240, 248, 0.40);
 
-  --color-accent:     #ffffff;
-  --color-accent-dim: rgba(255, 255, 255, 0.10);
+  /* Interaction Accent: Spectral Blue-Violet */
+  --color-accent:     #818cf8; /* Indigo 400 */
+  --color-accent-dim: rgba(129, 140, 248, 0.15);
 
   --shadow-card:       0 1px 3px rgba(0,0,0,0.40), 0 0 0 1px rgba(255,255,255,0.06);
   --shadow-card-hover: 0 8px 32px -8px rgba(0,0,0,0.60), 0 0 0 1px rgba(255,255,255,0.10);
