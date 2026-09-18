@@ -19,10 +19,11 @@ class Organization(SQLModel, table=True):
 class User(SQLModel, table=True):
     __tablename__ = "users"
     
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    email: str = Field(unique=True, index=True)
-    name: str
-    hashed_password: str
+    # Maps to Supabase auth.users.id or profiles.id
+    id: uuid.UUID = Field(primary_key=True)
+    email: Optional[str] = Field(default=None, index=True)
+    name: Optional[str] = None
+    
     avatar: Optional[str] = None
     timezone: Optional[str] = None
     

@@ -50,7 +50,6 @@ async def _ensure_user_in_db(user_id_str: str, email: Optional[str], metadata: O
     user = User(
         id=user_uuid,
         email=email or f"{user_id_str}@user.metaphor",
-        hashed_password="",
         name=name
     )
     session.add(user)
