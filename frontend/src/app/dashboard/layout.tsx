@@ -46,7 +46,6 @@ export default function DashboardLayout({
     }
     fetchUser();
 
-    // Cloud Sync
     import("@/lib/settings").then((m) => m.pullSettingsFromCloud());
 
     const handleProfileUpdate = () => {
@@ -58,22 +57,21 @@ export default function DashboardLayout({
   }, []);
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-background overflow-hidden text-sm selection:bg-primary/20">
-      
-      {/* Ecosystem Floating Top Navigation Bar */}
+    <div className="relative min-h-screen w-screen bg-background text-foreground overflow-x-hidden selection:bg-primary/20">
+      {/* Detached Floating Island Nav (Atlas-style) */}
       <FloatingNav
         isWeaveOpen={isWeavePanelOpen}
         onToggleWeave={() => setIsWeavePanelOpen((o) => !o)}
         user={user}
       />
 
-      {/* Main Viewport Container */}
-      <div className="flex-1 flex overflow-hidden pt-12 relative">
-        <main className="flex-1 overflow-y-auto relative bg-background">
+      {/* Full-width Spatial Canvas */}
+      <div className="flex w-full min-h-screen relative">
+        <main className="flex-1 w-full relative">
           {children}
         </main>
 
-        {/* Weave Panel — Collapsible right side drawer */}
+        {/* Weave Intelligence side drawer */}
         <aside
           style={{
             width: isWeavePanelOpen ? 340 : 0,
@@ -83,7 +81,7 @@ export default function DashboardLayout({
             borderLeft: isWeavePanelOpen ? "1px solid var(--color-border-subtle)" : "none",
             background: "var(--color-surface-1)",
           }}
-          className="h-full z-20"
+          className="fixed right-0 top-0 bottom-0 z-40 shadow-2xl"
         >
           {isWeavePanelOpen && (
             <div style={{ width: 340, height: "100%", overflowY: "auto" }}>
@@ -92,7 +90,6 @@ export default function DashboardLayout({
           )}
         </aside>
       </div>
-
     </div>
   );
 }

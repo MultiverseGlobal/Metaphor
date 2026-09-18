@@ -1,9 +1,22 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { CheckCircle2, Plug, Database, Sparkles, Server, Folder, FileText, Calendar, Activity, Terminal, Inbox, ArrowRight, Clock, Zap, Bot, Network, GitBranch } from "lucide-react";
+import {
+  Database,
+  Sparkles,
+  Server,
+  Activity,
+  Terminal,
+  Inbox,
+  ArrowRight,
+  Clock,
+  Bot,
+  Network,
+  ShieldCheck,
+  Search,
+  Plug,
+} from "lucide-react";
 import { fetchFromMetaphor } from "@/app/api";
-import GraphViewer from "./GraphViewer";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
@@ -28,17 +41,18 @@ interface HandoffItem {
 export default function SynchronizationDashboard() {
   const router = useRouter();
   const [authLoading, setAuthLoading] = useState(true);
+  const [queryInput, setQueryInput] = useState("");
   const [syncing, setSyncing] = useState<Record<string, boolean>>({});
   const [stats, setStats] = useState({
     node_count: 0,
     edge_count: 0,
     active_sessions: 0,
-    total_events: 0
+    total_events: 0,
   });
-  const [user, setUser] = useState<{name: string, email: string} | null>(null);
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
   const [activeClients, setActiveClients] = useState<ActiveClient[]>([]);
   const [handoffs, setHandoffs] = useState<HandoffItem[]>([]);
-  const [recentNodes, setRecentNodes] = useState<{title: string, type: string, created_at: string}[]>([]);
+  const [recentNodes, setRecentNodes] = useState<{ title: string; type: string; created_at: string }[]>([]);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const notifications = useMetaphorSSE();
 
@@ -56,7 +70,6 @@ export default function SynchronizationDashboard() {
       if (statsData.status === "fulfilled" && statsData.value) {
         setStats(statsData.value);
       }
-      // Try to fetch recent handoffs and nodes
       const [handoffData, nodeData] = await Promise.allSettled([
         fetchFromMetaphor("/graph/handoffs?limit=5"),
         fetchFromMetaphor("/graph/nodes?limit=5&order=created_at.desc"),
@@ -75,17 +88,19 @@ export default function SynchronizationDashboard() {
 
   useEffect(() => {
     async function checkAuthAndFetch() {
-      // Safety timer to guarantee UI resolves and never hangs in skeleton
       const safetyTimer = setTimeout(() => {
         setAuthLoading(false);
       }, 1500);
 
       try {
-        const isUnlocked = typeof document !== "undefined" && (
-          document.cookie.includes("metaphor_unlocked=true") ||
-          localStorage.getItem("metaphor_unlocked") === "true"
-        );
-        const { data: { session } } = await supabase.auth.getSession();
+        const isUnlocked =
+          typeof document !== "undefined" &&
+          (document.cookie.includes("metaphor_unlocked=true") ||
+            localStorage.getItem("metaphor_unlocked") === "true");
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
         if (!session && !isUnlocked) {
           clearTimeout(safetyTimer);
           router.push("/login?redirect=/dashboard");
@@ -102,7 +117,7 @@ export default function SynchronizationDashboard() {
             const localName = typeof window !== "undefined" ? localStorage.getItem("metaphor_user_name") : null;
             setUser({ name: localName || "Sovereign User", email: "sovereign@local" });
           }
-        } catch (e) {
+        } catch {
           const localName = typeof window !== "undefined" ? localStorage.getItem("metaphor_user_name") : null;
           setUser({ name: localName || "Sovereign User", email: "sovereign@local" });
         }
@@ -113,46 +128,62 @@ export default function SynchronizationDashboard() {
       }
     }
     checkAuthAndFetch();
-    // Refresh live data every 30 seconds
+
     const interval = setInterval(fetchLiveData, 30000);
     return () => clearInterval(interval);
-  }, [router, fetchLiveData]);
+  }, [router, fetchLiveData, supabase.auth]);
+
+  const handleQuerySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!queryInput.trim()) return;
+    router.push(`/dashboard/playground?q=${encodeURIComponent(queryInput.trim())}`);
+  };
 
   const syncIntegration = async (provider: string) => {
-    setSyncing(prev => ({ ...prev, [provider]: true }));
+    setSyncing((prev) => ({ ...prev, [provider]: true }));
     try {
       await fetchFromMetaphor(`/integrations/${provider}/sync`, undefined, "POST");
     } catch (e) {
       console.error(`Failed to sync ${provider}:`, e);
     } finally {
-      setSyncing(prev => ({ ...prev, [provider]: false }));
+      setSyncing((prev) => ({ ...prev, [provider]: false }));
     }
   };
 
   if (authLoading) {
     return (
-      <div className="max-w-4xl mx-auto p-8 space-y-8 animate-in fade-in duration-150">
-        <div className="w-48 h-8 rounded-xl bg-surface-2 animate-pulse mb-8" />
+      <div className="max-w-4xl mx-auto p-8 pt-32 space-y-8 animate-in fade-in duration-150">
+        <div className="w-48 h-8 rounded-xl bg-surface-2 animate-pulse mb-8 mx-auto" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <CardSkeleton /><CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
         </div>
       </div>
     );
   }
 
-  const greeting = user?.name && user.name !== "Supabase User" && user.name !== "Developer User"
-    ? `${user.name}`
-    : user?.email?.split("@")[0] || "Workspace";
-
   return (
-    <div className="relative w-full min-h-full animate-in fade-in duration-200">
+    <div className="relative w-full min-h-screen animate-in fade-in duration-300 pb-24">
       
-      {/* SSE Toasts */}
+      {/* Subtle Dot Matrix Spatial Background */}
+      <div
+        className="pointer-events-none absolute inset-0 z-0 opacity-40 [background-image:radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_35%,#000_70%,transparent_100%)]"
+        aria-hidden="true"
+      />
+
+      {/* SSE Real-Time Event Toasts */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
         {notifications.map((notif) => (
-          <div key={notif.id} className="w-80 bg-surface-1 border border-border-subtle rounded-xl p-4 shadow-2xl animate-in slide-in-from-right-4 fade-in duration-300">
+          <div
+            key={notif.id}
+            className="w-80 bg-surface-1/95 border border-border-subtle rounded-xl p-4 shadow-2xl backdrop-blur-md animate-in slide-in-from-right-4 fade-in duration-300"
+          >
             <div className="flex items-center justify-between mb-1">
-              <span className={`text-xs font-bold uppercase tracking-wider ${notif.type === "handoff_received" ? "text-primary" : "text-success"}`}>
+              <span
+                className={`text-[10px] font-mono font-bold uppercase tracking-wider ${
+                  notif.type === "handoff_received" ? "text-primary" : "text-success"
+                }`}
+              >
                 {notif.type === "handoff_received" ? "Action Received" : "Resolved"}
               </span>
               <span className="text-[10px] text-muted">Just now</span>
@@ -163,216 +194,207 @@ export default function SynchronizationDashboard() {
         ))}
       </div>
 
-      <GraphViewer />
-      <div className="relative z-10 w-full max-w-4xl mx-auto p-8 pb-16 flex flex-col items-start">
+      <div className="relative z-10 w-full max-w-5xl mx-auto px-4 sm:px-6">
 
-        {/* Header */}
-        <div className="mb-10 w-full border-b border-border-subtle/50 pb-8">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-              <span className="text-xs font-mono uppercase tracking-widest text-muted">System Online</span>
-            </div>
-            <button
-              onClick={fetchLiveData}
-              className="text-[10px] font-mono uppercase tracking-widest text-muted hover:text-foreground transition-colors flex items-center gap-1"
-            >
-              <Clock className="w-3 h-3" />
-              Refreshed {lastRefresh.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-            </button>
-          </div>
-          <h1 className="text-3xl text-foreground font-medium tracking-tight leading-snug mb-2">
-            {greeting}, your knowledge model is active.
+        {/* ── Atlas-Style Spatial Hero Deck ────────────────────────────── */}
+        <div className="flex flex-col items-center text-center pt-28 sm:pt-36 pb-12">
+          
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-foreground mb-3 font-sans">
+            Launch Context Engine
           </h1>
-          <p className="text-muted text-sm">
-            {stats.node_count} nodes · {stats.edge_count} relational links · {activeClients.length} AI client{activeClients.length !== 1 ? "s" : ""} connected
+          <p className="text-muted text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
+            Define your memory scope below. Metaphor will autonomously resolve relational concepts, extract decisions, and stream context to your AI stack.
           </p>
-        </div>
 
-        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-12">
+          {/* Floating Command / Intent Capsule */}
+          <form onSubmit={handleQuerySubmit} className="w-full mt-8 max-w-2xl">
+            <div className="flex items-center gap-2 p-1.5 pl-5 rounded-2xl bg-surface-1/90 border border-border-subtle shadow-[0_16px_45px_-12px_rgba(0,0,0,0.6)] focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-all backdrop-blur-xl">
+              <Search className="w-4 h-4 text-muted shrink-0" />
+              <input
+                type="text"
+                value={queryInput}
+                onChange={(e) => setQueryInput(e.target.value)}
+                placeholder="Query your context graph (e.g. 'Synthesize project architecture and active decisions')..."
+                className="flex-1 bg-transparent text-sm sm:text-base text-foreground placeholder:text-muted/60 focus:outline-none min-w-0"
+              />
 
-          {/* Stats Row */}
-          <div className="col-span-1 md:col-span-2">
-            <SectionHeader icon={<Database />} label="Context Architecture" />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-              <ContextCard label="Graph Nodes" value={`${stats.node_count} Concepts`} icon={<Activity />} highlight />
-              <ContextCard label="Graph Edges" value={`${stats.edge_count} Links`} icon={<Network />} />
-              <ContextCard label="AI Sessions" value={`${stats.active_sessions} Active`} icon={<Server />} alert={stats.active_sessions > 0} />
-            </div>
-          </div>
-
-          {/* Live AI Clients */}
-          <div className="col-span-1 md:col-span-2">
-            <SectionHeader icon={<Bot />} label="Connected AI Clients" action={<Link href="/dashboard/api" className="text-[10px] font-mono uppercase tracking-widest text-muted hover:text-foreground">Manage Tokens →</Link>} />
-            <div className="mt-4 bg-surface-1 border border-border-subtle rounded-xl overflow-hidden">
-              {activeClients.length === 0 ? (
-                <div className="p-6 text-center">
-                  <p className="text-sm text-muted">No AI clients currently connected.</p>
-                  <p className="text-xs text-muted/60 mt-1">Connect Claude, Cursor, or ChatGPT via Remote MCP to see them here.</p>
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-2/80 border border-border-subtle/80 text-[11px] font-medium text-foreground">
+                  <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+                  <span>Sovereign Node</span>
                 </div>
-              ) : (
-                activeClients.map((client, i) => (
-                  <div key={i} className="flex items-center justify-between px-4 py-3 border-b border-border-subtle/50 last:border-0">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                      <span className="text-sm font-medium text-foreground capitalize">{client.client_name || "Unknown Client"}</span>
-                      {client.project_id && (
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                          Scoped Project
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xs font-mono text-muted">
-                      {client.connected_at ? new Date(client.connected_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "Active"}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
 
-          {/* Handoff Queue */}
-          <div>
-            <SectionHeader icon={<Inbox />} label="Handoff Queue" action={<Link href="/dashboard/inbox" className="text-[10px] font-mono uppercase tracking-widest text-muted hover:text-foreground">View All →</Link>} />
-            <div className="mt-4 space-y-2">
-              {handoffs.length === 0 ? (
-                <div className="p-4 bg-surface-1 border border-border-subtle rounded-xl text-center">
-                  <p className="text-xs text-muted">No pending AI handoffs.</p>
-                </div>
-              ) : (
-                handoffs.map((h) => (
-                  <div key={h.id} className="p-4 bg-surface-1 border border-border-subtle rounded-xl space-y-2">
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="font-mono text-primary capitalize">{h.source_ai}</span>
-                      <ArrowRight className="w-3 h-3 text-muted" />
-                      <span className="font-mono text-foreground capitalize">{h.target_ai}</span>
-                      <span className={`ml-auto px-2 py-0.5 rounded-full text-[10px] font-mono border ${
-                        h.status === "pending" ? "bg-warning/10 text-warning border-warning/20" :
-                        h.status === "resolved" ? "bg-success/10 text-success border-success/20" :
-                        "bg-surface-2 text-muted border-border-subtle"
-                      }`}>{h.status}</span>
-                    </div>
-                    <p className="text-xs text-muted line-clamp-2">{h.payload}</p>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Recent Graph Activity */}
-          <div>
-            <SectionHeader icon={<Sparkles />} label="Recent Activity" />
-            <div className="mt-4 space-y-4 ml-2">
-              {recentNodes.length > 0 ? (
-                recentNodes.map((node, i) => (
-                  <TimelineItem key={i} text={`${node.type || "Node"}: ${node.title}`} time={node.created_at ? new Date(node.created_at).toLocaleDateString() : "Recent"} />
-                ))
-              ) : stats.node_count > 0 ? (
-                <>
-                  <TimelineItem text={`${stats.total_events} webhook events ingested and processed.`} time="Recently" />
-                  <TimelineItem text={`${stats.node_count} concept nodes extracted into graph.`} time="Recently" />
-                </>
-              ) : (
-                <TimelineItem text="System initialized. Waiting for first ingestion event." time="Just now" />
-              )}
-            </div>
-          </div>
-
-          {/* Connected Sources */}
-          <div>
-            <SectionHeader icon={<Plug />} label="Connected Sources" />
-            <div className="mt-4 bg-surface-1 border border-border-subtle rounded-xl p-2 space-y-1">
-              <IntegrationItem name="Notion" status={`${stats.total_events} docs`} loading={syncing['notion']} onSync={() => syncIntegration('notion')} />
-              <IntegrationItem name="GitHub" status="Active" loading={syncing['github']} onSync={() => syncIntegration('github')} />
-              <IntegrationItem name="Gmail" status="Not connected" loading={syncing['gmail']} onSync={() => syncIntegration('gmail')} />
-            </div>
-          </div>
-
-          {/* Open Playground CTA */}
-          <div>
-            <SectionHeader icon={<Terminal />} label="Query Your Graph" />
-            <Link
-              href="/dashboard/playground"
-              className="mt-4 group flex items-center justify-between w-full p-5 rounded-xl border bg-surface-1 border-border-subtle hover:border-border-strong transition-all duration-200 hover:-translate-y-[2px]"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-surface-2 text-muted group-hover:text-foreground transition-colors">
-                  <Terminal className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground tracking-tight">Open Context Playground</p>
-                  <p className="text-xs text-muted mt-0.5">Ask questions answered from your live graph.</p>
-                </div>
+                <button
+                  type="submit"
+                  disabled={!queryInput.trim()}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-foreground text-background text-xs font-semibold hover:opacity-90 active:scale-95 disabled:opacity-35 disabled:pointer-events-none transition-all cursor-pointer shadow-sm shrink-0"
+                >
+                  <span>Query Graph</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <span className="text-muted group-hover:text-foreground transition-colors text-lg">→</span>
-            </Link>
+            </div>
+          </form>
+
+          {/* Real-Time Telemetry Signal Pill */}
+          <div className="mt-5 inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-surface-1/80 border border-border-subtle/80 text-xs text-muted shadow-xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+            <span className="font-semibold text-foreground">System Online:</span>
+            <span>{stats.node_count} concepts</span>
+            <span className="opacity-40">·</span>
+            <span>{stats.edge_count} relational links</span>
+            <span className="opacity-40">·</span>
+            <span>{activeClients.length} AI clients</span>
+          </div>
+        </div>
+
+        {/* ── Architecture Telemetry Metrics ───────────────────────────── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          <div className="p-5 rounded-2xl bg-surface-1/70 border border-border-subtle/80 backdrop-blur-md hover:border-border-strong transition-all shadow-xs group">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-3">
+              <Activity className="w-4 h-4" />
+            </div>
+            <p className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1">Graph Nodes</p>
+            <p className="text-xl font-semibold text-foreground tracking-tight">{stats.node_count} Concepts</p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-surface-1/70 border border-border-subtle/80 backdrop-blur-md hover:border-border-strong transition-all shadow-xs group">
+            <div className="w-8 h-8 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 mb-3">
+              <Network className="w-4 h-4" />
+            </div>
+            <p className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1">Graph Edges</p>
+            <p className="text-xl font-semibold text-foreground tracking-tight">{stats.edge_count} Links</p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-surface-1/70 border border-border-subtle/80 backdrop-blur-md hover:border-border-strong transition-all shadow-xs group">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-3">
+              <Server className="w-4 h-4" />
+            </div>
+            <p className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1">Active AI Sessions</p>
+            <p className="text-xl font-semibold text-foreground tracking-tight">{stats.active_sessions} Active</p>
+          </div>
+        </div>
+
+        {/* ── Connected AI Clients & Intelligence Sources ──────────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          {/* Connected AI Clients */}
+          <div className="p-6 rounded-2xl bg-surface-1/70 border border-border-subtle/80 backdrop-blur-md shadow-xs">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Bot className="w-4 h-4 text-primary" />
+                <h2 className="text-xs font-semibold text-muted uppercase tracking-widest">
+                  Connected AI Clients
+                </h2>
+              </div>
+              <Link
+                href="/dashboard/api"
+                className="text-[10px] font-mono uppercase tracking-widest text-muted hover:text-foreground transition-colors"
+              >
+                Manage Tokens →
+              </Link>
+            </div>
+
+            {activeClients.length === 0 ? (
+              <div className="p-8 text-center rounded-xl bg-surface-2/30 border border-border-subtle/40">
+                <Bot className="w-7 h-7 text-muted/50 mx-auto mb-2" />
+                <p className="text-xs font-medium text-muted">No external AI clients connected.</p>
+                <p className="text-[11px] text-muted/60 mt-1">
+                  Connect Claude, Cursor, or ChatGPT via Remote MCP to query memory.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {activeClients.map((client, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-surface-2/40 border border-border-subtle/50"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-xs font-semibold text-foreground capitalize">
+                        {client.client_name || "Unknown Client"}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-muted">Active</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Connected Ingestion Sources */}
+          <div className="p-6 rounded-2xl bg-surface-1/70 border border-border-subtle/80 backdrop-blur-md shadow-xs">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Plug className="w-4 h-4 text-primary" />
+                <h2 className="text-xs font-semibold text-muted uppercase tracking-widest">
+                  Active Data Connectors
+                </h2>
+              </div>
+              <Link
+                href="/dashboard/integrations"
+                className="text-[10px] font-mono uppercase tracking-widest text-muted hover:text-foreground transition-colors"
+              >
+                Configure →
+              </Link>
+            </div>
+
+            <div className="space-y-2">
+              <IntegrationRow
+                name="Notion Context Vault"
+                status={`${stats.total_events} documents ingested`}
+                loading={syncing["notion"]}
+                onSync={() => syncIntegration("notion")}
+              />
+              <IntegrationRow
+                name="GitHub Workspace Repo"
+                status="Connected & Watching"
+                loading={syncing["github"]}
+                onSync={() => syncIntegration("github")}
+              />
+              <IntegrationRow
+                name="Gmail Intelligence"
+                status="Ready to Connect"
+                loading={syncing["gmail"]}
+                onSync={() => syncIntegration("gmail")}
+              />
+            </div>
           </div>
 
         </div>
+
       </div>
     </div>
   );
 }
 
-// ── UI Primitives ──────────────────────────────────────────────────
-
-function SectionHeader({ icon, label, action }: { icon: React.ReactNode; label: string; action?: React.ReactNode }) {
+function IntegrationRow({
+  name,
+  status,
+  loading = false,
+  onSync,
+}: {
+  name: string;
+  status: string;
+  loading?: boolean;
+  onSync?: () => void;
+}) {
   return (
-    <div className="flex items-center justify-between">
-      <h2 className="text-xs font-semibold text-muted uppercase tracking-widest flex items-center gap-2">
-        {React.cloneElement(icon as React.ReactElement, { className: "w-3.5 h-3.5" })}
-        {label}
-      </h2>
-      {action}
-    </div>
-  );
-}
-
-function ContextCard({ label, value, icon, highlight = false, alert = false }: { label: string, value: string, icon: React.ReactNode, highlight?: boolean, alert?: boolean }) {
-  return (
-    <div className={`group p-5 rounded-xl border transition-all duration-300 hover:-translate-y-[2px] ${
-      highlight ? 'bg-primary/5 border-primary/20' :
-      alert ? 'bg-orange-500/5 border-orange-500/20' :
-      'bg-surface-1 border-border-subtle/50 hover:border-border-strong'
-    }`}>
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-4 ${
-        highlight ? 'bg-primary/10 text-primary' :
-        alert ? 'bg-orange-500/10 text-orange-500' :
-        'bg-surface-2 text-muted group-hover:text-foreground'
-      } transition-colors`}>
-        {React.cloneElement(icon as React.ReactElement, { className: "w-4 h-4" })}
+    <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-surface-2/30 border border-border-subtle/50 hover:bg-surface-2/50 transition-colors">
+      <div>
+        <p className="text-xs font-semibold text-foreground tracking-tight">{name}</p>
+        <p className="text-[11px] text-muted mt-0.5">{status}</p>
       </div>
-      <p className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1.5">{label}</p>
-      <p className="text-sm font-medium text-foreground tracking-tight leading-snug">{value}</p>
-    </div>
-  );
-}
-
-function IntegrationItem({ name, status, loading = false, onSync }: { name: string, status: string, loading?: boolean, onSync?: () => void }) {
-  const isConnected = status !== "Not connected";
-  return (
-    <div className="flex items-center justify-between p-3 rounded-lg transition-colors group hover:bg-surface-2">
-      <div className="flex items-center gap-3">
-        <div className={`w-2 h-2 rounded-full ${loading ? 'bg-warning animate-pulse' : isConnected ? 'bg-success' : 'bg-muted'}`} />
-        <span className="text-sm font-medium tracking-tight text-foreground group-hover:text-primary transition-colors">{name}</span>
-      </div>
-      <div className="flex items-center gap-4">
-        <span className="text-xs font-medium text-muted">{status}</span>
-        {onSync && isConnected && (
-          <button onClick={onSync} disabled={loading} className="text-[10px] font-mono uppercase tracking-widest px-2 py-1 rounded bg-surface-2 border border-border-subtle hover:border-border-strong transition-all text-foreground cursor-pointer disabled:opacity-50">
-            {loading ? 'Syncing...' : 'Sync'}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TimelineItem({ text, time }: { text: string, time: string }) {
-  return (
-    <div className="relative pl-6 before:absolute before:left-0 before:top-1.5 before:w-2 before:h-2 before:rounded-full before:border-2 before:border-primary/50 before:bg-background">
-      <p className="text-sm font-medium text-foreground tracking-tight leading-relaxed">{text}</p>
-      <p className="text-[11px] text-muted mt-1">{time}</p>
+      {onSync && (
+        <button
+          onClick={onSync}
+          disabled={loading}
+          className="text-[10px] font-mono uppercase tracking-widest px-2.5 py-1 rounded-lg bg-surface-1 border border-border-subtle hover:border-border-strong transition-all text-foreground cursor-pointer disabled:opacity-50"
+        >
+          {loading ? "Syncing..." : "Sync"}
+        </button>
+      )}
     </div>
   );
 }
