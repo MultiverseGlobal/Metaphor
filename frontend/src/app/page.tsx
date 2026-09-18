@@ -43,10 +43,10 @@ export default function LandingPage() {
         </div>
         
         <div className="flex items-center gap-4">
-          <Link href="/login" className="text-xs font-medium text-muted hover:text-foreground transition-colors px-3 py-1.5 rounded-lg">
+          <Link href="/login" className="pds-btn-ghost">
             Sign In
           </Link>
-          <Link href="/explorer" className="group flex items-center gap-1.5 px-4 py-2 bg-foreground text-background font-medium text-xs rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-sm">
+          <Link href="/home" className="pds-btn-primary group shadow-sm">
             <span>Open Explorer</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </Link>
@@ -71,7 +71,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight text-foreground leading-tight mb-6"
+            className="font-display text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight text-foreground leading-tight mb-6"
           >
             AI memory that explains <br/> <span className="text-muted">exactly what it knows.</span>
           </motion.h1>
@@ -91,8 +91,8 @@ export default function LandingPage() {
             transition={{ duration: 0.6, delay: 0.4 }}
           >
             <Link 
-              href="/explorer"
-              className="px-8 py-3.5 bg-foreground text-background font-medium text-sm rounded-xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 shadow-xl shadow-foreground/5 cursor-pointer"
+              href="/home"
+              className="pds-btn-primary hover:scale-[1.02] transition-transform shadow-xl shadow-foreground/5 cursor-pointer !w-auto !inline-flex !h-12 !px-8 !text-sm"
             >
               <span>Launch Explorer</span>
               <ArrowRight className="w-4 h-4" />

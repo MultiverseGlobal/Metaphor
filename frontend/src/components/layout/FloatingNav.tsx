@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
 import { EcosystemSwitcher } from "@/components/ui/EcosystemSwitcher";
+import { useTheme } from "next-themes";
 
 interface FloatingNavProps {
   isWeaveOpen?: boolean;
@@ -53,7 +54,8 @@ export function FloatingNav({
   const pathname = usePathname();
   const router = useRouter();
 
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [activePartition, setActivePartition] = useState("Global Identity");
   const [isBrandDropdownOpen, setIsBrandDropdownOpen] = useState(false);
   const [user, setUser] = useState<{ name: string; email: string } | null>(initialUser || null);
@@ -66,25 +68,11 @@ export function FloatingNav({
   const scopeLabel = SCOPE_LABELS[scopeKey];
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("metaphor_theme");
-      const current = stored === "light" ? "light" : "dark";
-      setTheme(current);
-      document.documentElement.setAttribute("data-theme", current);
-      if (current === "dark") document.documentElement.classList.add("dark");
-      else document.documentElement.classList.remove("dark");
-    }
+    setMounted(true);
   }, []);
 
   const toggleTheme = () => {
-    const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("metaphor_theme", next);
-      document.documentElement.setAttribute("data-theme", next);
-      if (next === "dark") document.documentElement.classList.add("dark");
-      else document.documentElement.classList.remove("dark");
-    }
+    setTheme(theme === "dark" ? "light" : "dark");
   };
 
   useEffect(() => {
@@ -247,13 +235,15 @@ export function FloatingNav({
           )}
 
           {/* Theme toggle */}
-          <button
-            onClick={toggleTheme}
-            title={theme === "dark" ? "Light mode" : "Dark mode"}
-            className="p-1.5 rounded-xl text-muted hover:text-foreground hover:bg-surface-2/80 transition-colors cursor-pointer"
-          >
-            {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-          </button>
+          {mounted && (
+            <button
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Light mode" : "Dark mode"}
+              className="p-1.5 rounded-xl text-muted hover:text-foreground hover:bg-surface-2/80 transition-colors cursor-pointer"
+            >
+              {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+            </button>
+          )}
 
           {/* Weave toggle */}
           {onToggleWeave && (
