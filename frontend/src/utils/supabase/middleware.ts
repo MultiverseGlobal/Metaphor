@@ -47,7 +47,7 @@ export async function updateSession(request: NextRequest) {
   const isUnlocked = request.cookies.has("metaphor_unlocked");
   const isAuthenticated = !hasSupabaseConfig || !!user || isUnlocked;
 
-  const isProtectedRoute = request.nextUrl.pathname.startsWith('/dashboard') || request.nextUrl.pathname.startsWith('/inbox');
+  const isProtectedRoute = request.nextUrl.pathname.startsWith('/home') || request.nextUrl.pathname.startsWith('/inbox');
   const isLoginRoute = request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup';
 
   if (!isAuthenticated && isProtectedRoute) {
@@ -63,14 +63,14 @@ export async function updateSession(request: NextRequest) {
   const isLandingPage = request.nextUrl.pathname === '/';
   if (isAuthenticated && isLandingPage) {
     const url = request.nextUrl.clone()
-    url.pathname = hasOnboarded ? '/dashboard' : '/onboarding'
+    url.pathname = hasOnboarded ? '/home' : '/onboarding'
     return NextResponse.redirect(url)
   }
 
   if (isAuthenticated && isLoginRoute) {
     const url = request.nextUrl.clone()
     const redirectParam = request.nextUrl.searchParams.get('redirect')
-    url.pathname = redirectParam || (hasOnboarded ? '/dashboard' : '/onboarding')
+    url.pathname = redirectParam || (hasOnboarded ? '/home' : '/onboarding')
     url.searchParams.delete('redirect')
     return NextResponse.redirect(url)
   }
@@ -85,7 +85,7 @@ export async function updateSession(request: NextRequest) {
   if (isAuthenticated && hasOnboarded && request.nextUrl.pathname === '/onboarding') {
     const url = request.nextUrl.clone()
     const redirectParam = request.nextUrl.searchParams.get('redirect')
-    url.pathname = redirectParam || '/dashboard'
+    url.pathname = redirectParam || '/home'
     url.searchParams.delete('redirect')
     return NextResponse.redirect(url)
   }
