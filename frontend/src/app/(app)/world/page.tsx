@@ -19,20 +19,12 @@ import "@xyflow/react/dist/style.css";
 
 // ── Custom Node Implementation ──
 const CustomNode = ({ data }: { data: any }) => {
-  const isIdentity = data.type === "identity";
-  const isProject = data.type === "project";
-  const isDocument = data.type === "document";
-  
   return (
-    <div className="px-4 py-2 bg-surface-1 border border-border-strong rounded-full shadow-sm flex items-center gap-2 hover:border-primary transition-colors min-w-[120px]">
-      <Handle type="target" position={Position.Top} className="!w-1.5 !h-1.5 !bg-muted !border-none" />
-      <div className={`w-2.5 h-2.5 rounded-full ${
-        isIdentity ? "bg-primary" : 
-        isProject ? "bg-cyan-500" : 
-        isDocument ? "bg-emerald-500" : "bg-rose-500"
-      }`} />
-      <span className="text-xs font-medium text-foreground whitespace-nowrap">{data.label}</span>
-      <Handle type="source" position={Position.Bottom} className="!w-1.5 !h-1.5 !bg-muted !border-none" />
+    <div className="px-3 py-1.5 bg-surface-1 border border-border-strong hover:border-foreground rounded-none shadow-sm flex items-center gap-2 transition-colors min-w-[120px]">
+      <Handle type="target" position={Position.Top} className="!w-1 !h-1 !bg-foreground !border-none !rounded-none" />
+      <div className="text-[10px] uppercase font-mono tracking-widest text-muted">{data.type || "NODE"}</div>
+      <span className="text-xs font-sans font-medium text-foreground whitespace-nowrap ml-2">{data.label}</span>
+      <Handle type="source" position={Position.Bottom} className="!w-1 !h-1 !bg-foreground !border-none !rounded-none" />
     </div>
   );
 };
@@ -214,17 +206,16 @@ export default function KnowledgeGraphPage() {
           </ReactFlow>
 
           {/* Node Type Legend */}
-          <div className="absolute bottom-4 left-4 bg-surface-1/90 backdrop-blur-sm border border-border-subtle rounded-xl p-3 flex flex-col gap-2 shadow-sm">
+          <div className="absolute bottom-4 left-4 bg-surface-1/90 backdrop-blur-sm border border-border-subtle rounded-none p-3 flex flex-col gap-2 shadow-sm">
             <div className="text-[9px] font-mono uppercase tracking-widest text-muted mb-1">Node Types</div>
             {[
-              { label: "Identity", color: "bg-primary" },
-              { label: "Project", color: "bg-cyan-500" },
-              { label: "Document", color: "bg-emerald-500" },
-              { label: "Other", color: "bg-rose-500" },
-            ].map(({ label, color }) => (
-              <div key={label} className="flex items-center gap-2 text-[10px] text-muted">
-                <div className={`w-2 h-2 rounded-full ${color}`} />
-                {label}
+              "Identity",
+              "Project",
+              "Document",
+              "Other",
+            ].map((label) => (
+              <div key={label} className="text-[10px] text-muted font-mono uppercase">
+                [{label}]
               </div>
             ))}
           </div>
@@ -290,7 +281,7 @@ export default function KnowledgeGraphPage() {
               <div key={node.id} className="p-3 bg-background border border-border-subtle rounded-lg flex flex-col gap-1 group cursor-pointer hover:border-primary/50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${node.type.toLowerCase() === 'identity' ? 'bg-primary' : node.type.toLowerCase() === 'project' ? 'bg-cyan-500' : node.type.toLowerCase() === 'document' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                    <span className="text-[9px] uppercase tracking-widest font-mono text-muted">[{node.type}]</span>
                     <span className="text-xs font-semibold text-foreground">{node.name}</span>
                   </div>
                   <span className="text-[10px] text-muted font-mono">{node.connections} edges</span>

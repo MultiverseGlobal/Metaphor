@@ -39,11 +39,11 @@ type Handoff = {
 };
 
 const STATUS_CONFIG: Record<HandoffStatus, { label: string; color: string; bg: string; dot: string }> = {
-  pending:   { label: "Pending",   color: "text-amber-500",   bg: "bg-amber-500/10 border-amber-500/20",   dot: "bg-amber-400" },
-  running:   { label: "Running",   color: "text-primary",     bg: "bg-primary/10 border-primary/20",       dot: "bg-primary animate-pulse" },
-  complete:  { label: "Complete",  color: "text-emerald-500", bg: "bg-emerald-500/10 border-emerald-500/20", dot: "bg-emerald-500" },
-  failed:    { label: "Failed",    color: "text-danger",      bg: "bg-danger/10 border-danger/20",         dot: "bg-danger" },
-  cancelled: { label: "Cancelled", color: "text-muted",       bg: "bg-surface-2 border-border-subtle",     dot: "bg-muted" },
+  pending:   { label: "Pending",   color: "text-warning",     bg: "bg-surface-1 border-border-subtle", dot: "bg-warning" },
+  running:   { label: "Running",   color: "text-foreground",  bg: "bg-surface-2 border-foreground",    dot: "bg-foreground animate-pulse" },
+  complete:  { label: "Complete",  color: "text-success",     bg: "bg-surface-1 border-border-subtle", dot: "bg-success" },
+  failed:    { label: "Failed",    color: "text-danger",      bg: "bg-surface-1 border-border-subtle", dot: "bg-danger" },
+  cancelled: { label: "Cancelled", color: "text-muted",       bg: "bg-surface-1 border-border-subtle", dot: "bg-muted" },
 };
 
 // Mock data for when backend returns nothing
@@ -284,7 +284,7 @@ export default function PipelinePage() {
                           <button
                             onClick={() => handleAction(h.id, "retry")}
                             disabled={actionLoading === h.id + "retry"}
-                            className="flex items-center gap-1.5 px-3.5 py-2 bg-foreground text-background hover:opacity-90 text-xs font-medium rounded-xl transition-all disabled:opacity-50 cursor-pointer"
+                            className="pds-btn-primary w-auto min-h-[32px] px-3 py-1.5 rounded-lg"
                           >
                             <RotateCcw className="w-3.5 h-3.5" /> Retry
                           </button>
@@ -293,7 +293,7 @@ export default function PipelinePage() {
                           <button
                             onClick={() => handleAction(h.id, "resume")}
                             disabled={actionLoading === h.id + "resume"}
-                            className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-background hover:opacity-90 text-xs font-medium rounded-xl transition-all disabled:opacity-50 cursor-pointer"
+                            className="pds-btn-primary w-auto min-h-[32px] px-3 py-1.5 rounded-lg"
                           >
                             <Zap className="w-3.5 h-3.5" /> Resume
                           </button>
@@ -302,7 +302,7 @@ export default function PipelinePage() {
                           <button
                             onClick={() => handleAction(h.id, "cancel")}
                             disabled={actionLoading === h.id + "cancel"}
-                            className="flex items-center gap-1.5 px-3.5 py-2 bg-surface-1 border border-destructive/30 text-destructive hover:bg-destructive/5 text-xs font-medium rounded-xl transition-all disabled:opacity-50 cursor-pointer"
+                            className="pds-btn-ghost w-auto min-h-[32px] px-3 py-1.5 text-danger border-danger/30 hover:border-danger hover:bg-danger/10 rounded-lg"
                           >
                             <XCircle className="w-3.5 h-3.5" /> Cancel
                           </button>

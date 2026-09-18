@@ -138,53 +138,48 @@ export default function SettingsPage() {
   if (loading) return null;
 
   return (
-    <div className="flex flex-col h-full bg-background animate-in fade-in duration-150 max-w-3xl mx-auto p-8">
+    <div className="flex flex-col h-full bg-background animate-in fade-in duration-150 max-w-2xl mx-auto p-8">
       
       <header className="mb-10">
-        <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-2 flex items-center gap-2">
-          <Settings className="w-6 h-6 text-primary" /> Settings
-        </h1>
-        <p className="text-sm text-muted">Control your trust model, data governance, and workspace preferences.</p>
+        <div className="text-[9px] font-mono uppercase tracking-widest text-muted mb-3">Configuration</div>
+        <h1 className="font-display text-3xl text-foreground tracking-tight mb-2">Settings</h1>
+        <p className="text-xs font-mono text-muted">Trust model — data governance — workspace preferences.</p>
       </header>
 
       <div className="space-y-8 mb-12">
         
         {/* Profile & Identity */}
         <section>
-          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 border-b border-border-subtle pb-2">Profile & Identity</h2>
+          <h2 className="text-[10px] font-mono text-muted uppercase tracking-widest mb-4 border-b border-border-subtle pb-2">Profile & Identity</h2>
           <Card className="p-6 space-y-4">
             <div>
-              <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">
-                Display Name
-              </label>
-              <div className="flex gap-3">
+              <label className="pds-label">Display Name</label>
+              <div className="flex gap-2">
                 <input
                   type="text"
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
-                  placeholder="Enter your display name (e.g. SUDO)"
-                  className="flex-1 px-3.5 py-2 rounded-xl bg-surface-1 border border-border-subtle focus:border-primary text-sm text-foreground focus:outline-none transition-colors"
+                  placeholder="e.g. SUDO"
+                  className="flex-1 px-3 py-2 bg-surface-1 border border-border-subtle focus:border-foreground text-sm font-mono text-foreground focus:outline-none transition-colors rounded-sm"
                 />
                 <button
                   onClick={handleSaveName}
                   disabled={savingName}
-                  className="px-4 py-2 bg-foreground text-background hover:opacity-90 font-medium text-xs rounded-xl transition-all disabled:opacity-50 cursor-pointer"
+                  className="pds-btn-primary w-auto min-h-[36px] px-4 rounded-sm text-xs"
                 >
-                  {savingName ? "Saving..." : nameSaved ? "Saved!" : "Save Name"}
+                  {savingName ? "Saving..." : nameSaved ? "✓ Saved" : "Save"}
                 </button>
 
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">
-                Account Email
-              </label>
+              <label className="pds-label mt-4 block">Account Email</label>
               <input
                 type="text"
                 value={userEmail}
                 disabled
-                className="w-full px-3.5 py-2 rounded-xl bg-surface-2 border border-border-subtle text-sm text-muted cursor-not-allowed opacity-75"
+                className="w-full px-3 py-2 rounded-sm bg-surface-2 border border-border-subtle text-sm font-mono text-muted cursor-not-allowed opacity-60"
               />
             </div>
           </Card>
@@ -192,7 +187,7 @@ export default function SettingsPage() {
 
         {/* API Keys */}
         <section>
-          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 border-b border-border-subtle pb-2">API Keys & Authentication</h2>
+          <h2 className="text-[10px] font-mono text-muted uppercase tracking-widest mb-4 border-b border-border-subtle pb-2 mt-8">API Keys & Authentication</h2>
           <Card className="p-6">
             <div className="flex flex-col gap-4">
               <div>
@@ -201,9 +196,9 @@ export default function SettingsPage() {
                 </p>
                 
                 {apiKey ? (
-                  <div className="p-4 bg-surface-2 border border-primary/30 rounded-xl space-y-3 relative group">
+                  <div className="p-4 bg-surface-2 border border-border-strong rounded-sm space-y-3 relative group">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-primary uppercase tracking-wider">Your New API Key</span>
+                      <span className="text-[9px] font-mono text-muted uppercase tracking-widest">New API Key</span>
                       <button 
                         onClick={() => {
                           navigator.clipboard.writeText(apiKey);
@@ -216,21 +211,21 @@ export default function SettingsPage() {
                         <Copy className="w-3.5 h-3.5" /> <span id="copy-key-text">Copy</span>
                       </button>
                     </div>
-                    <code className="block text-sm text-foreground font-mono break-all bg-background p-3 rounded-lg border border-border-subtle">
+                    <code className="block text-xs text-foreground font-mono break-all bg-background p-3 rounded-sm border border-border-strong">
                       {apiKey}
                     </code>
-                    <p className="text-[11px] text-accent-red font-medium flex items-center gap-1.5 mt-2">
-                      <Shield className="w-3.5 h-3.5" /> Please copy this key now. You won't be able to see it again!
+                    <p className="text-[10px] text-danger font-mono flex items-center gap-1.5 mt-2">
+                      <Shield className="w-3 h-3" /> Copy now — this key won&apos;t be shown again.
                     </p>
                   </div>
                 ) : (
                   <button
                     onClick={handleGenerateApiKey}
                     disabled={generatingKey}
-                    className="flex items-center justify-center gap-2 w-full py-3 bg-primary text-primary-foreground font-medium text-sm rounded-xl hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
+                    className="pds-btn-primary rounded-sm text-xs"
                   >
-                    <Key className="w-4 h-4" />
-                    {generatingKey ? "Generating Key..." : "Generate New API Key"}
+                    <Key className="w-3.5 h-3.5" />
+                    {generatingKey ? "Generating..." : "Generate API Key"}
                   </button>
                 )}
               </div>
@@ -241,45 +236,43 @@ export default function SettingsPage() {
         
         {/* Appearance */}
         <section>
-          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 border-b border-border-subtle pb-2">Appearance</h2>
-          <div className="grid grid-cols-3 gap-4">
-            <button onClick={() => updateSetting("theme", "light")} className={`flex flex-col items-center gap-3 p-4 bg-surface-1 border ${settings.theme === 'light' ? 'border-primary' : 'border-border-subtle'} hover:border-primary/50 rounded-xl cursor-pointer transition-colors`}>
-              <div className="w-10 h-10 rounded-full bg-background border border-border-strong flex items-center justify-center shadow-inner text-foreground">
-                <Sun className="w-5 h-5" />
-              </div>
-              <span className={`text-xs font-semibold ${settings.theme === 'light' ? 'text-foreground' : 'text-muted'}`}>Clean (Light)</span>
-            </button>
-            <button onClick={() => updateSetting("theme", "dark")} className={`flex flex-col items-center gap-3 p-4 bg-surface-1 border ${settings.theme === 'dark' ? 'border-primary' : 'border-border-subtle'} hover:border-primary/50 rounded-xl cursor-pointer transition-colors`}>
-              <div className="w-10 h-10 rounded-full bg-stone-900 border border-stone-700 flex items-center justify-center shadow-inner text-stone-200">
-                <Moon className="w-5 h-5" />
-              </div>
-              <span className={`text-xs font-semibold ${settings.theme === 'dark' ? 'text-foreground' : 'text-muted'}`}>Deep (Dark)</span>
-            </button>
-            <button onClick={() => updateSetting("theme", "system")} className={`flex flex-col items-center gap-3 p-4 bg-surface-1 border ${settings.theme === 'system' ? 'border-primary' : 'border-border-subtle'} hover:border-primary/50 rounded-xl cursor-pointer transition-colors`}>
-              <div className="w-10 h-10 rounded-full bg-background border border-border-strong flex items-center justify-center shadow-inner text-muted">
-                <Monitor className="w-5 h-5" />
-              </div>
-              <span className={`text-xs font-semibold ${settings.theme === 'system' ? 'text-foreground' : 'text-muted'}`}>System</span>
-            </button>
+          <h2 className="text-[10px] font-mono text-muted uppercase tracking-widest mb-4 border-b border-border-subtle pb-2 mt-8">Appearance</h2>
+          <div className="grid grid-cols-3 gap-2">
+            {(["light", "dark", "system"] as const).map((t) => {
+              const Icon = t === "light" ? Sun : t === "dark" ? Moon : Monitor;
+              const label = t === "light" ? "Light" : t === "dark" ? "Dark" : "System";
+              return (
+                <button
+                  key={t}
+                  onClick={() => updateSetting("theme", t)}
+                  className={`flex flex-col items-center gap-2 p-4 bg-surface-1 border ${
+                    settings.theme === t ? 'border-foreground' : 'border-border-subtle'
+                  } hover:border-border-strong rounded-sm cursor-pointer transition-colors`}
+                >
+                  <Icon className={`w-5 h-5 ${settings.theme === t ? 'text-foreground' : 'text-muted'}`} />
+                  <span className={`text-[10px] font-mono uppercase tracking-widest ${settings.theme === t ? 'text-foreground' : 'text-muted'}`}>{label}</span>
+                </button>
+              );
+            })}
           </div>
         </section>
 
         {/* Sovereign Trust Model */}
         <section>
-          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 border-b border-border-subtle pb-2 flex items-center gap-2">
-            <Shield className="w-4 h-4 text-emerald-500" /> Trust & Sovereign Mode
+          <h2 className="text-[10px] font-mono text-foreground uppercase tracking-widest mb-4 border-b border-border-subtle pb-2 flex items-center gap-2">
+            <Shield className="w-3.5 h-3.5" /> Trust & Sovereign Mode
           </h2>
-          <Card noPadding className="divide-y divide-border-subtle">
-            <div onClick={() => updateSetting("sovereignMode", !settings.sovereignMode)} className="p-5 flex items-center justify-between hover:bg-surface-2/50 transition-colors cursor-pointer">
-              <div className="flex items-center gap-4">
-                <Shield className="w-5 h-5 text-emerald-500" />
+          <Card noPadding className="divide-y divide-border-subtle rounded-sm">
+            <div onClick={() => updateSetting("sovereignMode", !settings.sovereignMode)} className="p-4 flex items-center justify-between hover:bg-surface-2/50 transition-colors cursor-pointer">
+              <div className="flex items-center gap-3">
+                <Shield className="w-4 h-4 text-muted" />
                 <div>
-                  <h3 className="text-sm font-medium text-foreground">Sovereign Mode</h3>
-                  <p className="text-xs text-muted mt-0.5">Credentials stay local. Raw document text never leaves your machine.</p>
+                  <h3 className="text-xs font-semibold text-foreground">Sovereign Mode</h3>
+                  <p className="text-[10px] font-mono text-muted mt-1">Credentials stay local. Raw document text never leaves your machine.</p>
                 </div>
               </div>
-              <div className={`w-10 h-6 rounded-full relative shadow-inner transition-colors ${settings.sovereignMode ? 'bg-emerald-500' : 'bg-surface-2 border border-border-strong'}`}>
-                <div className={`absolute top-1 w-4 h-4 rounded-full transition-all ${settings.sovereignMode ? 'right-1 bg-white shadow-sm' : 'left-1 bg-muted'}`} />
+              <div className={`w-10 h-5 rounded-full relative shadow-inner transition-colors ${settings.sovereignMode ? 'bg-foreground' : 'bg-surface-2 border border-border-strong'}`}>
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${settings.sovereignMode ? 'right-0.5 bg-background shadow-sm' : 'left-0.5 bg-muted'}`} />
               </div>
             </div>
 
@@ -312,10 +305,10 @@ export default function SettingsPage() {
 
         {/* Developer Access */}
         <section>
-          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 border-b border-border-subtle pb-2">Developer Access</h2>
-          <Card className="p-6 space-y-4">
-            <p className="text-xs text-muted">Use the danger zone below only if you want to fully purge your context graph and start from scratch. This action is irreversible.</p>
-            <button className="w-full py-2.5 border border-destructive/40 text-destructive hover:bg-destructive/5 rounded-xl text-xs font-medium transition-colors cursor-pointer">
+          <h2 className="text-[10px] font-mono text-muted uppercase tracking-widest mb-4 border-b border-border-subtle pb-2 mt-8">Danger Zone</h2>
+          <Card className="p-4 space-y-3 rounded-sm border-danger/20">
+            <p className="text-[10px] font-mono text-muted">Purge your entire context graph. This action is permanent and irreversible.</p>
+            <button className="pds-btn-ghost w-auto min-h-[32px] px-3 text-danger border-danger/30 hover:border-danger hover:bg-danger/10 rounded-sm text-[10px]">
               Delete All Graph Data
             </button>
           </Card>
@@ -323,31 +316,31 @@ export default function SettingsPage() {
 
         {/* Behavior */}
         <section>
-          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 border-b border-border-subtle pb-2">Engine Behavior</h2>
-          <Card noPadding className="divide-y divide-border-subtle">
-            <div onClick={() => updateSetting("passiveIngestion", !settings.passiveIngestion)} className="p-5 flex items-center justify-between hover:bg-surface-2/50 transition-colors cursor-pointer">
-              <div className="flex items-center gap-4">
-                <Database className="w-5 h-5 text-muted" />
+          <h2 className="text-[10px] font-mono text-foreground uppercase tracking-widest mb-4 border-b border-border-subtle pb-2 mt-8">Engine Behavior</h2>
+          <Card noPadding className="divide-y divide-border-subtle rounded-sm">
+            <div onClick={() => updateSetting("passiveIngestion", !settings.passiveIngestion)} className="p-4 flex items-center justify-between hover:bg-surface-2/50 transition-colors cursor-pointer">
+              <div className="flex items-center gap-3">
+                <Database className="w-4 h-4 text-muted" />
                 <div>
-                  <h3 className="text-sm font-medium text-foreground">Passive Ingestion Mode</h3>
-                  <p className="text-xs text-muted mt-0.5">Allow webhooks to automatically create Nodes without approval.</p>
+                  <h3 className="text-xs font-semibold text-foreground">Passive Ingestion Mode</h3>
+                  <p className="text-[10px] font-mono text-muted mt-1">Allow webhooks to automatically create Nodes without approval.</p>
                 </div>
               </div>
-              <div className={`w-10 h-6 rounded-full relative shadow-inner transition-colors ${settings.passiveIngestion ? 'bg-success' : 'bg-surface-2 border border-border-strong'}`}>
-                <div className={`absolute top-1 w-4 h-4 rounded-full transition-all ${settings.passiveIngestion ? 'right-1 bg-white shadow-sm' : 'left-1 bg-muted'}`} />
+              <div className={`w-10 h-5 rounded-full relative shadow-inner transition-colors ${settings.passiveIngestion ? 'bg-foreground' : 'bg-surface-2 border border-border-strong'}`}>
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${settings.passiveIngestion ? 'right-0.5 bg-background shadow-sm' : 'left-0.5 bg-muted'}`} />
               </div>
             </div>
             
-            <div onClick={() => updateSetting("clarificationNotifications", !settings.clarificationNotifications)} className="p-5 flex items-center justify-between hover:bg-surface-2/50 transition-colors cursor-pointer">
-              <div className="flex items-center gap-4">
-                <Bell className="w-5 h-5 text-muted" />
+            <div onClick={() => updateSetting("clarificationNotifications", !settings.clarificationNotifications)} className="p-4 flex items-center justify-between hover:bg-surface-2/50 transition-colors cursor-pointer">
+              <div className="flex items-center gap-3">
+                <Bell className="w-4 h-4 text-muted" />
                 <div>
-                  <h3 className="text-sm font-medium text-foreground">Clarification Notifications</h3>
-                  <p className="text-xs text-muted mt-0.5">Notify me when the engine encounters conflicting truths.</p>
+                  <h3 className="text-xs font-semibold text-foreground">Clarification Notifications</h3>
+                  <p className="text-[10px] font-mono text-muted mt-1">Notify me when the engine encounters conflicting truths.</p>
                 </div>
               </div>
-              <div className={`w-10 h-6 rounded-full relative shadow-inner transition-colors ${settings.clarificationNotifications ? 'bg-success' : 'bg-surface-2 border border-border-strong'}`}>
-                <div className={`absolute top-1 w-4 h-4 rounded-full transition-all ${settings.clarificationNotifications ? 'right-1 bg-white shadow-sm' : 'left-1 bg-muted'}`} />
+              <div className={`w-10 h-5 rounded-full relative shadow-inner transition-colors ${settings.clarificationNotifications ? 'bg-foreground' : 'bg-surface-2 border border-border-strong'}`}>
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${settings.clarificationNotifications ? 'right-0.5 bg-background shadow-sm' : 'left-0.5 bg-muted'}`} />
               </div>
             </div>
           </Card>

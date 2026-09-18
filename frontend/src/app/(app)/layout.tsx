@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { FloatingNav } from "@/components/layout/FloatingNav";
 import { WeavePanel } from "@/components/WeavePanel";
+import { BrainField } from "@/components/ui/BrainField";
 
 export default function DashboardLayout({
   children,
@@ -57,7 +58,9 @@ export default function DashboardLayout({
   }, []);
 
   return (
-    <div className="relative min-h-screen w-screen bg-background text-foreground overflow-x-hidden selection:bg-primary/20">
+    <div className="relative min-h-screen w-screen bg-background text-foreground overflow-x-hidden selection:bg-primary/20 z-0">
+      <BrainField />
+      
       {/* Detached Floating Island Nav (Atlas-style) */}
       <FloatingNav
         isWeaveOpen={isWeavePanelOpen}

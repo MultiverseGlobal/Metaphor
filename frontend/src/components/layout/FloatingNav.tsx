@@ -29,12 +29,10 @@ interface FloatingNavProps {
 }
 
 const ROUTES = [
-  { path: "/explorer", label: "Explorer", icon: Terminal, exact: false },
-  { path: "/overview", label: "Overview", icon: Command, exact: true },
-  { path: "/integrations", label: "Sources", icon: Plug, exact: false },
-  { path: "/graph", label: "Graph", icon: Network, exact: false },
-  { path: "/partitions", label: "Partitions", icon: Layers, exact: false },
-  { path: "/inbox", label: "Inbox", icon: Activity, exact: false },
+  { path: "/home", label: "Home", icon: Activity, exact: false },
+  { path: "/context", label: "Context", icon: Terminal, exact: false },
+  { path: "/world", label: "World", icon: Network, exact: false },
+  { path: "/work", label: "Work", icon: Layers, exact: false },
   { path: "/settings", label: "Settings", icon: Settings, exact: false },
 ];
 
