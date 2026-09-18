@@ -101,8 +101,9 @@ export function FloatingNav({
       localStorage.clear();
       document.cookie = "metaphor_unlocked=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
       document.cookie = "metaphor_onboarded=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+      document.cookie = "metaphor_signed_out=true; path=/; max-age=86400;";
     }
-    router.push("/");
+    router.push("/?landing=true");
   };
 
   const isRouteActive = (routePath: string, exact: boolean) => {

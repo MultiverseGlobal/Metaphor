@@ -134,17 +134,17 @@ export function FirstEntrySequence({ onComplete }: FirstEntrySequenceProps) {
             {phase === "text" || phase === "done" ? (
               <motion.div
                 className="relative z-10 text-center select-none"
-                initial={{ opacity: 0, y: 6, filter: "blur(8px)" }}
-                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                initial={{ opacity: 0, y: 12, filter: "blur(12px)", scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)", scale: 1 }}
+                exit={{ opacity: 0, y: -4, filter: "blur(4px)" }}
+                transition={{ duration: 0.8, ease: [0.25, 1, 0.5, 1] }}
               >
                 <div className="text-[10px] font-mono uppercase tracking-[0.35em] text-muted mb-3">
-                  Your context is assembling
+                  Ecosystem Synchronized
                 </div>
                 <div
                   className="text-5xl md:text-7xl text-foreground tracking-tighter"
-                  style={{ fontFamily: "var(--font-display)", fontWeight: 700, letterSpacing: "-0.04em" }}
+                  style={{ fontFamily: "var(--font-display)", fontWeight: 500, letterSpacing: "-0.02em" }}
                 >
                   Metaphor
                 </div>

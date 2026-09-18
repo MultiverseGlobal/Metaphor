@@ -81,10 +81,11 @@ function InsightCard({ insight }: { insight: Insight }) {
           <AnimatePresence>
             {expanded && (
               <motion.div
-                initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                animate={{ opacity: 1, height: "auto", marginTop: 16 }}
-                exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                className="overflow-hidden"
+                initial={{ opacity: 0, height: 0, marginTop: 0, filter: "blur(4px)", scale: 0.98 }}
+                animate={{ opacity: 1, height: "auto", marginTop: 16, filter: "blur(0px)", scale: 1 }}
+                exit={{ opacity: 0, height: 0, marginTop: 0, filter: "blur(4px)", scale: 0.98 }}
+                transition={{ duration: 0.8, ease: [0.25, 1, 0.5, 1] }} // Level 3 Cinematic
+                className="overflow-hidden transform-gpu"
               >
                 <div className="p-4 rounded-xl bg-surface-2/80 border border-border-subtle shadow-inner">
                   <h4 className="text-[10px] font-mono uppercase tracking-widest text-muted mb-3">Supported By</h4>

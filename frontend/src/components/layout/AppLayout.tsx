@@ -36,11 +36,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       
       {/* FLOATING TOP NAVIGATION */}
       <FloatingNav
-        toggleCommandPalette={toggleCommandPalette}
-        activeWorkspace={activeWorkspace}
-        setActiveWorkspace={setActiveWorkspace}
-        activeView={activeView}
-        setActiveView={setActiveView}
+        onOpenPalette={toggleCommandPalette}
       />
 
       {/* MAIN CONTAINER: CONTENT VIEW */}

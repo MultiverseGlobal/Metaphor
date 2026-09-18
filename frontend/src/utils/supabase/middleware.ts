@@ -59,9 +59,10 @@ export async function updateSession(request: NextRequest) {
 
   const hasOnboarded = request.cookies.has("metaphor_onboarded") || isUnlocked || !hasSupabaseConfig;
 
-  // Redirect logged-in users away from the marketing landing page
+  // Redirect logged-in users away from the marketing landing page unless explicitly signed out or viewing landing
   const isLandingPage = request.nextUrl.pathname === '/';
-  if (isAuthenticated && isLandingPage) {
+  const isExplicitLanding = request.cookies.has("metaphor_signed_out") || request.nextUrl.searchParams.has("landing");
+  if (isAuthenticated && isLandingPage && !isExplicitLanding) {
     const url = request.nextUrl.clone()
     url.pathname = hasOnboarded ? '/home' : '/onboarding'
     return NextResponse.redirect(url)

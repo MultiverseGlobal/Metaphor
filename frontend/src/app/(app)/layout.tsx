@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { FloatingNav } from "@/components/layout/FloatingNav";
 import { WeavePanel } from "@/components/WeavePanel";
-import { BrainField } from "@/components/ui/BrainField";
+import { AmbientField, FieldState } from "@/components/ui/AmbientField";
 import { FirstEntrySequence } from "@/components/ui/FirstEntrySequence";
 import { CommandPalette } from "@/components/ui/CommandPalette";
 
@@ -77,13 +77,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const handleEntryComplete = useCallback(() => setEntryDone(true), []);
 
+  let fieldState: FieldState = "idle";
+  if (pathname.startsWith("/context")) fieldState = "focused";
+  if (pathname.startsWith("/world")) fieldState = "exploring";
+  if (pathname.startsWith("/work")) fieldState = "resolving";
+
   return (
     <div className="relative min-h-screen w-screen bg-background text-foreground overflow-x-hidden selection:bg-accent/20">
       {/* First-entry cinematic — shown only once */}
       <FirstEntrySequence onComplete={handleEntryComplete} />
 
       {/* Ambient field */}
-      <BrainField />
+      <AmbientField fieldState={fieldState} />
 
       {/* Command palette */}
       <CommandPalette open={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} />

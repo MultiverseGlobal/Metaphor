@@ -154,9 +154,9 @@ function KnowledgeGraphInternal() {
       ...n,
       style: {
         ...n.style,
-        opacity: connectedNodeIds.has(n.id) ? 1 : 0.2,
-        filter: connectedNodeIds.has(n.id) ? "none" : "blur(2px)",
-        transition: "all 0.3s ease",
+        opacity: connectedNodeIds.has(n.id) ? 1 : 0.15,
+        filter: connectedNodeIds.has(n.id) ? "none" : "blur(4px)",
+        transition: "all var(--motion-duration-large) var(--motion-ease-cinematic)",
       }
     })));
 
@@ -164,8 +164,8 @@ function KnowledgeGraphInternal() {
       ...e,
       style: {
         ...e.style,
-        opacity: (e.source === selectedNodeId || e.target === selectedNodeId) ? 1 : 0.1,
-        transition: "all 0.3s ease",
+        opacity: (e.source === selectedNodeId || e.target === selectedNodeId) ? 1 : 0.05,
+        transition: "all var(--motion-duration-large) var(--motion-ease-cinematic)",
       }
     })));
   }, [selectedNodeId, edges]);

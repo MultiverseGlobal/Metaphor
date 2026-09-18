@@ -41,7 +41,12 @@ export function StatusBadge({ type, label, dot = false, size = "sm" }: StatusBad
       size === "sm" ? "text-[9px] px-2 py-0.5" : "text-[10px] px-2.5 py-1"
     }`}>
       {dot ? (
-        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dotColor} ${isRunning ? "animate-pulse" : ""}`} />
+        <span className="relative flex h-2 w-2 items-center justify-center shrink-0">
+          {isRunning && (
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${cfg.dotColor}`} />
+          )}
+          <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${cfg.dotColor}`} />
+        </span>
       ) : (
         <Icon className={`shrink-0 ${size === "sm" ? "w-2.5 h-2.5" : "w-3 h-3"} ${isRunning ? "animate-spin" : ""}`} />
       )}
