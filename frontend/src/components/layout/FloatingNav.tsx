@@ -102,7 +102,7 @@ export function FloatingNav({
       document.cookie = "metaphor_unlocked=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
       document.cookie = "metaphor_onboarded=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
     }
-    router.push("/login");
+    router.push("/");
   };
 
   const isRouteActive = (routePath: string, exact: boolean) => {
