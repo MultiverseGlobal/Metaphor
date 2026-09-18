@@ -1,22 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { fetchFromMetaphor } from "@/app/api";
 import {
-  Activity,
-  Target,
-  Zap,
-  Clock,
-  RotateCcw,
-  XCircle,
-  Search,
-  ChevronRight,
-  Bot,
-  ArrowRight,
-  FileText,
-  CheckCircle2,
+  Activity, ArrowRight, FileText, Bot, Clock, ChevronDown, ChevronUp
 } from "lucide-react";
-import { Card } from "@/components/ui/Card";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { LoadingState } from "@/components/ui/LoadingState";
 
 type HandoffStatus = "pending" | "running" | "complete" | "failed" | "cancelled";
 
@@ -38,60 +29,207 @@ type Handoff = {
   payload?: string;
 };
 
-const STATUS_CONFIG: Record<HandoffStatus, { label: string; color: string; bg: string; dot: string }> = {
-  pending:   { label: "Pending",   color: "text-warning",     bg: "bg-surface-1 border-border-subtle", dot: "bg-warning" },
-  running:   { label: "Running",   color: "text-foreground",  bg: "bg-surface-2 border-foreground",    dot: "bg-foreground animate-pulse" },
-  complete:  { label: "Complete",  color: "text-success",     bg: "bg-surface-1 border-border-subtle", dot: "bg-success" },
-  failed:    { label: "Failed",    color: "text-danger",      bg: "bg-surface-1 border-border-subtle", dot: "bg-danger" },
-  cancelled: { label: "Cancelled", color: "text-muted",       bg: "bg-surface-1 border-border-subtle", dot: "bg-muted" },
-};
-
-// Mock data for when backend returns nothing
 const MOCK_HANDOFFS: Handoff[] = [
   {
-    id: "h-001",
-    source_agent: "Claude (Cursor)",
-    target_agent: "ChatGPT (ChatGPT.com)",
-    task_goal: "Summarize architectural decisions from Metaphor OS codebase",
-    status: "complete",
-    artifacts: [{ name: "arch_summary.md", type: "document" }, { name: "decisions.json", type: "data" }],
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-    completed_at: new Date(Date.now() - 3200000).toISOString(),
-  },
-  {
-    id: "h-002",
+    id: "h-1042",
     source_agent: "Antigravity IDE",
     target_agent: "Claude (Cursor)",
-    task_goal: "Review and fix TypeScript errors in frontend pages",
+    task_goal: "Fix TypeScript errors in frontend UI components",
     status: "running",
-    artifacts: [],
-    created_at: new Date(Date.now() - 1200000).toISOString(),
+    created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+    artifacts: [
+      { name: "Button.tsx", type: "code" },
+      { name: "error_log.txt", type: "text" },
+    ],
+    payload: "Review these two files and apply the PDS-v5 token system to the Button component. The error log contains the current TSC output.",
   },
   {
-    id: "h-003",
-    source_agent: "Cursor IDE",
-    target_agent: "Metaphor OS",
-    task_goal: "Ingest updated codebase context for graph indexing",
-    status: "pending",
-    artifacts: [],
-    created_at: new Date(Date.now() - 600000).toISOString(),
+    id: "h-1041",
+    source_agent: "Claude (Cursor)",
+    target_agent: "Orion",
+    task_goal: "Summarise architectural decisions into ADR",
+    status: "complete",
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+    completed_at: new Date(Date.now() - 1000 * 60 * 60 * 1.5).toISOString(),
+    artifacts: [
+      { name: "ADR-42.md", type: "document" },
+    ],
+    payload: "Generated ADR 42 regarding the NATS JetStream migration.",
   },
+  {
+    id: "h-1040",
+    source_agent: "Metaphor UI",
+    target_agent: "Antigravity IDE",
+    task_goal: "Generate visual QA report for /world route",
+    status: "failed",
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+    completed_at: new Date(Date.now() - 1000 * 60 * 60 * 23.9).toISOString(),
+    artifacts: [],
+    payload: "Agent failed to launch browser instance. Port collision detected.",
+  }
 ];
 
-export default function PipelinePage() {
-  const [handoffs, setHandoffs] = useState<Handoff[]>([]);
+// ── Flow Diagram ───────────────────────────────────────────────────────────
+
+function HandoffFlow({ handoff }: { handoff: Handoff }) {
+  const isRunning = handoff.status === "running";
+  
+  return (
+    <div className="flex items-center justify-between w-full max-w-2xl mx-auto py-8">
+      {/* Source */}
+      <div className="flex flex-col items-center gap-3 relative z-10 w-32">
+        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border shadow-sm transition-colors ${
+          isRunning ? "bg-surface-2 border-foreground text-foreground" : "bg-surface-1 border-border-subtle text-muted"
+        }`}>
+          <Bot className="w-6 h-6" />
+        </div>
+        <span className="text-xs font-semibold text-center">{handoff.source_agent}</span>
+      </div>
+
+      {/* Path */}
+      <div className="flex-1 relative flex items-center justify-center mx-4">
+        <svg className="absolute w-full h-8 top-1/2 -translate-y-1/2 overflow-visible">
+          <line 
+            x1="0" y1="50%" x2="100%" y2="50%" 
+            stroke="var(--color-border-strong)" 
+            strokeWidth="2" 
+            strokeDasharray={isRunning ? "6 6" : "0"}
+            style={{ animation: isRunning ? "handoffFlow 1.5s linear infinite" : "none" }}
+          />
+          {isRunning && (
+            <motion.circle 
+              cx="0" cy="50%" r="4" 
+              fill="var(--color-foreground)"
+              animate={{ cx: ["0%", "100%"] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+            />
+          )}
+        </svg>
+        <div className="bg-surface-1 border border-border-subtle px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-widest text-muted z-10 shadow-sm whitespace-nowrap">
+          {handoff.artifacts.length} Artifact{handoff.artifacts.length !== 1 ? "s" : ""}
+        </div>
+      </div>
+
+      {/* Target */}
+      <div className="flex flex-col items-center gap-3 relative z-10 w-32">
+        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border shadow-sm transition-colors ${
+          isRunning ? "bg-foreground border-foreground text-background" : "bg-surface-1 border-border-subtle text-muted"
+        }`}>
+          <Bot className="w-6 h-6" />
+        </div>
+        <span className="text-xs font-semibold text-center">{handoff.target_agent}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Timeline Item ──────────────────────────────────────────────────────────
+
+function HandoffTimelineItem({ handoff }: { handoff: Handoff }) {
+  const [expanded, setExpanded] = useState(handoff.status === "running");
+
+  return (
+    <motion.div 
+      layout
+      className="pds-card overflow-hidden transition-colors hover:border-border-strong bg-surface-1/50 backdrop-blur-sm"
+    >
+      <div 
+        className="p-5 flex items-start sm:items-center justify-between gap-4 cursor-pointer"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0 flex-col sm:flex-row">
+          <div className="flex items-center gap-3 shrink-0">
+            <StatusBadge type={handoff.status} dot />
+            <span className="text-[10px] font-mono text-muted">{new Date(handoff.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+          </div>
+          
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <span className="text-sm font-semibold truncate shrink-0 max-w-[120px]">{handoff.source_agent}</span>
+            <ArrowRight className="w-3 h-3 text-muted shrink-0" />
+            <span className="text-sm font-semibold truncate shrink-0 max-w-[120px]">{handoff.target_agent}</span>
+            <span className="text-sm text-muted truncate ml-2 hidden md:block border-l border-border-subtle pl-3">{handoff.task_goal}</span>
+          </div>
+        </div>
+        
+        <button className="p-1 text-muted hover:text-foreground hover:bg-surface-2 rounded-md transition-colors shrink-0">
+          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="border-t border-border-subtle bg-surface-2/40"
+          >
+            <div className="p-6">
+              
+              {handoff.status === "running" && (
+                <div className="mb-8 border-b border-border-subtle pb-8">
+                  <HandoffFlow handoff={handoff} />
+                </div>
+              )}
+
+              <div className="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h4 className="text-[10px] font-mono uppercase tracking-widest text-muted mb-2">Objective</h4>
+                  <p className="text-sm text-foreground font-medium mb-6">{handoff.task_goal}</p>
+                  
+                  {handoff.payload && (
+                    <>
+                      <h4 className="text-[10px] font-mono uppercase tracking-widest text-muted mb-2">Payload</h4>
+                      <p className="text-sm text-muted bg-surface-1 border border-border-subtle p-3 rounded-lg leading-relaxed">
+                        {handoff.payload}
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                <div>
+                  <h4 className="text-[10px] font-mono uppercase tracking-widest text-muted mb-2">Transferred Artifacts</h4>
+                  {handoff.artifacts.length > 0 ? (
+                    <div className="space-y-2">
+                      {handoff.artifacts.map((a, i) => (
+                        <div key={i} className="flex items-center gap-3 p-3 bg-surface-1 border border-border-subtle rounded-lg">
+                          <FileText className="w-4 h-4 text-muted" />
+                          <span className="text-sm font-mono text-foreground flex-1 truncate">{a.name}</span>
+                          <span className="text-[10px] uppercase font-mono tracking-wider text-muted bg-surface-2 px-1.5 py-0.5 rounded">{a.type}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted italic p-3 bg-surface-1 border border-border-subtle rounded-lg">No artifacts attached.</p>
+                  )}
+                  
+                  <div className="mt-6 flex items-center justify-between text-[10px] font-mono text-muted">
+                    <span>ID: {handoff.id}</span>
+                    {handoff.completed_at && <span>Completed: {new Date(handoff.completed_at).toLocaleTimeString()}</span>}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+// ── Page ───────────────────────────────────────────────────────────────────
+
+export default function WorkEnvironment() {
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<HandoffStatus | "all">("all");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [handoffs, setHandoffs] = useState<Handoff[]>([]);
 
   useEffect(() => {
-    async function loadHandoffs() {
+    async function fetchWork() {
       try {
-        const data = await fetchFromMetaphor("/graph/handoffs?limit=50");
-        if (data?.handoffs && data.handoffs.length > 0) {
-          setHandoffs(data.handoffs);
+        const res = await fetchFromMetaphor("/graph/handoffs?limit=50");
+        if (res?.handoffs?.length > 0) {
+          setHandoffs(res.handoffs);
         } else {
           setHandoffs(MOCK_HANDOFFS);
         }
@@ -101,227 +239,63 @@ export default function PipelinePage() {
         setLoading(false);
       }
     }
-    loadHandoffs();
+    fetchWork();
   }, []);
 
-  const handleAction = async (id: string, action: "resume" | "cancel" | "retry") => {
-    setActionLoading(id + action);
-    try {
-      await fetchFromMetaphor(`/graph/handoffs/${id}/${action}`, undefined, "POST");
-      setHandoffs(prev =>
-        prev.map(h =>
-          h.id === id
-            ? { ...h, status: action === "cancel" ? "cancelled" : action === "retry" ? "pending" : "running" }
-            : h
-        )
-      );
-    } catch (e) {
-      console.error(`Failed to ${action} handoff:`, e);
-    } finally {
-      setActionLoading(null);
-    }
-  };
+  if (loading) {
+    return <LoadingState context="handoffs" className="min-h-screen" />;
+  }
 
-  const filtered = handoffs.filter(h => {
-    const matchSearch =
-      h.task_goal.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      h.source_agent.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      h.target_agent.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchStatus = statusFilter === "all" || h.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
-
-  const statusCounts = handoffs.reduce<Record<string, number>>((acc, h) => {
-    acc[h.status] = (acc[h.status] || 0) + 1;
-    return acc;
-  }, {});
+  const runningCount = handoffs.filter(h => h.status === "running").length;
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 sm:px-8 py-8 animate-in fade-in duration-200">
+    <div className="relative w-full min-h-screen pt-28 pb-32 px-6 md:px-12 lg:px-20 animate-in fade-in duration-500">
+      
+      <div className="max-w-4xl mx-auto space-y-12">
+        <header className="border-b border-border-subtle pb-8">
+          <h1 className="text-4xl md:text-5xl font-display text-foreground tracking-tight mb-4" style={{ fontFamily: "var(--font-display)" }}>
+            Work & Handoffs
+          </h1>
+          <p className="text-lg text-muted max-w-2xl leading-relaxed flex items-center gap-2">
+            The nervous system of the ecosystem. <span className="font-mono text-xs bg-surface-2 px-2 py-0.5 rounded text-foreground">{runningCount} active</span>
+          </p>
+        </header>
 
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-2 flex items-center gap-2">
-          <Activity className="w-6 h-6 text-primary" />
-          Agent Handoffs
-        </h1>
-        <p className="text-sm text-muted max-w-2xl">
-          Durable record of context packages passed between AI agents. Each handoff carries a task goal and artifact trail.
-        </p>
+        <section>
+          <div className="flex items-center gap-2 border-b border-border-subtle pb-2 mb-6">
+            <Activity className="w-4 h-4 text-muted" />
+            <h2 className="text-[10px] font-mono uppercase tracking-widest text-muted">Timeline</h2>
+          </div>
+
+          <motion.div 
+            className="space-y-4"
+            initial="hidden"
+            animate="show"
+            variants={{
+              hidden: {},
+              show: { transition: { staggerChildren: 0.08 } }
+            }}
+          >
+            {handoffs.map((h) => (
+              <motion.div
+                key={h.id}
+                variants={{
+                  hidden: { opacity: 0, y: 12, filter: "blur(4px)" },
+                  show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } }
+                }}
+              >
+                <HandoffTimelineItem handoff={h} />
+              </motion.div>
+            ))}
+            {handoffs.length === 0 && (
+              <p className="text-muted text-sm italic py-8 text-center border border-dashed border-border-subtle rounded-xl bg-surface-1/50">
+                No handoffs recorded in this partition.
+              </p>
+            )}
+          </motion.div>
+        </section>
+
       </div>
-
-      {/* Telemetry Pills */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {(["all", "running", "pending", "complete", "failed", "cancelled"] as const).map(s => {
-          const count = s === "all" ? handoffs.length : (statusCounts[s] || 0);
-          const cfg = s !== "all" ? STATUS_CONFIG[s] : null;
-          return (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${
-                statusFilter === s
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-surface-1 text-muted border-border-subtle hover:text-foreground"
-              }`}
-            >
-              {cfg && <div className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />}
-              <span className="capitalize">{s}</span>
-              <span className="opacity-70">({count})</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Search */}
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Search by agent name or task goal..."
-          className="w-full bg-surface-1 border border-border-subtle rounded-xl pl-9 pr-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary transition-colors"
-        />
-      </div>
-
-      {/* Timeline */}
-      {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="h-24 rounded-2xl bg-surface-1 animate-pulse" />
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
-        <Card className="p-16 text-center">
-          <Activity className="w-8 h-8 text-muted/40 mx-auto mb-3" />
-          <p className="text-sm text-muted">No handoffs match your filters.</p>
-        </Card>
-      ) : (
-        <div className="relative space-y-3">
-          {/* Vertical timeline line */}
-          <div className="absolute left-7 top-8 bottom-8 w-px bg-border-subtle hidden sm:block" />
-
-          {filtered.map(h => {
-            const cfg = STATUS_CONFIG[h.status];
-            const isExpanded = expandedId === h.id;
-
-            return (
-              <div key={h.id} className="relative pl-0 sm:pl-14">
-                {/* Timeline Dot */}
-                <div className={`absolute left-5 top-6 w-3 h-3 rounded-full border-2 border-background ${cfg.dot} hidden sm:block`} />
-
-                <Card className={`p-5 transition-all duration-200 hover:border-border-strong ${isExpanded ? "border-border-strong" : ""}`}>
-                  <div
-                    className="flex items-start justify-between gap-4 cursor-pointer"
-                    onClick={() => setExpandedId(isExpanded ? null : h.id)}
-                  >
-                    <div className="flex-1 min-w-0">
-                      {/* Agent Route */}
-                      <div className="flex items-center gap-2 text-xs text-muted mb-2 flex-wrap">
-                        <Bot className="w-3.5 h-3.5 text-primary shrink-0" />
-                        <span className="font-medium text-foreground">{h.source_agent}</span>
-                        <ArrowRight className="w-3 h-3 shrink-0" />
-                        <span className="font-medium text-foreground">{h.target_agent}</span>
-                        <span className="opacity-40">·</span>
-                        <Clock className="w-3 h-3 shrink-0" />
-                        <span>{new Date(h.created_at).toLocaleString()}</span>
-                      </div>
-
-                      {/* Goal */}
-                      <p className="text-sm font-medium text-foreground truncate">{h.task_goal}</p>
-
-                      {/* Artifacts badge */}
-                      {h.artifacts.length > 0 && (
-                        <div className="flex items-center gap-1 mt-2">
-                          <FileText className="w-3 h-3 text-muted" />
-                          <span className="text-[11px] text-muted">{h.artifacts.length} artifact{h.artifacts.length > 1 ? "s" : ""}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border ${cfg.bg} ${cfg.color}`}>
-                        {cfg.label}
-                      </span>
-                      <ChevronRight className={`w-4 h-4 text-muted transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`} />
-                    </div>
-                  </div>
-
-                  {/* Expanded Detail */}
-                  {isExpanded && (
-                    <div className="mt-5 pt-5 border-t border-border-subtle animate-in fade-in duration-200 space-y-4">
-                      
-                      {/* Payload preview */}
-                      {h.payload && (
-                        <div>
-                          <div className="text-[9px] font-mono uppercase tracking-widest text-muted mb-2">Context Payload</div>
-                          <pre className="text-xs text-muted bg-background border border-border-subtle rounded-xl p-4 overflow-x-auto max-h-40">
-                            {h.payload}
-                          </pre>
-                        </div>
-                      )}
-
-                      {/* Artifacts */}
-                      {h.artifacts.length > 0 && (
-                        <div>
-                          <div className="text-[9px] font-mono uppercase tracking-widest text-muted mb-2">Artifacts</div>
-                          <div className="flex flex-wrap gap-2">
-                            {h.artifacts.map((a, i) => (
-                              <div key={i} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-2 border border-border-subtle rounded-lg text-xs">
-                                <FileText className="w-3 h-3 text-muted" />
-                                <span className="font-mono text-foreground">{a.name}</span>
-                                {a.size && <span className="text-muted opacity-60">{a.size}</span>}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-2 pt-2">
-                        {(h.status === "failed" || h.status === "cancelled") && (
-                          <button
-                            onClick={() => handleAction(h.id, "retry")}
-                            disabled={actionLoading === h.id + "retry"}
-                            className="pds-btn-primary w-auto min-h-[32px] px-3 py-1.5 rounded-lg"
-                          >
-                            <RotateCcw className="w-3.5 h-3.5" /> Retry
-                          </button>
-                        )}
-                        {h.status === "pending" && (
-                          <button
-                            onClick={() => handleAction(h.id, "resume")}
-                            disabled={actionLoading === h.id + "resume"}
-                            className="pds-btn-primary w-auto min-h-[32px] px-3 py-1.5 rounded-lg"
-                          >
-                            <Zap className="w-3.5 h-3.5" /> Resume
-                          </button>
-                        )}
-                        {(h.status === "pending" || h.status === "running") && (
-                          <button
-                            onClick={() => handleAction(h.id, "cancel")}
-                            disabled={actionLoading === h.id + "cancel"}
-                            className="pds-btn-ghost w-auto min-h-[32px] px-3 py-1.5 text-danger border-danger/30 hover:border-danger hover:bg-danger/10 rounded-lg"
-                          >
-                            <XCircle className="w-3.5 h-3.5" /> Cancel
-                          </button>
-                        )}
-                        {h.status === "complete" && (
-                          <div className="flex items-center gap-1.5 text-xs text-emerald-500">
-                            <CheckCircle2 className="w-4 h-4" />
-                            Completed {h.completed_at ? new Date(h.completed_at).toLocaleTimeString() : ""}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </Card>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }

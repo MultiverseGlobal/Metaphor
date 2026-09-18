@@ -1,17 +1,27 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { usePathname } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { FloatingNav } from "@/components/layout/FloatingNav";
 import { WeavePanel } from "@/components/WeavePanel";
 import { BrainField } from "@/components/ui/BrainField";
+import { FirstEntrySequence } from "@/components/ui/FirstEntrySequence";
+import { CommandPalette } from "@/components/ui/CommandPalette";
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+const PAGE_VARIANTS = {
+  initial:  { opacity: 0, y: 6, filter: "blur(4px)" },
+  animate:  { opacity: 1, y: 0, filter: "blur(0px)" },
+  exit:     { opacity: 0, y: -4, filter: "blur(2px)" },
+};
+const PAGE_TRANSITION = { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const };
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isWeavePanelOpen, setIsWeavePanelOpen] = useState(false);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [entryDone, setEntryDone] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     async function fetchUser() {
@@ -32,21 +42,16 @@ export default function DashboardLayout({
           ? emailFirstWord.charAt(0).toUpperCase() + emailFirstWord.slice(1)
           : null;
         const fallbackName = googleFullName || cleanEmailName || "Your Workspace";
-        const fallbackEmail = sbUser?.email || "workspace@metaphor.os";
 
         const isGenericName = !data?.name || data.name === "Developer User" || data.name === "Supabase User";
         const resolvedName = storedCustomName || (!isGenericName ? data.name : fallbackName);
-        setUser({
-          name: resolvedName,
-          email: data?.email || fallbackEmail,
-        });
-      } catch (e) {
-        const storedCustomName = typeof window !== "undefined" ? localStorage.getItem("metaphor_user_name") : null;
-        setUser({ name: storedCustomName || "Local User", email: "user@local" });
+        setUser({ name: resolvedName, email: data?.email || sbUser?.email || "workspace@metaphor.os" });
+      } catch {
+        const stored = typeof window !== "undefined" ? localStorage.getItem("metaphor_user_name") : null;
+        setUser({ name: stored || "Local User", email: "user@local" });
       }
     }
     fetchUser();
-
     import("@/lib/settings").then((m) => m.pullSettingsFromCloud());
 
     const handleProfileUpdate = () => {
@@ -57,21 +62,56 @@ export default function DashboardLayout({
     return () => window.removeEventListener("user-profile-updated", handleProfileUpdate);
   }, []);
 
+  // ⌘K / Ctrl+K global shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setIsPaletteOpen((o) => !o);
+      }
+      if (e.key === "Escape") setIsPaletteOpen(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  const handleEntryComplete = useCallback(() => setEntryDone(true), []);
+
   return (
-    <div className="relative min-h-screen w-screen bg-background text-foreground overflow-x-hidden selection:bg-primary/20 z-0">
+    <div className="relative min-h-screen w-screen bg-background text-foreground overflow-x-hidden selection:bg-accent/20">
+      {/* First-entry cinematic — shown only once */}
+      <FirstEntrySequence onComplete={handleEntryComplete} />
+
+      {/* Ambient field */}
       <BrainField />
-      
-      {/* Detached Floating Island Nav (Atlas-style) */}
+
+      {/* Command palette */}
+      <CommandPalette open={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} />
+
+      {/* Navigation */}
       <FloatingNav
         isWeaveOpen={isWeavePanelOpen}
         onToggleWeave={() => setIsWeavePanelOpen((o) => !o)}
+        onOpenPalette={() => setIsPaletteOpen(true)}
         user={user}
       />
 
-      {/* Full-width Spatial Canvas */}
+      {/* Page area */}
       <div className="flex w-full min-h-screen relative">
         <main className="flex-1 w-full relative">
-          {children}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={pathname}
+              variants={PAGE_VARIANTS}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={PAGE_TRANSITION}
+              className="w-full"
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
         </main>
 
         {/* Weave Intelligence side drawer */}
