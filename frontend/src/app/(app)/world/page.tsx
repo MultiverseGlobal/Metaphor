@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { Network, Search, Maximize2, Share2, Activity, ArrowRight, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -268,8 +268,10 @@ function KnowledgeGraphInternal() {
 
 export default function KnowledgeGraphPage() {
   return (
-    <ReactFlowProvider>
-      <KnowledgeGraphInternal />
-    </ReactFlowProvider>
+    <Suspense fallback={<LoadingState context="graph" className="h-screen w-screen absolute inset-0" />}>
+      <ReactFlowProvider>
+        <KnowledgeGraphInternal />
+      </ReactFlowProvider>
+    </Suspense>
   );
 }
