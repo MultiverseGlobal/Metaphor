@@ -69,7 +69,10 @@ function LoginForm() {
     } else {
       // Single-tenant sovereign bypass:
       document.cookie = "metaphor_unlocked=true; path=/; max-age=31536000";
+      document.cookie = "metaphor_onboarded=true; path=/; max-age=31536000";
       if (typeof window !== "undefined") {
+        localStorage.setItem("metaphor_unlocked", "true");
+        localStorage.setItem("metaphor_onboarded", "true");
         localStorage.setItem("metaphor_user_name", "Admin");
       }
       setLoading(false);

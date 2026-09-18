@@ -6,39 +6,46 @@ export async function updateSession(request: NextRequest) {
     request,
   })
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
-
   let user = null;
+  const hasSupabaseConfig = Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
 
-  try {
-    const { data } = await supabase.auth.getUser()
-    user = data?.user || null;
-  } catch (err) {
-    console.error("Middleware auth error (failing closed):", err);
-    user = null;
+  if (hasSupabaseConfig) {
+    try {
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll() {
+              return request.cookies.getAll()
+            },
+            setAll(cookiesToSet) {
+              cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+              supabaseResponse = NextResponse.next({
+                request,
+              })
+              cookiesToSet.forEach(({ name, value, options }) =>
+                supabaseResponse.cookies.set(name, value, options)
+              )
+            },
+          },
+        }
+      )
+      const { data } = await supabase.auth.getUser()
+      user = data?.user || null;
+    } catch (err) {
+      console.error("Middleware auth error:", err);
+      user = null;
+    }
+  } else {
+    // Single-tenant or sovereign environment without cloud Supabase keys
+    user = { id: "sovereign_admin" };
   }
 
   const isUnlocked = request.cookies.has("metaphor_unlocked");
-  const isAuthenticated = !!user || isUnlocked;
+  const isAuthenticated = !hasSupabaseConfig || !!user || isUnlocked;
 
   const isProtectedRoute = request.nextUrl.pathname.startsWith('/dashboard') || request.nextUrl.pathname.startsWith('/inbox');
   const isLoginRoute = request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup';
@@ -50,7 +57,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  const hasOnboarded = request.cookies.has("metaphor_onboarded") || isUnlocked;
+  const hasOnboarded = request.cookies.has("metaphor_onboarded") || isUnlocked || !hasSupabaseConfig;
 
   // Redirect logged-in users away from the marketing landing page
   const isLandingPage = request.nextUrl.pathname === '/';
@@ -62,19 +69,24 @@ export async function updateSession(request: NextRequest) {
 
   if (isAuthenticated && isLoginRoute) {
     const url = request.nextUrl.clone()
-    url.pathname = hasOnboarded ? '/dashboard' : '/onboarding'
+    const redirectParam = request.nextUrl.searchParams.get('redirect')
+    url.pathname = redirectParam || (hasOnboarded ? '/dashboard' : '/onboarding')
+    url.searchParams.delete('redirect')
     return NextResponse.redirect(url)
   }
 
   if (isAuthenticated && isProtectedRoute && !hasOnboarded) {
     const url = request.nextUrl.clone()
     url.pathname = '/onboarding'
+    url.searchParams.set('redirect', request.nextUrl.pathname)
     return NextResponse.redirect(url)
   }
 
   if (isAuthenticated && hasOnboarded && request.nextUrl.pathname === '/onboarding') {
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    const redirectParam = request.nextUrl.searchParams.get('redirect')
+    url.pathname = redirectParam || '/dashboard'
+    url.searchParams.delete('redirect')
     return NextResponse.redirect(url)
   }
 
