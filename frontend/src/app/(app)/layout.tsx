@@ -79,13 +79,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const handleEntryComplete = useCallback(() => setEntryDone(true), []);
 
+  // Minimal field state — no colour pollution on pure-black canvas
   let fieldState: FieldState = "idle";
   if (pathname.startsWith("/context")) fieldState = "focused";
-  if (pathname.startsWith("/world")) fieldState = "exploring";
-  if (pathname.startsWith("/work")) fieldState = "resolving";
+  if (pathname.startsWith("/world"))   fieldState = "exploring";
+  if (pathname.startsWith("/work"))    fieldState = "resolving";
 
   return (
-    <div className="relative min-h-screen w-screen bg-background text-foreground overflow-x-hidden selection:bg-accent/20">
+    <div className="relative min-h-screen w-screen bg-background text-foreground overflow-x-hidden selection:bg-[rgba(76,175,125,0.15)]">
       {/* First-entry cinematic — shown only once */}
       <FirstEntrySequence onComplete={handleEntryComplete} />
 
@@ -103,8 +104,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         user={user}
       />
 
-      {/* Page area */}
-      <div className="flex w-full min-h-screen relative">
+      {/* Page area — pt-12 matches the 48px slim nav bar */}
+      <div className="flex w-full min-h-screen relative pt-12">
         <main className="flex-1 w-full relative">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div

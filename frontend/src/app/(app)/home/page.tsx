@@ -6,12 +6,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { fetchFromMetaphor } from "@/app/api";
-import { ContextField } from "@/components/ui/ContextField";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { LoadingState } from "@/components/ui/LoadingState";
-import {
-  ArrowRight, Clock, Network, ChevronRight, Shield, Target, Database, Lightbulb
-} from "lucide-react";
+import { ArrowRight, Clock, Network, ChevronRight, Shield, Target, Database, Lightbulb } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -78,6 +75,26 @@ function typeIcon(t: NodeType) {
     case "constraint": return Target;
     case "insight":    return Lightbulb;
     default:           return Database;
+  }
+}
+
+// Type dot colour
+function typeColor(t: NodeType): string {
+  switch (t) {
+    case "decision":   return "rgba(129,140,248,1)"; // indigo
+    case "constraint": return "#f59e0b"; // amber
+    case "insight":    return "#4CAF7D"; // mint
+    default:           return "rgba(240,240,238,0.35)";
+  }
+}
+
+// Status stripe colour for handoff items
+function statusStripe(s: Handoff["status"]): string {
+  switch (s) {
+    case "running":  return "#4CAF7D";
+    case "complete": return "rgba(34,197,94,0.6)";
+    case "failed":   return "rgba(244,63,94,0.7)";
+    default:         return "rgba(255,255,255,0.10)";
   }
 }
 
@@ -170,6 +187,7 @@ export default function HomeEnvironment() {
   // Greeting
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 
   if (authLoading) {
     return (
@@ -180,58 +198,112 @@ export default function HomeEnvironment() {
   }
 
   return (
-    <div className="relative w-full min-h-screen pb-24">
+    <div className="relative w-full min-h-screen pb-32">
 
-      {/* ── Hero ──────────────────────────────────────────────────────── */}
-      <section className="relative pt-28 pb-16 px-6 md:px-12 lg:px-20 overflow-hidden">
-        {/* ContextField background */}
-        <div className="absolute inset-0 opacity-[0.06]">
-          <ContextField nodeCount={22} intensity="ambient" />
-        </div>
-
-        <div className="relative max-w-5xl mx-auto">
+      {/* ── Editorial Hero ─────────────────────────────────────────────── */}
+      <section className="px-6 md:px-12 lg:px-20 pt-14 pb-16">
+        <div className="max-w-5xl mx-auto">
           <motion.div
-            initial={{ opacity: 0, y: 16, filter: "blur(8px)" }}
+            initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="text-[9px] font-mono uppercase tracking-[0.3em] text-muted mb-3">
-              {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
-            </div>
-            <h1 className="font-display text-4xl md:text-5xl text-foreground tracking-tighter mb-3" style={{ fontFamily: "var(--font-display)" }}>
-              {greeting}, {userName}.
-            </h1>
-            <p className="text-sm text-muted max-w-md leading-relaxed">
-              {dataLoading
-                ? "Resolving your context across the ecosystem..."
-                : `${changes.length} things changed since your last visit.`}
-            </p>
-          </motion.div>
-
-          {/* Change count pill */}
-          {!dataLoading && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-1/80 border border-border-subtle backdrop-blur-sm shadow-sm"
+            {/* Date eyebrow */}
+            <div
+              className="text-[10px] font-mono uppercase tracking-[0.25em] mb-5"
+              style={{ color: "rgba(240,240,238,0.28)" }}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-              <span className="text-xs font-mono text-muted">
-                Context live · {changes.length} update{changes.length !== 1 ? "s" : ""}
-              </span>
-            </motion.div>
-          )}
+              {today}
+            </div>
+
+            {/* Serif greeting headline */}
+            <h1
+              style={{
+                fontFamily: "'Cormorant Garamond', Georgia, serif",
+                fontSize: "clamp(38px, 5vw, 64px)",
+                fontWeight: 400,
+                lineHeight: 1.1,
+                letterSpacing: "-0.015em",
+                color: "var(--color-foreground)",
+                marginBottom: "16px",
+              }}
+            >
+              {greeting},{" "}
+              <em style={{ fontStyle: "italic", fontWeight: 300 }}>
+                {userName}.
+              </em>
+            </h1>
+
+            {/* Subtitle — editorial prose */}
+            <p
+              className="text-base max-w-lg leading-relaxed"
+              style={{
+                fontFamily: "'Satoshi', sans-serif",
+                color: "var(--color-muted)",
+              }}
+            >
+              {dataLoading
+                ? "Resolving your context across the mesh…"
+                : `Your context mesh has ${changes.length} active thread${changes.length !== 1 ? "s" : ""}. ${handoffs.filter(h => h.status === "running").length} agents running now.`}
+            </p>
+
+            {/* Live pulse badge */}
+            {!dataLoading && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.28, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                className="inline-flex items-center gap-2 mt-6 px-3.5 py-1.5 rounded-full"
+                style={{
+                  background: "rgba(76,175,125,0.08)",
+                  border: "1px solid rgba(76,175,125,0.18)",
+                }}
+              >
+                <span
+                  className="relative flex h-1.5 w-1.5"
+                >
+                  <span
+                    className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                    style={{ background: "#4CAF7D" }}
+                  />
+                  <span
+                    className="relative inline-flex rounded-full h-1.5 w-1.5"
+                    style={{ background: "#4CAF7D" }}
+                  />
+                </span>
+                <span
+                  className="text-[11px] font-mono"
+                  style={{ color: "#4CAF7D" }}
+                >
+                  Context live · {changes.length} update{changes.length !== 1 ? "s" : ""}
+                </span>
+              </motion.div>
+            )}
+          </motion.div>
         </div>
       </section>
 
       <div className="max-w-5xl mx-auto px-6 md:px-12 lg:px-20 space-y-16">
 
-        {/* ── Since You Were Away ───────────────────────────────────── */}
+        {/* ── Activity Feed (Since You Were Away) ──────────────────────── */}
         <section>
-          <div className="flex items-center justify-between border-b border-border-subtle pb-2 mb-6">
-            <h2 className="text-[10px] font-mono uppercase tracking-widest text-muted">Since You Were Away</h2>
-            <Link href="/context" className="text-[10px] font-mono uppercase tracking-widest text-muted hover:text-foreground transition-colors flex items-center gap-1">
+          <div
+            className="flex items-center justify-between pb-3 mb-6"
+            style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
+          >
+            <span
+              className="text-[10px] font-mono uppercase tracking-widest"
+              style={{ color: "var(--color-muted)" }}
+            >
+              Since you were away
+            </span>
+            <Link
+              href="/context"
+              className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-widest transition-colors duration-150"
+              style={{ color: "var(--color-muted)" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "var(--color-foreground)")}
+              onMouseLeave={e => (e.currentTarget.style.color = "var(--color-muted)")}
+            >
               Explore <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
@@ -243,30 +315,63 @@ export default function HomeEnvironment() {
               variants={containerVariants}
               initial="hidden"
               animate="show"
-              className="space-y-2"
+              className="space-y-px"
             >
               {changes.map((change) => {
                 const t = normaliseType(change.type);
                 const Icon = typeIcon(t);
+                const dotColor = typeColor(t);
                 return (
                   <motion.div
                     key={change.id}
                     variants={itemVariants}
-                    className="group flex items-center gap-4 p-4 bg-surface-1/60 border border-border-subtle hover:border-border-strong hover:bg-surface-1 rounded-xl transition-all cursor-pointer backdrop-blur-sm"
+                    className="group flex items-center gap-4 py-3.5 cursor-pointer transition-all duration-150"
+                    style={{
+                      borderBottom: "1px solid var(--color-border-subtle)",
+                    }}
                     onClick={() => router.push(`/focus/${change.id}`)}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLDivElement).style.paddingLeft = "4px";
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLDivElement).style.paddingLeft = "0px";
+                    }}
                   >
-                    <div className="w-7 h-7 rounded-lg bg-surface-2 border border-border-subtle flex items-center justify-center shrink-0">
-                      <Icon className="w-3.5 h-3.5 text-muted" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-foreground truncate group-hover:text-foreground transition-colors">{change.name}</p>
-                    </div>
+                    {/* Type dot */}
+                    <span
+                      className="w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{ background: dotColor }}
+                    />
+
+                    {/* Content */}
+                    <p
+                      className="flex-1 text-sm leading-snug transition-colors duration-150 truncate"
+                      style={{
+                        fontFamily: "'Satoshi', sans-serif",
+                        color: "var(--color-foreground)",
+                      }}
+                    >
+                      {change.name}
+                    </p>
+
+                    {/* Metadata */}
                     <div className="flex items-center gap-3 shrink-0">
-                      <StatusBadge type={t as any} dot size="sm" />
-                      <span className="text-[10px] font-mono text-muted hidden sm:block">
+                      <span
+                        className="text-[10px] font-mono hidden sm:block"
+                        style={{ color: "var(--color-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}
+                      >
+                        {t}
+                      </span>
+                      <span
+                        className="text-[10px] font-mono"
+                        style={{ color: "rgba(240,240,238,0.22)" }}
+                      >
                         {change.updated_at ? timeAgo(change.updated_at) : "—"}
                       </span>
-                      <ChevronRight className="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                      <ChevronRight
+                        className="w-3 h-3 opacity-0 group-hover:opacity-60 transition-all"
+                        style={{ color: "var(--color-muted)" }}
+                      />
                     </div>
                   </motion.div>
                 );
@@ -275,13 +380,21 @@ export default function HomeEnvironment() {
           )}
         </section>
 
-        {/* ── Two-column: Current State + Active Threads ───────────── */}
+        {/* ── Two-column: Active Projects + Active Handoffs ───────────── */}
         <div className="grid md:grid-cols-2 gap-12">
 
-          {/* Current State */}
+          {/* Active Projects — Flora numbered card style */}
           <section>
-            <div className="border-b border-border-subtle pb-2 mb-6">
-              <h2 className="text-[10px] font-mono uppercase tracking-widest text-muted">Current State</h2>
+            <div
+              className="pb-3 mb-6"
+              style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
+            >
+              <span
+                className="text-[10px] font-mono uppercase tracking-widest"
+                style={{ color: "var(--color-muted)" }}
+              >
+                Current state
+              </span>
             </div>
             {dataLoading ? (
               <LoadingState context="generic" compact />
@@ -292,19 +405,63 @@ export default function HomeEnvironment() {
                 animate="show"
                 className="space-y-3"
               >
-                {activeWork.map((work) => (
+                {activeWork.map((work, idx) => (
                   <motion.div
                     key={work.id}
                     variants={itemVariants}
-                    className="group p-4 bg-surface-1/60 border border-border-subtle hover:border-border-strong rounded-xl transition-all cursor-pointer backdrop-blur-sm"
+                    className="group relative overflow-hidden rounded-xl cursor-pointer transition-all duration-200"
+                    style={{
+                      background: "var(--color-surface-1)",
+                      border: "1px solid var(--color-border-subtle)",
+                      padding: "16px 18px",
+                    }}
                     onClick={() => router.push(`/focus/${work.id}`)}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLDivElement).style.borderColor = "var(--color-border-mid)";
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLDivElement).style.borderColor = "var(--color-border-subtle)";
+                    }}
                   >
-                    <div className="flex items-start justify-between gap-2">
+                    {/* Ghost numeral */}
+                    <span
+                      className="absolute right-3 top-0 select-none pointer-events-none font-bold leading-none"
+                      style={{
+                        fontSize: "52px",
+                        fontFamily: "'Cormorant Garamond', serif",
+                        color: "rgba(255,255,255,0.04)",
+                        lineHeight: 1,
+                      }}
+                      aria-hidden="true"
+                    >
+                      0{idx + 1}
+                    </span>
+
+                    <div className="relative z-10 flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1">{work.type}</p>
-                        <p className="text-sm font-semibold text-foreground">{work.name}</p>
+                        <p
+                          className="text-[9px] font-mono uppercase tracking-widest mb-1.5"
+                          style={{ color: "var(--color-muted)" }}
+                        >
+                          {work.type}
+                        </p>
+                        <p
+                          className="text-sm font-semibold"
+                          style={{
+                            fontFamily: "'Satoshi', sans-serif",
+                            color: "var(--color-foreground)",
+                            letterSpacing: "-0.015em",
+                          }}
+                        >
+                          {work.name}
+                        </p>
                         {work.content && (
-                          <p className="text-xs text-muted mt-1 truncate">{work.content}</p>
+                          <p
+                            className="text-xs mt-1 truncate"
+                            style={{ color: "var(--color-muted)" }}
+                          >
+                            {work.content}
+                          </p>
                         )}
                       </div>
                       {work.status && (
@@ -317,11 +474,25 @@ export default function HomeEnvironment() {
             )}
           </section>
 
-          {/* Active Handoffs */}
+          {/* Active Handoffs — editorial slim rows */}
           <section>
-            <div className="flex items-center justify-between border-b border-border-subtle pb-2 mb-6">
-              <h2 className="text-[10px] font-mono uppercase tracking-widest text-muted">Active Handoffs</h2>
-              <Link href="/work" className="text-[10px] font-mono uppercase tracking-widest text-muted hover:text-foreground transition-colors flex items-center gap-1">
+            <div
+              className="flex items-center justify-between pb-3 mb-6"
+              style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
+            >
+              <span
+                className="text-[10px] font-mono uppercase tracking-widest"
+                style={{ color: "var(--color-muted)" }}
+              >
+                Active handoffs
+              </span>
+              <Link
+                href="/work"
+                className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-widest transition-colors duration-150"
+                style={{ color: "var(--color-muted)" }}
+                onMouseEnter={e => (e.currentTarget.style.color = "var(--color-foreground)")}
+                onMouseLeave={e => (e.currentTarget.style.color = "var(--color-muted)")}
+              >
                 All <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
@@ -332,25 +503,59 @@ export default function HomeEnvironment() {
                 variants={containerVariants}
                 initial="hidden"
                 animate="show"
-                className="space-y-3"
+                className="space-y-2"
               >
                 {handoffs.map((h) => (
                   <motion.div
                     key={h.id}
                     variants={itemVariants}
-                    className="group p-4 bg-surface-1/60 border border-border-subtle hover:border-border-strong rounded-xl transition-all cursor-pointer backdrop-blur-sm"
-                    onClick={() => router.push(`/work`)}
+                    className="group relative overflow-hidden rounded-xl cursor-pointer transition-all duration-200"
+                    style={{
+                      background: "var(--color-surface-1)",
+                      border: "1px solid var(--color-border-subtle)",
+                      borderLeft: `3px solid ${statusStripe(h.status)}`,
+                      padding: "14px 16px",
+                    }}
+                    onClick={() => router.push("/work")}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLDivElement).style.borderRightColor = "var(--color-border-mid)";
+                      (e.currentTarget as HTMLDivElement).style.borderTopColor = "var(--color-border-mid)";
+                      (e.currentTarget as HTMLDivElement).style.borderBottomColor = "var(--color-border-mid)";
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLDivElement).style.borderRightColor = "var(--color-border-subtle)";
+                      (e.currentTarget as HTMLDivElement).style.borderTopColor = "var(--color-border-subtle)";
+                      (e.currentTarget as HTMLDivElement).style.borderBottomColor = "var(--color-border-subtle)";
+                    }}
                   >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-semibold text-foreground truncate">{h.source_agent}</span>
-                      <ArrowRight className="w-3 h-3 text-muted shrink-0" />
-                      <span className="text-xs text-muted truncate">{h.target_agent}</span>
+                    {/* Agent chain */}
+                    <div className="flex items-center gap-1.5 mb-1.5 min-w-0">
+                      <span
+                        className="text-[11px] font-semibold truncate"
+                        style={{ fontFamily: "'Satoshi', sans-serif", color: "var(--color-foreground)" }}
+                      >
+                        {h.source_agent}
+                      </span>
+                      <ArrowRight className="w-2.5 h-2.5 shrink-0" style={{ color: "var(--color-muted)" }} />
+                      <span
+                        className="text-[11px] truncate"
+                        style={{ fontFamily: "'Satoshi', sans-serif", color: "var(--color-muted)" }}
+                      >
+                        {h.target_agent}
+                      </span>
                       <StatusBadge type={h.status} dot size="sm" />
                     </div>
-                    <p className="text-xs text-muted truncate">{h.task_goal}</p>
-                    <div className="flex items-center gap-1 mt-2">
-                      <Clock className="w-3 h-3 text-muted" />
-                      <span className="text-[10px] text-muted font-mono">{timeAgo(h.created_at)}</span>
+                    <p
+                      className="text-[11px] truncate"
+                      style={{ color: "var(--color-muted)", fontFamily: "'Satoshi', sans-serif" }}
+                    >
+                      {h.task_goal}
+                    </p>
+                    <div className="flex items-center gap-1 mt-1.5">
+                      <Clock className="w-2.5 h-2.5" style={{ color: "rgba(240,240,238,0.22)" }} />
+                      <span className="text-[9px] font-mono" style={{ color: "rgba(240,240,238,0.22)" }}>
+                        {timeAgo(h.created_at)}
+                      </span>
                     </div>
                   </motion.div>
                 ))}
@@ -359,29 +564,76 @@ export default function HomeEnvironment() {
           </section>
         </div>
 
-        {/* ── Explore World CTA ─────────────────────────────────────── */}
+        {/* ── Explore World CTA ──────────────────────────────────────── */}
         <section className="pb-8">
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-            className="relative rounded-2xl border border-border-subtle bg-surface-1/50 backdrop-blur-sm overflow-hidden p-8 group cursor-pointer hover:border-border-strong transition-all"
+            transition={{ delay: 0.5, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-200 group"
+            style={{
+              background: "var(--color-surface-1)",
+              border: "1px solid var(--color-border-subtle)",
+              padding: "32px",
+            }}
             onClick={() => router.push("/world")}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLDivElement).style.borderColor = "var(--color-border-mid)";
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLDivElement).style.borderColor = "var(--color-border-subtle)";
+            }}
           >
-            {/* Mini ContextField inside CTA */}
-            <div className="absolute inset-0 opacity-10">
-              <ContextField nodeCount={30} intensity="exploring" />
-            </div>
-            <div className="relative z-10 flex items-center justify-between">
+            {/* Ghost "W" numeral */}
+            <span
+              className="absolute right-6 top-0 select-none pointer-events-none font-bold leading-none"
+              style={{
+                fontSize: "clamp(80px, 12vw, 140px)",
+                fontFamily: "'Cormorant Garamond', serif",
+                color: "rgba(255,255,255,0.03)",
+                lineHeight: 1,
+              }}
+              aria-hidden="true"
+            >
+              W
+            </span>
+
+            <div className="relative z-10 flex items-center justify-between gap-4">
               <div>
-                <div className="text-[9px] font-mono uppercase tracking-widest text-muted mb-2">Explore</div>
-                <h3 className="font-display text-2xl text-foreground tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
-                  Enter your World
+                <div
+                  className="text-[9px] font-mono uppercase tracking-widest mb-2"
+                  style={{ color: "var(--color-muted)" }}
+                >
+                  Explore
+                </div>
+                <h3
+                  style={{
+                    fontFamily: "'Cormorant Garamond', Georgia, serif",
+                    fontSize: "clamp(24px, 3vw, 36px)",
+                    fontWeight: 400,
+                    letterSpacing: "-0.015em",
+                    color: "var(--color-foreground)",
+                    lineHeight: 1.1,
+                  }}
+                >
+                  Enter your{" "}
+                  <em style={{ fontStyle: "italic", fontWeight: 300 }}>World.</em>
                 </h3>
-                <p className="text-sm text-muted mt-1">Explore how everything is connected.</p>
+                <p
+                  className="text-sm mt-2"
+                  style={{ color: "var(--color-muted)", fontFamily: "'Satoshi', sans-serif" }}
+                >
+                  Explore how everything is connected.
+                </p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-surface-2 border border-border-subtle flex items-center justify-center group-hover:bg-foreground group-hover:border-foreground transition-all duration-300">
-                <Network className="w-5 h-5 text-muted group-hover:text-background transition-colors" />
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110"
+                style={{
+                  border: "1px solid var(--color-border-mid)",
+                  background: "var(--color-surface-2)",
+                }}
+              >
+                <Network className="w-4 h-4" style={{ color: "var(--color-muted)" }} />
               </div>
             </div>
           </motion.div>
