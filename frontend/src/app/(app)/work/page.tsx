@@ -92,65 +92,54 @@ const MOCK_HANDOFFS: Handoff[] = [
 
 // ── Living Flow Diagram ───────────────────────────────────────────────────
 
+// Flora-style editorial handoff flow — no SVG arrows, clean mono typography
 function HandoffFlow({ handoff }: { handoff: Handoff }) {
   const isRunning = handoff.status === "running";
 
   return (
-    <div className="flex items-center justify-between w-full max-w-2xl mx-auto py-6">
-      {/* Source Agent */}
-      <div className="flex flex-col items-center gap-2.5 relative z-10 w-32">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center border shadow-sm transition-all duration-300 ${
-          isRunning
-            ? "bg-surface-2 border-foreground text-foreground shadow-md ring-2 ring-foreground/10"
-            : "bg-surface-1 border-border-subtle text-muted"
-        }`}>
-          <Bot className="w-5 h-5" />
-        </div>
-        <div className="text-center">
-          <span className="text-xs font-medium text-foreground block truncate max-w-[120px]">{handoff.source_agent}</span>
-          <span className="text-[9px] font-mono text-muted uppercase tracking-wider">Source Runtime</span>
-        </div>
+    <div className="flex items-center gap-3 py-5">
+      {/* Source */}
+      <div
+        className="flex flex-col gap-0.5 px-4 py-3 rounded-xl min-w-0"
+        style={{
+          background: "var(--color-surface-2)",
+          border: "1px solid var(--color-border-subtle)",
+        }}
+      >
+        <span className="text-[9px] font-mono uppercase tracking-widest" style={{ color: "var(--color-muted)" }}>Source</span>
+        <span className="text-sm font-semibold truncate" style={{ fontFamily: "'Satoshi', sans-serif", color: "var(--color-foreground)", letterSpacing: "-0.015em" }}>
+          {handoff.source_agent}
+        </span>
       </div>
 
-      {/* Pulsing Signal Path */}
-      <div className="flex-1 relative flex items-center justify-center mx-4">
-        <svg className="absolute w-full h-8 top-1/2 -translate-y-1/2 overflow-visible" aria-hidden="true">
-          <line
-            x1="0" y1="50%" x2="100%" y2="50%"
-            stroke="var(--color-border-strong)"
-            strokeWidth="1.5"
-            strokeDasharray={isRunning ? "5 5" : "none"}
-            opacity={isRunning ? 0.8 : 0.4}
-          />
-          {isRunning && (
-            <motion.circle
-              cx="0" cy="50%" r="3.5"
-              fill="var(--color-foreground)"
-              animate={{ cx: ["0%", "100%"] }}
-              transition={{ duration: 1.8, repeat: Infinity, ease: "linear" }}
-            />
-          )}
-        </svg>
-
-        <div className="bg-surface-1/90 backdrop-blur-md border border-border-subtle px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-widest text-muted z-10 shadow-sm whitespace-nowrap flex items-center gap-1.5">
-          <Sparkles className={`w-3 h-3 ${isRunning ? "text-accent animate-spin" : "text-muted"}`} />
-          <span>{handoff.artifacts.length} Artifact{handoff.artifacts.length !== 1 ? "s" : ""}</span>
+      {/* Connector */}
+      <div className="flex items-center gap-2 shrink-0">
+        <div style={{ width: 32, height: 1, background: "var(--color-border-strong)" }} />
+        <div
+          className="px-2.5 py-1 rounded-full text-[9px] font-mono whitespace-nowrap"
+          style={{
+            background: isRunning ? "rgba(76,175,125,0.10)" : "var(--color-surface-2)",
+            border: `1px solid ${isRunning ? "rgba(76,175,125,0.25)" : "var(--color-border-subtle)"}`,
+            color: isRunning ? "#4CAF7D" : "var(--color-muted)",
+          }}
+        >
+          {isRunning ? "live" : `${handoff.artifacts.length} artifact${handoff.artifacts.length !== 1 ? "s" : ""}`}
         </div>
+        <div style={{ width: 32, height: 1, background: "var(--color-border-strong)" }} />
       </div>
 
-      {/* Target Agent */}
-      <div className="flex flex-col items-center gap-2.5 relative z-10 w-32">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center border shadow-sm transition-all duration-300 ${
-          isRunning
-            ? "bg-foreground border-foreground text-background shadow-lg ring-4 ring-foreground/10"
-            : "bg-surface-1 border-border-subtle text-muted"
-        }`}>
-          <Cpu className="w-5 h-5" />
-        </div>
-        <div className="text-center">
-          <span className="text-xs font-medium text-foreground block truncate max-w-[120px]">{handoff.target_agent}</span>
-          <span className="text-[9px] font-mono text-muted uppercase tracking-wider">Target Node</span>
-        </div>
+      {/* Target */}
+      <div
+        className="flex flex-col gap-0.5 px-4 py-3 rounded-xl min-w-0"
+        style={{
+          background: isRunning ? "rgba(76,175,125,0.07)" : "var(--color-surface-2)",
+          border: `1px solid ${isRunning ? "rgba(76,175,125,0.20)" : "var(--color-border-subtle)"}`,
+        }}
+      >
+        <span className="text-[9px] font-mono uppercase tracking-widest" style={{ color: "var(--color-muted)" }}>Target</span>
+        <span className="text-sm font-semibold truncate" style={{ fontFamily: "'Satoshi', sans-serif", color: "var(--color-foreground)", letterSpacing: "-0.015em" }}>
+          {handoff.target_agent}
+        </span>
       </div>
     </div>
   );
@@ -172,29 +161,35 @@ function HandoffTimelineItem({ handoff, isLatest }: { handoff: Handoff; isLatest
 
   const isRunning = handoff.status === "running";
 
-  return (
-    <div className="relative flex items-start gap-4 md:gap-6 group">
-      {/* Timeline Rail Bead */}
-      <div className="relative flex flex-col items-center mt-4 shrink-0">
-        <div className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-300 ${
-          isRunning
-            ? "bg-foreground border-foreground shadow-[0_0_12px_rgba(255,255,255,0.4)] scale-110"
-            : handoff.status === "complete"
-            ? "bg-surface-1 border-border-strong"
-            : "bg-danger/20 border-danger"
-        }`} />
-        <div className="w-px h-full bg-border-subtle absolute top-4 bottom-[-1.5rem]" />
-      </div>
+  // Left-stripe colour by status (Flora signature)
+  const stripeColor =
+    isRunning ? "#4CAF7D" :
+    handoff.status === "complete" ? "rgba(34,197,94,0.55)" :
+    handoff.status === "failed" ? "rgba(244,63,94,0.65)" :
+    "rgba(255,255,255,0.10)";
 
-      {/* Handoff Card */}
+  return (
+    <div className="relative group">
+      {/* Handoff Card — left stripe replaces bead rail */}
       <motion.div
         layout
         transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-        className={`flex-1 rounded-xl border transition-all duration-200 overflow-hidden ${
-          isRunning
-            ? "bg-surface-1/90 border-border-strong shadow-float ring-1 ring-border-strong/50"
-            : "bg-surface-1/50 border-border-subtle hover:border-border-strong hover:bg-surface-1/80"
-        } backdrop-blur-md`}
+        className="rounded-xl overflow-hidden transition-all duration-200"
+        style={{
+          background: "var(--color-surface-1)",
+          border: "1px solid var(--color-border-subtle)",
+          borderLeft: `3px solid ${stripeColor}`,
+        }}
+        onMouseEnter={e => {
+          (e.currentTarget as HTMLDivElement).style.borderTopColor = "var(--color-border-mid)";
+          (e.currentTarget as HTMLDivElement).style.borderRightColor = "var(--color-border-mid)";
+          (e.currentTarget as HTMLDivElement).style.borderBottomColor = "var(--color-border-mid)";
+        }}
+        onMouseLeave={e => {
+          (e.currentTarget as HTMLDivElement).style.borderTopColor = "var(--color-border-subtle)";
+          (e.currentTarget as HTMLDivElement).style.borderRightColor = "var(--color-border-subtle)";
+          (e.currentTarget as HTMLDivElement).style.borderBottomColor = "var(--color-border-subtle)";
+        }}
       >
         <div
           className="p-5 flex items-start sm:items-center justify-between gap-4 cursor-pointer select-none"
@@ -374,63 +369,88 @@ export default function WorkEnvironment() {
   }
 
   return (
-    <div className="relative w-full min-h-screen pt-28 pb-32 px-6 md:px-12 lg:px-20 animate-in fade-in duration-300">
+    <div className="relative w-full min-h-screen pt-8 pb-32 px-6 md:px-12 lg:px-20 animate-in fade-in duration-300">
       <div className="max-w-4xl mx-auto space-y-10">
         
-        {/* Editorial Header */}
-        <header className="border-b border-border-subtle pb-8">
-          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-muted mb-3">
-            <Shield className="w-3.5 h-3.5 text-foreground" />
-            <span>Operational Continuity · Ecosystem Timeline</span>
+        {/* Editorial Header — Flora style */}
+        <header style={{ borderBottom: "1px solid var(--color-border-subtle)", paddingBottom: "32px" }}>
+          {/* Eyebrow */}
+          <div
+            className="text-[10px] font-mono uppercase tracking-widest mb-5"
+            style={{ color: "var(--color-muted)" }}
+          >
+            Operational Continuity · Ecosystem Timeline
           </div>
 
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          {/* Serif heading + inline prose metrics */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
               <h1
-                className="text-4xl md:text-5xl font-display text-foreground tracking-tight mb-3"
-                style={{ fontFamily: "var(--font-display)" }}
+                className="mb-3"
+                style={{
+                  fontFamily: "'Cormorant Garamond', Georgia, serif",
+                  fontSize: "clamp(36px, 5vw, 60px)",
+                  fontWeight: 400,
+                  letterSpacing: "-0.015em",
+                  lineHeight: 1.08,
+                  color: "var(--color-foreground)",
+                }}
               >
-                Work & Handoffs
+                Work &amp;{" "}
+                <em style={{ fontStyle: "italic", fontWeight: 300 }}>Handoffs.</em>
               </h1>
-              <p className="text-base text-muted max-w-xl leading-relaxed">
-                State transitions and artifact transmission across autonomous agents in the sovereign mesh.
+              <p
+                className="text-sm leading-relaxed max-w-lg"
+                style={{ color: "var(--color-muted)", fontFamily: "'Satoshi', sans-serif" }}
+              >
+                State transitions and artifact transmission across autonomous agents.
               </p>
             </div>
 
-            {/* Metric Capsules */}
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="px-3.5 py-2 rounded-xl bg-surface-1 border border-border-subtle backdrop-blur-md">
-                <span className="text-[9px] font-mono uppercase tracking-wider text-muted block">Active Now</span>
-                <span className="text-lg font-mono font-semibold text-foreground flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
-                  {runningCount}
-                </span>
-              </div>
-              <div className="px-3.5 py-2 rounded-xl bg-surface-1 border border-border-subtle backdrop-blur-md">
-                <span className="text-[9px] font-mono uppercase tracking-wider text-muted block">Resolved</span>
-                <span className="text-lg font-mono font-semibold text-foreground">
-                  {completedCount}
-                </span>
-              </div>
-            </div>
+            {/* Inline prose metrics — no metric boxes */}
+            <p
+              className="text-sm font-mono shrink-0"
+              style={{ color: "var(--color-muted)" }}
+            >
+              <span style={{ color: "#4CAF7D", fontWeight: 600 }}>{runningCount} active</span>
+              {" · "}
+              {completedCount} resolved
+            </p>
           </div>
 
-          {/* Filter Pills */}
-          <div className="flex items-center gap-2 mt-8 pt-4 border-t border-border-subtle/50 overflow-x-auto pb-1">
-            {(["all", "running", "complete", "failed"] as const).map((filter) => {
+          {/* Numbered filter pills — Flora section prefix style */}
+          <div
+            className="flex items-center gap-2 mt-8 pt-5 overflow-x-auto pb-1"
+            style={{ borderTop: "1px solid var(--color-border-subtle)" }}
+          >
+            {(["all", "running", "complete", "failed"] as const).map((filter, idx) => {
               const count = filter === "all" ? handoffs.length : handoffs.filter(h => h.status === filter).length;
               const isActive = statusFilter === filter;
               return (
                 <button
                   key={filter}
                   onClick={() => setStatusFilter(filter)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider transition-all cursor-pointer ${
-                    isActive
-                      ? "bg-foreground text-background font-semibold shadow-sm"
-                      : "bg-surface-1 text-muted hover:text-foreground hover:bg-surface-2 border border-border-subtle"
-                  }`}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-mono transition-all cursor-pointer whitespace-nowrap"
+                  style={{
+                    background: isActive ? "var(--color-foreground)" : "transparent",
+                    color: isActive ? "var(--color-background)" : "var(--color-muted)",
+                    border: isActive ? "none" : "1px solid var(--color-border-subtle)",
+                    fontWeight: isActive ? 600 : 400,
+                  }}
+                  aria-pressed={isActive}
                 >
-                  {filter} ({count})
+                  <span
+                    style={{
+                      fontFamily: "'Cormorant Garamond', serif",
+                      fontStyle: "italic",
+                      fontSize: "11px",
+                      opacity: isActive ? 0.6 : 0.35,
+                    }}
+                  >
+                    0{idx + 1}
+                  </span>
+                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                  <span style={{ opacity: 0.5 }}>({count})</span>
                 </button>
               );
             })}
