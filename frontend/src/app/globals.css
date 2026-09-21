@@ -14,6 +14,7 @@
   /* ── Canvas & Surface ────────────────────────────────────────────────── */
   --color-background: #FFFFFF;
   --color-foreground: #0A0A0A;
+  --color-ink: #111315;
 
   /* Glass surface stack — white with increasing solidity */
   --color-surface-1: rgba(255, 255, 255, 0.80);

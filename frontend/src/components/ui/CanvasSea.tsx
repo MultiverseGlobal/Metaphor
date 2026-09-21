@@ -5,19 +5,22 @@ import { useEffect, useRef, useState } from "react";
 interface Point {
   x: number;
   y: number;
-  age: number;
-  maxAge: number;
+  time: number;
 }
 
 interface Ripple {
   x: number;
   y: number;
-  radius: number;
+  startTime: number;
+  duration: number;
   maxRadius: number;
-  opacity: number;
-  age: number;
-  maxAge: number;
+  held: boolean;
+  releaseTime?: number;
 }
+
+const WAKE_DURATION_MS = 600; // Exact spec: fades over 600ms
+const RIPPLE_DURATION_MS = 450;
+const HELD_RADIUS = 12; // Spec: Selection -> held ripple at 12px radius
 
 export function CanvasSea() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -26,14 +29,11 @@ export function CanvasSea() {
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     setPrefersReducedMotion(mediaQuery.matches);
-    
+
     const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
     mediaQuery.addEventListener("change", handler);
     return () => mediaQuery.removeEventListener("change", handler);
   }, []);
-
-  const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
-  const [isHovering, setIsHovering] = useState(false);
 
   useEffect(() => {
     if (prefersReducedMotion) return;
@@ -47,13 +47,12 @@ export function CanvasSea() {
     let animationFrameId: number;
     let points: Point[] = [];
     let ripples: Ripple[] = [];
-    
+    let activeHoldRipple: Ripple | null = null;
+    let holdTimeout: NodeJS.Timeout | null = null;
     let isVisible = true;
-    let mouseMovedSinceLastFrame = false;
 
-    // Resize canvas
+    // Handle high-DPI displays
     const handleResize = () => {
-      // Handle high-DPI displays
       const dpr = window.devicePixelRatio || 1;
       canvas.width = window.innerWidth * dpr;
       canvas.height = window.innerHeight * dpr;
@@ -61,45 +60,64 @@ export function CanvasSea() {
       canvas.style.width = `${window.innerWidth}px`;
       canvas.style.height = `${window.innerHeight}px`;
     };
-    
+
     handleResize();
     window.addEventListener("resize", handleResize);
 
     const handleMouseMove = (e: MouseEvent) => {
-      mouseMovedSinceLastFrame = true;
-      setMousePos({ x: e.clientX, y: e.clientY });
-      
-      // Check if hovering over clickable element
-      const target = e.target as HTMLElement;
-      setIsHovering(
-        window.getComputedStyle(target).cursor === "pointer" ||
-        target.tagName.toLowerCase() === "a" ||
-        target.tagName.toLowerCase() === "button"
-      );
-
-      // Add a point to the wake
+      const now = performance.now();
       points.push({
         x: e.clientX,
         y: e.clientY,
-        age: 0,
-        maxAge: 40, // frames to live
+        time: now,
       });
-      // Cap points to prevent memory leak
-      if (points.length > 200) {
+
+      // Keep recent points
+      if (points.length > 250) {
         points.shift();
       }
     };
 
     const handleMouseDown = (e: MouseEvent) => {
+      const now = performance.now();
+      const x = e.clientX;
+      const y = e.clientY;
+
+      // Check if held for > 200ms
+      holdTimeout = setTimeout(() => {
+        activeHoldRipple = {
+          x,
+          y,
+          startTime: performance.now(),
+          duration: RIPPLE_DURATION_MS,
+          maxRadius: HELD_RADIUS,
+          held: true,
+        };
+        ripples.push(activeHoldRipple);
+      }, 200);
+
+      // Instant click ripple
       ripples.push({
-        x: e.clientX,
-        y: e.clientY,
-        radius: 0,
-        maxRadius: 40,
-        opacity: 0.4,
-        age: 0,
-        maxAge: 30,
+        x,
+        y,
+        startTime: now,
+        duration: RIPPLE_DURATION_MS,
+        maxRadius: 36,
+        held: false,
       });
+    };
+
+    const handleMouseUp = () => {
+      if (holdTimeout) {
+        clearTimeout(holdTimeout);
+        holdTimeout = null;
+      }
+      if (activeHoldRipple) {
+        activeHoldRipple.held = false;
+        activeHoldRipple.releaseTime = performance.now();
+        activeHoldRipple.maxRadius = 32;
+        activeHoldRipple = null;
+      }
     };
 
     const handleVisibilityChange = () => {
@@ -108,89 +126,77 @@ export function CanvasSea() {
 
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
     window.addEventListener("mousedown", handleMouseDown, { passive: true });
+    window.addEventListener("mouseup", handleMouseUp, { passive: true });
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    const render = () => {
+    const render = (now: number) => {
       if (!isVisible) {
         animationFrameId = requestAnimationFrame(render);
         return;
       }
 
-      // Optimize: Only clear and redraw if there are active animations
-      if (points.length === 0 && ripples.length === 0 && !mouseMovedSinceLastFrame) {
-        animationFrameId = requestAnimationFrame(render);
-        return;
-      }
-      mouseMovedSinceLastFrame = false;
+      // Filter expired points using wall-clock time
+      points = points.filter((p) => now - p.time < WAKE_DURATION_MS);
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Filter expired ripples
+      ripples = ripples.filter((r) => {
+        if (r.held) return true;
+        const refTime = r.releaseTime ?? r.startTime;
+        return now - refTime < r.duration;
+      });
 
-      // Draw Wake (connected lines that fade)
-      if (points.length > 1) {
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
+      // Only draw when there are points or ripples
+      if (points.length > 0 || ripples.length > 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw individual wake segments with fading opacity
         for (let i = 1; i < points.length; i++) {
           const pt = points[i];
           const prevPt = points[i - 1];
-          // Simple smoothing
-          const xc = (prevPt.x + pt.x) / 2;
-          const yc = (prevPt.y + pt.y) / 2;
-          ctx.quadraticCurveTo(prevPt.x, prevPt.y, xc, yc);
+
+          const lifeRatio = 1 - (now - pt.time) / WAKE_DURATION_MS;
+          if (lifeRatio <= 0) continue;
+
+          ctx.beginPath();
+          ctx.moveTo(prevPt.x, prevPt.y);
+          ctx.lineTo(pt.x, pt.y);
+
+          // Ink color: #111315
+          ctx.strokeStyle = `rgba(17, 19, 21, ${lifeRatio * 0.12})`;
+          ctx.lineWidth = 1 + lifeRatio * 1.5;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.stroke();
         }
-        ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
-        
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        
-        // We draw the stroke with a gradient or solid color but fading opacity
-        // A simple approach is just a single stroke that fades out
-        // For a more physical wake, we would draw individual segments, but a single path is faster
-        // We'll draw segments to allow fading tail
+
+        // Draw ripples
+        for (const ripple of ripples) {
+          if (ripple.held) {
+            // Held ripple stays at 12px with gentle pulse
+            const pulse = 1 + Math.sin(now * 0.008) * 0.08;
+            ctx.beginPath();
+            ctx.arc(ripple.x, ripple.y, HELD_RADIUS * pulse, 0, Math.PI * 2);
+            ctx.strokeStyle = "rgba(17, 19, 21, 0.25)";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+          } else {
+            const refTime = ripple.releaseTime ?? ripple.startTime;
+            const elapsed = now - refTime;
+            const progress = Math.min(1, elapsed / ripple.duration);
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            const currentRadius = ripple.maxRadius * easeOut;
+            const opacity = (1 - progress) * 0.3;
+
+            ctx.beginPath();
+            ctx.arc(ripple.x, ripple.y, currentRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(17, 19, 21, ${opacity})`;
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+          }
+        }
+      } else {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
-
-      // Draw individual segment wake for fade effect
-      for (let i = 1; i < points.length; i++) {
-        const pt = points[i];
-        const prevPt = points[i - 1];
-        
-        const lifeRatio = 1 - (pt.age / pt.maxAge);
-        if (lifeRatio <= 0) continue;
-
-        ctx.beginPath();
-        ctx.moveTo(prevPt.x, prevPt.y);
-        ctx.lineTo(pt.x, pt.y);
-        
-        // Ink color: #111315
-        ctx.strokeStyle = `rgba(17, 19, 21, ${lifeRatio * 0.15})`;
-        ctx.lineWidth = 1 + lifeRatio * 1.5;
-        ctx.stroke();
-      }
-
-      // Update wake points
-      points = points.filter(pt => {
-        pt.age++;
-        return pt.age < pt.maxAge;
-      });
-
-      // Draw Ripples
-      ripples.forEach(ripple => {
-        const lifeRatio = 1 - (ripple.age / ripple.maxAge);
-        
-        // Expand radius using ease-out
-        const easeOut = 1 - Math.pow(1 - (ripple.age / ripple.maxAge), 3);
-        ripple.radius = ripple.maxRadius * easeOut;
-        
-        ctx.beginPath();
-        ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(17, 19, 21, ${ripple.opacity * lifeRatio})`;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-
-        ripple.age++;
-      });
-
-      // Filter out dead ripples
-      ripples = ripples.filter(r => r.age < r.maxAge);
 
       animationFrameId = requestAnimationFrame(render);
     };
@@ -199,43 +205,30 @@ export function CanvasSea() {
 
     return () => {
       cancelAnimationFrame(animationFrameId);
+      if (holdTimeout) clearTimeout(holdTimeout);
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("mouseup", handleMouseUp);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [prefersReducedMotion]);
 
   if (prefersReducedMotion) {
-    return null; // Fallback to CSS background only
+    return (
+      <div
+        className="fixed inset-0 pointer-events-none -z-10 bg-[#FFFFFF] bg-[radial-gradient(rgba(17,19,21,0.06)_1px,transparent_1px)] [background-size:24px_24px]"
+        aria-hidden="true"
+      />
+    );
   }
 
   return (
-    <>
-      <canvas
-        ref={canvasRef}
-        className="fixed inset-0 pointer-events-none w-full h-full"
-        style={{ zIndex: -1, backgroundColor: "#FFFFFF" }}
-        aria-hidden="true"
-      />
-      {/* Custom Ink Cursor — always visible regardless of CSS variable resolution */}
-      <div
-        className="fixed top-0 left-0 pointer-events-none rounded-full"
-        style={{
-          width: isHovering ? 14 : 8,
-          height: isHovering ? 14 : 8,
-          backgroundColor: "#111315",
-          transform: `translate(${mousePos.x - (isHovering ? 7 : 4)}px, ${mousePos.y - (isHovering ? 7 : 4)}px)`,
-          zIndex: 99999,
-          opacity: mousePos.x === -100 ? 0 : 1,
-          transition: "width 120ms ease, height 120ms ease, opacity 200ms ease",
-          willChange: "transform",
-          mixBlendMode: "multiply",
-        }}
-      />
-      <style dangerouslySetInnerHTML={{ __html: `
-        *, *::before, *::after { cursor: none !important; }
-      `}} />
-    </>
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 pointer-events-none w-full h-full"
+      style={{ zIndex: -1, backgroundColor: "#FFFFFF" }}
+      aria-hidden="true"
+    />
   );
 }

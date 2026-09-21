@@ -1,59 +1,52 @@
 ---
 name: metaphor-design
-description: Metaphor's project-local creative overhaul rules and design system contract.
+description: Design standard and token contract for Metaphor — the AI context engine interface. Enforces the White Sea visual language, Cormorant Garamond typography, ink color tokens, and strict copy guidelines.
 ---
 
-# Metaphor Design System & Creative Overhaul
+# Metaphor Cognitive Design Specification (PDS-Metaphor)
 
-## 1. Design Read
+Metaphor is light-mode first. Clarity over atmosphere. One accent, zero gradients on surfaces, no color pollution.
 
-> Creative visual workspace for art-and-taste users, with a quiet white-glass material language, black-ink contrast, and physical water-like cursor motion.
+## 1. The Visual World ("The White Sea")
 
-**Dial Values:**
-- `DESIGN_VARIANCE: 8` (Authored composition, memorable interaction signature)
-- `MOTION_INTENSITY: 7` (Noticeable but controlled motion)
-- `VISUAL_DENSITY: 3` (Generous whitespace, small number of visible decisions)
+- **Canvas**: Pure white (`#FFFFFF`). The canvas lives beneath all UI at `z-index: -1` and responds to mouse interaction via an organic ink wake (fading over 600ms) and ripples.
+- **Ink Color**: `#111315` (`var(--color-ink)`). This is the single black ink token used for primary display text, headings, borders, and active indicators.
+- **Surfaces**: Transparent or subtle glass (`backdrop-blur-xl`, `rgba(255, 255, 255, 0.80)`). Never use opaque white blocks or nested cards with drop shadows.
+- **Borders**: Hairline elevation (`rgba(10, 10, 10, 0.06)` for subtle, `rgba(10, 10, 10, 0.12)` for interactive boundaries).
+- **Signal**: Indigo `#6366F1` (`--color-primary`). Precision, connection, network signal. Not generic AI purple.
 
-## 2. Token Contract
+## 2. Typography Rules
 
-| Token | Semantic Purpose |
-| --- | --- |
-| `sea-base` (#F7F8F6) | Warm, near-white field. Keep the background quiet and low frequency. |
-| `sea-highlight` (White 70-92%) | Soft local lift or specular response. Never use as white text without a backing. |
-| `sea-shadow` (#D9DEE2 18-32%) | Restrained displacement and depth cue. No colored bloom. |
-| `glass-regular` (White 68-82%) | Text-heavy navigation and controls. Pair with blur only when supported. |
-| `glass-clear` (White 36-58%) | Short labels or media-like overlays only. Add a contrast stabilizer over bright content. |
-| `glass-border` (White 55-75%) | One-pixel edge highlight. Avoid repeated border rows. |
-| `ink` (#111315) | Cursor, primary text, active marks, decisive actions, and focus anchor. |
-| `ink-secondary` (#3B4043) | Secondary text and supporting controls. Verify contrast over motion. |
-| `structure` (#AEB7BC) | Quiet orientation and non-essential dividers. Never use for primary copy. |
-| `focus-ring` (#111315, 2-3px) | Always present for keyboard focus. Independent of the canvas. |
-| `scrim` (#111315 36-54%) | Blocking modal only. Do not use for ordinary panels. |
-| `radius` (10 / 16 / 24 px) | One restrained family. Do not invent per-component radii. |
-| `shadow-soft` (0 14px 40px, black 8-12%) | One elevation family. Keep the field visually open. |
-| `blur-regular` (18-28px) | Central glass only; feature-detect support. |
-| `blur-clear` (8-14px) | Short overlays only. Provide a solid fallback. |
+- **Display Headings**: `Cormorant Garamond` (or `var(--next-font-display)`, serif). Use `font-weight: 400` with subtle italic flourishes for editorial authority. Never use bold 700+ sans-serif block headers.
+- **Body & Controls**: `Geist` / `Satoshi` (`var(--next-font-sans)`). Clean, high legibility, optical tracking `-0.015em`.
+- **Metadata & Audit Trails**: `JetBrains Mono` (`var(--next-font-mono)`). Used for timestamps, IDs, status labels, and protocol references.
 
-## 3. Copy Bans
-- No em dash or en dash used as a separator.
-- No numbered eyebrows or decorative labels above the main statement.
-- No hero version labels.
-- No fake timestamps, locations, activity counts, or telemetry.
-- No ornamental status dots.
-- No generic AI claims or promises that the interface cannot demonstrate.
-- No “click here,” “submit,” or “continue” when the object and outcome can be named.
+## 3. Cursor & Motion Philosophy
 
-## 4. State Model & Interaction Invariants
-- **First Viewport:** One dominant workspace, one primary action, one compact navigation layer.
-- **Glass:** One functional glass layer for navigation/controls. Glass does not cover every card.
-- **The Wake:** A subtle black/gray wake follows cursor direction, fades naturally. Click creates one restrained ripple. The ripple is feedback, not navigation.
-- **Progressive Disclosure:** Keep advanced controls in a contextual glass tray after selection.
-- **Accessibility/Reduced Motion:** Remove continuous sea drift, cursor parallax, and persistent trails. Replace traveling ripples with an immediate static dark focus ring or brief opacity change.
+- **System Cursor**: The native OS cursor MUST remain visible and unblocked at all times. Never inject `* { cursor: none !important; }`.
+- **Canvas Sea**: The canvas draws a fluid ink wake behind cursor movements using wall-clock `performance.now()` timing (600ms lifespan).
+- **Ripples**: Click initiates a 36px expanding wave. Mousedown held for > 200ms holds a 12px ripple ring until release.
+- **Reduced Motion**: If `prefers-reduced-motion: reduce`, the canvas is replaced by a subtle static CSS dot-grid:
+  `bg-[radial-gradient(rgba(17,19,21,0.06)_1px,transparent_1px)] [background-size:24px_24px]`.
 
-## 5. Audit Checklist (Pre-Flight)
-Before implementing UI changes, ensure:
-- [ ] No generic AI-purple gradients.
-- [ ] No dense dashboard sidebars or panel stacking.
-- [ ] Contrast meets WCAG AA (4.5:1 normal text, 3:1 large text).
-- [ ] Fallbacks exist for `backdrop-filter`.
-- [ ] The change respects the 3-layer architecture (Sea -> Glass -> Ink).
+## 4. Copy Guidelines by Surface
+
+1. **Landing Page**:
+   - Editorial, thoughtful, authoritative.
+   - Tone: "Make your AI tools work as one."
+   - Avoid generic marketing buzzwords ("revolutionize", "seamlessly", "synergy").
+
+2. **Authentication (`/login`, `/signup`)**:
+   - Minimal, present tense, one sentence max.
+   - Headline: *Sign In.* / *One last thing.*
+   - Subtitle: "Enter your workspace to continue your session."
+
+3. **Onboarding (`/onboard/*`)**:
+   - Question-led.
+   - No bullet point matrices or dense feature checklists.
+   - Inputs are bare underline fields with italic serif placeholders.
+
+4. **Authenticated App (`/world`, `/tools`, `/connections`, `/handoffs`, `/context`)**:
+   - Functional, restrained, quiet.
+   - No marketing slogans.
+   - Data and events presented as minimalist timeline feeds and clean tables with hairline dividers.
