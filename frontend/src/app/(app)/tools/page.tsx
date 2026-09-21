@@ -118,6 +118,15 @@ export default function ToolsPage() {
         </Link>
       </div>
 
+      {/* Demonstration / Telemetry Notice */}
+      <div className="mb-8 p-4 rounded-xl bg-black/[0.02] border border-[rgba(10,10,10,0.06)] flex items-center justify-between text-[12px] text-[#555E64]">
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span>Showing verified participants from onboarding. Connect custom API keys in <Link href="/connections" className="text-[var(--color-ink)] underline underline-offset-2">Connections</Link> for live telemetry streaming.</span>
+        </div>
+        <span className="font-mono text-[#AEB7BC] text-[11px] hidden sm:inline">[Verified Seed]</span>
+      </div>
+
       {/* Tools Table / Minimal Row List */}
       <div className="flex flex-col divide-y divide-[rgba(10,10,10,0.06)]">
         {tools.map((tool) => (

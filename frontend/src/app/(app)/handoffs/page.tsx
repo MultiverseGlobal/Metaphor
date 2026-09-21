@@ -74,6 +74,15 @@ export default function HandoffsPage() {
         </p>
       </div>
 
+      {/* Demonstration / Example notice */}
+      <div className="mb-10 p-4 rounded-xl bg-black/[0.02] border border-[rgba(10,10,10,0.06)] flex items-center justify-between text-[12px] text-[#555E64]">
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+          <span>Demonstration Ledger: Records below illustrate context passing payloads. As autonomous agents communicate, live transfers will log here in real time.</span>
+        </div>
+        <span className="font-mono text-[#AEB7BC] text-[11px] hidden sm:inline">[Demonstration Data]</span>
+      </div>
+
       {/* Editorial Timeline Feed */}
       <div className="relative pl-6 sm:pl-8 before:absolute before:inset-y-0 before:left-3 sm:before:left-3.5 before:w-[1px] before:bg-[rgba(10,10,10,0.08)]">
         <div className="flex flex-col gap-10">

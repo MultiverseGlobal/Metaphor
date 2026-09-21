@@ -18,11 +18,12 @@ interface FloatingNavProps {
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 const ROUTES = [
-  { path: "/world",    label: "Project Space" },
-  { path: "/community",label: "Community" },
-  { path: "/showcase", label: "Showcase" },
-  { path: "/canvas",   label: "Studio" },
-  { path: "/settings", label: "Settings" },
+  { path: "/world",       label: "Your Connected World" },
+  { path: "/tools",       label: "Tools" },
+  { path: "/handoffs",    label: "Handoffs" },
+  { path: "/context",     label: "Context" },
+  { path: "/connections", label: "Connections" },
+  { path: "/settings",    label: "Settings" },
 ];
 
 // ── Glass Navigation Capsule ─────────────────────────────────────────────────
