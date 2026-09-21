@@ -52,11 +52,11 @@
 
   /* ── Typography ─────────────────────────────────────────────────────────── */
   /* Editorial serif for display headings — the Flora signature */
-  --font-display: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+  --font-display: var(--next-font-display, 'Cormorant Garamond', 'Playfair Display', Georgia, serif);
   /* Clean sans for all UI, body, labels */
-  --font-sans:    'Satoshi', -apple-system, system-ui, sans-serif;
+  --font-sans:    var(--next-font-sans, 'Geist', 'Satoshi', -apple-system, system-ui, sans-serif);
   /* Mono for data, code, audit trails */
-  --font-mono:    'JetBrains Mono', 'Courier New', monospace;
+  --font-mono:    var(--next-font-mono, 'JetBrains Mono', 'Courier New', monospace);
 
   /* ── Tracking ─────────────────────────────────────────────────────────── */
   --tracking-tightest: -0.04em;
@@ -369,8 +369,8 @@ h1, h2, h3, h4, h5, h6, .font-display {
 /* ── Typography Utils ─────────────────────────────────────────────────────── */
 
 .label-mono {
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -570,7 +570,7 @@ h1, h2, h3, h4, h5, h6, .font-display {
 
 .pds-label {
   display: block;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.10em;
@@ -603,7 +603,8 @@ h1, h2, h3, h4, h5, h6, .font-display {
   align-items: center;
   gap: 5px;
   font-size: 10px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
