@@ -1,622 +1,876 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  ArrowRight,
-  Terminal,
-  Copy,
-  Check,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  Zap,
-  Layers,
-  ShieldCheck,
-} from "lucide-react";
+import { motion, useReducedMotion, AnimatePresence } from "framer-motion";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { ArrowRight, Check } from "@phosphor-icons/react";
 import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+gsap.registerPlugin(ScrollTrigger);
 
-type StreamStatus = "ok" | "running" | "error";
+// ── Types ───────────────────────────────────────────────────────────────────
 
-interface StreamRow {
+interface Participant {
   id: string;
-  agent: string;
-  tool: string;
-  result: string;
-  status: StreamStatus;
-  ms: number;
+  name: string;
+  role: string;
+  x: number;
+  y: number;
+  color: string;
 }
 
-// ── Mock activity stream data ─────────────────────────────────────────────────
-
-const INITIAL_STREAM: StreamRow[] = [
-  { id: "r5", agent: "Antigravity IDE",  tool: "generate_auth_scaffold",  result: "Auth route scaffold created",          status: "ok",      ms: 1420 },
-  { id: "r4", agent: "Claude (Cursor)",  tool: "read_context_graph",       result: "Returned 34 decision nodes",          status: "ok",      ms: 88   },
-  { id: "r3", agent: "ChatGPT-4o",       tool: "request_tool_action",      result: "Delegated to Metaphor Proxy",         status: "ok",      ms: 12   },
-  { id: "r2", agent: "Orion Companion",  tool: "write_handoff_record",     result: "ADR-042 persisted to context mesh",   status: "ok",      ms: 310  },
-  { id: "r1", agent: "Metaphor Engine",  tool: "match_capability",         result: "Routing...",                          status: "running", ms: 0    },
-];
-
-const LIVE_ROWS: StreamRow[] = [
-  { id: "l1", agent: "Antigravity IDE",  tool: "generate_component",       result: "FloatingNav.tsx written",             status: "ok",      ms: 2100 },
-  { id: "l2", agent: "Claude (Cursor)",  tool: "list_mcp_tools",           result: "27 tools registered",                 status: "ok",      ms: 44   },
-  { id: "l3", agent: "ChatGPT-4o",       tool: "read_context_graph",       result: "Orion sprint context loaded",         status: "ok",      ms: 156  },
-  { id: "l4", agent: "Orion Companion",  tool: "request_tool_action",      result: "Capability matched in 9ms",           status: "ok",      ms: 9    },
-  { id: "l5", agent: "Metaphor Engine",  tool: "write_handoff_record",     result: "Handoff #1049 logged",                status: "ok",      ms: 204  },
-];
-
-// ── Status icon helper ────────────────────────────────────────────────────────
-
-function StreamStatusIcon({ status }: { status: StreamStatus }) {
-  if (status === "ok")      return <CheckCircle2  className="w-3 h-3 shrink-0" style={{ color: "#4CAF7D" }} />;
-  if (status === "error")   return <AlertCircle   className="w-3 h-3 shrink-0 text-red-400" />;
-  return <Loader2 className="w-3 h-3 shrink-0 animate-spin" style={{ color: "#4CAF7D" }} />;
+interface Connection {
+  from: string;
+  to: string;
 }
 
-// ── Live Activity Stream ──────────────────────────────────────────────────────
+// ── Participant Network Data ─────────────────────────────────────────────────
 
-function ActivityStream() {
-  const [rows, setRows] = useState<StreamRow[]>(INITIAL_STREAM);
-  const liveIndex = useRef(0);
+const PARTICIPANTS: Participant[] = [
+  { id: "chatgpt",     name: "ChatGPT",     role: "Reasoning",      x: 50,  y: 5,   color: "#10A37F" },
+  { id: "claude",      name: "Claude",      role: "Architecture",   x: 95,  y: 28,  color: "#D97706" },
+  { id: "github",      name: "GitHub",      role: "Codebase",       x: 88,  y: 72,  color: "#0A0A0A" },
+  { id: "notion",      name: "Notion",      role: "Knowledge",      x: 50,  y: 95,  color: "#6366F1" },
+  { id: "antigravity", name: "Antigravity", role: "Development",    x: 12,  y: 72,  color: "#8B5CF6" },
+  { id: "cursor",      name: "Cursor",      role: "Implementation", x: 5,   y: 28,  color: "#374151" },
+];
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      const next = LIVE_ROWS[liveIndex.current % LIVE_ROWS.length];
-      liveIndex.current++;
-      setRows(prev => {
-        const updated = [{ ...next, id: `live-${Date.now()}` }, ...prev].slice(0, 7);
-        return updated;
-      });
-    }, 2800);
-    return () => clearInterval(id);
-  }, []);
+const CENTER = { id: "metaphor", name: "Metaphor", x: 50, y: 50 };
+
+const CONNECTIONS: Connection[] = PARTICIPANTS.map((p) => ({
+  from: "metaphor",
+  to: p.id,
+}));
+
+// ── Animated Participant Network ─────────────────────────────────────────────
+
+function ParticipantNetwork({ phase }: { phase: "isolated" | "connected" | "coordinated" }) {
+  const reduce = useReducedMotion();
+
+  const getPos = (p: Participant) => ({
+    cx: `${p.x}%`,
+    cy: `${p.y}%`,
+  });
 
   return (
-    <div
-      className="relative w-full max-w-4xl mx-auto rounded-2xl overflow-hidden"
-      style={{
-        background: "#0D0D0D",
-        border: "1px solid rgba(255,255,255,0.06)",
-      }}
+    <svg
+      viewBox="0 0 100 100"
+      className="w-full h-full"
+      style={{ overflow: "visible" }}
+      aria-label="Participant network diagram showing AI tools connecting through Metaphor"
     >
-      {/* Header */}
-      <div
-        className="flex items-center justify-between px-5 py-3.5"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
-      >
-        <div className="flex items-center gap-2.5">
-          <span
-            className="relative flex h-2 w-2"
-          >
-            <span
-              className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-              style={{ background: "#4CAF7D" }}
-            />
-            <span
-              className="relative inline-flex rounded-full h-2 w-2"
-              style={{ background: "#4CAF7D" }}
-            />
-          </span>
-          <span
-            className="text-[11px] font-mono uppercase tracking-widest"
-            style={{ color: "rgba(240,240,238,0.45)" }}
-          >
-            Live · Agent Activity Stream
-          </span>
-        </div>
-        <span
-          className="text-[10px] font-mono"
-          style={{ color: "rgba(240,240,238,0.25)" }}
-        >
-          MCP Protocol v2.0
-        </span>
-      </div>
+      {/* Connection lines */}
+      {PARTICIPANTS.map((p) => (
+        <motion.line
+          key={`line-${p.id}`}
+          x1={`${CENTER.x}%`}
+          y1={`${CENTER.y}%`}
+          x2={`${p.x}%`}
+          y2={`${p.y}%`}
+          stroke="#6366F1"
+          strokeWidth="0.3"
+          strokeDasharray={phase === "connected" || phase === "coordinated" ? "none" : "2 2"}
+          initial={reduce ? false : { pathLength: 0, opacity: 0 }}
+          animate={
+            phase !== "isolated"
+              ? { pathLength: 1, opacity: phase === "coordinated" ? 0.35 : 0.2 }
+              : { pathLength: 0, opacity: 0 }
+          }
+          transition={{ duration: 0.8, delay: PARTICIPANTS.indexOf(p) * 0.1, ease: [0.16, 1, 0.3, 1] }}
+        />
+      ))}
 
-      {/* Stream rows */}
-      <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.03)" }}>
-        <AnimatePresence initial={false}>
-          {rows.map((row) => (
-            <motion.div
-              key={row.id}
-              layout
-              initial={{ opacity: 0, x: -12 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-              className="flex items-center gap-3 px-5 py-3 group"
+      {/* Signal dots traveling along lines (coordinated phase only) */}
+      {phase === "coordinated" &&
+        !reduce &&
+        PARTICIPANTS.slice(0, 3).map((p, i) => (
+          <motion.circle
+            key={`signal-${p.id}`}
+            r="0.8"
+            fill="#6366F1"
+            initial={{ offsetDistance: "0%", opacity: 0 }}
+            animate={{ offsetDistance: "100%", opacity: [0, 1, 0] }}
+            transition={{
+              duration: 2,
+              delay: i * 0.7,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+            style={{
+              offsetPath: `path("M ${CENTER.x} ${CENTER.y} L ${p.x} ${p.y}")`,
+            }}
+          />
+        ))}
+
+      {/* Participant nodes */}
+      {PARTICIPANTS.map((p, i) => {
+        const pos = getPos(p);
+        return (
+          <motion.g key={p.id}>
+            <motion.circle
+              cx={pos.cx}
+              cy={pos.cy}
+              r="3.5"
+              fill="white"
+              stroke={phase === "coordinated" ? p.color : "#E5E7EB"}
+              strokeWidth={phase === "coordinated" ? "0.5" : "0.3"}
+              initial={reduce ? false : { scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5, delay: i * 0.08, ease: [0.175, 0.885, 0.32, 1.05] }}
+              style={{ filter: phase === "coordinated" ? `drop-shadow(0 0 2px ${p.color}40)` : "none" }}
+            />
+            <motion.text
+              x={pos.cx}
+              y={`${p.y + 7}%`}
+              textAnchor="middle"
+              fill="#6B7280"
+              style={{ fontSize: "3px", fontFamily: "Satoshi, sans-serif", fontWeight: 500 }}
+              initial={reduce ? false : { opacity: 0 }}
+              animate={{ opacity: phase !== "isolated" ? 1 : 0.3 }}
+              transition={{ duration: 0.4, delay: 0.3 + i * 0.06 }}
             >
-              <StreamStatusIcon status={row.status} />
-
-              {/* Agent */}
-              <span
-                className="w-36 shrink-0 text-[11px] font-mono truncate"
-                style={{ color: "rgba(240,240,238,0.40)" }}
+              {p.name}
+            </motion.text>
+            {phase !== "isolated" && (
+              <motion.text
+                x={pos.cx}
+                y={`${p.y + 10.5}%`}
+                textAnchor="middle"
+                fill="#9CA3AF"
+                style={{ fontSize: "2.2px", fontFamily: "JetBrains Mono, monospace" }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4, delay: 0.5 + i * 0.06 }}
               >
-                {row.agent}
-              </span>
+                {p.role}
+              </motion.text>
+            )}
+          </motion.g>
+        );
+      })}
 
-              {/* Arrow */}
-              <ArrowRight
-                className="w-3 h-3 shrink-0"
-                style={{ color: "rgba(255,255,255,0.18)" }}
-              />
-
-              {/* Tool name */}
-              <span
-                className="w-44 shrink-0 text-[11px] font-mono font-semibold truncate"
-                style={{ color: "rgba(240,240,238,0.80)" }}
-              >
-                {row.tool}
-              </span>
-
-              {/* Result */}
-              <span
-                className="flex-1 text-[11px] font-sans truncate"
-                style={{ color: "rgba(240,240,238,0.38)" }}
-              >
-                {row.result}
-              </span>
-
-              {/* Latency */}
-              <span
-                className="shrink-0 text-[10px] font-mono ml-auto"
-                style={{ color: "rgba(240,240,238,0.22)" }}
-              >
-                {row.status === "running" ? "—" : row.ms > 999 ? `${(row.ms / 1000).toFixed(1)}s` : `${row.ms}ms`}
-              </span>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-    </div>
-  );
-}
-
-// ── Numbered Feature Card ─────────────────────────────────────────────────────
-
-interface FeatureCardProps {
-  num: string;
-  title: string;
-  description: string;
-  icon: React.ElementType;
-  delay?: number;
-}
-
-function FeatureCard({ num, title, description, icon: Icon, delay = 0 }: FeatureCardProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1], delay }}
-      className="relative overflow-hidden rounded-2xl p-7 group cursor-default"
-      style={{
-        background: "#0D0D0D",
-        border: "1px solid rgba(255,255,255,0.055)",
-      }}
-    >
-      {/* Ghost numeral */}
-      <span
-        className="absolute right-4 top-0 select-none pointer-events-none font-display font-bold leading-none"
+      {/* Center — Metaphor node */}
+      <motion.circle
+        cx="50%"
+        cy="50%"
+        r={phase === "coordinated" ? "6" : "5"}
+        fill="white"
+        stroke="#6366F1"
+        strokeWidth="0.6"
+        initial={reduce ? false : { scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ duration: 0.6, delay: 0.4, ease: [0.175, 0.885, 0.32, 1.05] }}
         style={{
-          fontSize: "clamp(80px, 10vw, 120px)",
-          color: "rgba(255,255,255,0.038)",
-          fontFamily: "'Cormorant Garamond', serif",
-          lineHeight: 1,
+          filter: phase === "coordinated" ? "drop-shadow(0 0 4px rgba(99,102,241,0.4))" : "drop-shadow(0 0 2px rgba(99,102,241,0.2))",
         }}
-        aria-hidden="true"
+      />
+      <motion.text
+        x="50%"
+        y="50%"
+        dy="1.1"
+        textAnchor="middle"
+        fill="#6366F1"
+        style={{ fontSize: "3.5px", fontFamily: "Satoshi, sans-serif", fontWeight: 600 }}
+        initial={reduce ? false : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.7 }}
       >
-        {num}
-      </span>
-
-      {/* Content */}
-      <div className="relative z-10">
-        <div
-          className="text-xs font-mono mb-5"
-          style={{ color: "rgba(240,240,238,0.30)" }}
-        >
-          {num}
-        </div>
-        <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center mb-5"
-          style={{
-            background: "rgba(76,175,125,0.10)",
-            border: "1px solid rgba(76,175,125,0.20)",
-          }}
-        >
-          <Icon className="w-4 h-4" style={{ color: "#4CAF7D" }} />
-        </div>
-        <h3
-          className="text-xl font-semibold mb-3"
-          style={{
-            fontFamily: "'Satoshi', sans-serif",
-            color: "#F0F0EE",
-            letterSpacing: "-0.02em",
-          }}
-        >
-          {title}
-        </h3>
-        <p
-          className="text-sm leading-relaxed"
-          style={{ color: "rgba(240,240,238,0.42)", fontFamily: "'Satoshi', sans-serif" }}
-        >
-          {description}
-        </p>
-      </div>
-    </motion.div>
+        Metaphor
+      </motion.text>
+    </svg>
   );
 }
 
-// ── Main Landing Page ─────────────────────────────────────────────────────────
+// ── Context Fragment ─────────────────────────────────────────────────────────
+
+const FRAGMENTS = [
+  { label: "Objective", emoji: "◎", delay: 0 },
+  { label: "Previous decisions", emoji: "◈", delay: 0.08 },
+  { label: "Constraints", emoji: "◉", delay: 0.16 },
+  { label: "Codebase state", emoji: "◇", delay: 0.24 },
+  { label: "Open questions", emoji: "○", delay: 0.32 },
+  { label: "Earlier outputs", emoji: "◆", delay: 0.40 },
+];
+
+// ── Landing Page ─────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const [copied, setCopied] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const reduce = useReducedMotion();
+  const gapSectionRef = useRef<HTMLDivElement>(null);
+  const gapInnerRef = useRef<HTMLDivElement>(null);
+  const layerSectionRef = useRef<HTMLDivElement>(null);
+  const layerInnerRef = useRef<HTMLDivElement>(null);
+  const [networkPhase, setNetworkPhase] = useState<"isolated" | "connected" | "coordinated">("isolated");
+  const [fragmentsScattered, setFragmentsScattered] = useState(false);
+  const [gapProgress, setGapProgress] = useState(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Hero network: animate through phases on load
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 24);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    const t1 = setTimeout(() => setNetworkPhase("connected"), 800);
+    const t2 = setTimeout(() => setNetworkPhase("coordinated"), 1800);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
-  const handleCopyCli = () => {
-    navigator.clipboard.writeText("npx @metaphor/mcp-server start");
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  // GSAP — The Context Gap (pinned scroll section)
+  useEffect(() => {
+    if (reduce || !gapSectionRef.current || !gapInnerRef.current) return;
+
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: gapSectionRef.current,
+          start: "top top",
+          end: "+=280%",
+          pin: true,
+          scrub: 1.2,
+          anticipatePin: 1,
+          onUpdate: (self) => setGapProgress(self.progress),
+        },
+      });
+
+      // Beat 1 → Beat 2: participants appear
+      tl.fromTo(".gap-participant", { opacity: 0, scale: 0.7, y: 12 }, {
+        opacity: 1, scale: 1, y: 0, duration: 0.3, stagger: 0.06, ease: "power3.out",
+      }, 0);
+
+      // Beat 2: intention appears
+      tl.fromTo(".gap-intention", { opacity: 0, y: 16 }, {
+        opacity: 1, y: 0, duration: 0.25, ease: "power2.out",
+      }, 0.35);
+
+      // Beat 3: fragments scatter
+      tl.to(".gap-fragment", { opacity: 1, scale: 1, duration: 0.2, stagger: 0.05 }, 0.55);
+      tl.to(".gap-fragment-0", { x: -80, y: -40, rotate: -8, duration: 0.35 }, 0.75);
+      tl.to(".gap-fragment-1", { x: 60, y: -20, rotate: 5, duration: 0.35 }, 0.78);
+      tl.to(".gap-fragment-2", { x: -40, y: 50, rotate: -12, duration: 0.35 }, 0.81);
+      tl.to(".gap-fragment-3", { x: 90, y: 30, rotate: 8, duration: 0.35 }, 0.84);
+      tl.to(".gap-fragment-4", { x: -20, y: -70, rotate: -5, duration: 0.35 }, 0.87);
+      tl.to(".gap-fragment-5", { x: 50, y: 60, rotate: 10, duration: 0.35 }, 0.90);
+
+      // Beat 4: bridge broken
+      tl.fromTo(".gap-bridge", { opacity: 0, scale: 0.9 }, {
+        opacity: 1, scale: 1, duration: 0.2,
+      }, 1.1);
+
+      // Beat 5: everything dims, final line appears
+      tl.to(".gap-participant, .gap-fragment, .gap-intention", { opacity: 0.12, duration: 0.2 }, 1.3);
+      tl.fromTo(".gap-final-line", { opacity: 0, y: 10 }, {
+        opacity: 1, y: 0, duration: 0.3,
+      }, 1.4);
+    }, gapSectionRef);
+
+    return () => ctx.revert();
+  }, [reduce]);
+
+  // GSAP — The Shared Layer (pinned scroll section)
+  useEffect(() => {
+    if (reduce || !layerSectionRef.current) return;
+
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: layerSectionRef.current,
+          start: "top top",
+          end: "+=200%",
+          pin: true,
+          scrub: 1,
+          anticipatePin: 1,
+        },
+      });
+
+      // Signal forms
+      tl.fromTo(".layer-signal", { scale: 0, opacity: 0 }, {
+        scale: 1, opacity: 1, duration: 0.3, ease: "power3.out",
+      }, 0);
+
+      // Fragments converge
+      tl.to(".layer-fragment", { x: 0, y: 0, opacity: 0.7, duration: 0.35, stagger: 0.05 }, 0.25);
+
+      // Participants illuminate
+      tl.to(".layer-participant", { opacity: 1, scale: 1, duration: 0.2, stagger: 0.06 }, 0.55);
+
+      // Handoff card expands
+      tl.fromTo(".layer-card", { opacity: 0, y: 20, scale: 0.95 }, {
+        opacity: 1, y: 0, scale: 1, duration: 0.3,
+      }, 0.8);
+
+      // Final copy
+      tl.fromTo(".layer-copy", { opacity: 0, y: 12 }, {
+        opacity: 1, y: 0, duration: 0.25,
+      }, 1.1);
+    }, layerSectionRef);
+
+    return () => ctx.revert();
+  }, [reduce]);
+
+  const [expandedCard, setExpandedCard] = useState(false);
 
   return (
-    <div
-      className="relative min-h-screen overflow-x-hidden flora-dot-canvas"
-      style={{ color: "#F0F0EE" }}
-    >
-      {/* ── Navigation ── */}
-      <header
-        className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
-        style={{
-          background: scrolled ? "rgba(0,0,0,0.78)" : "transparent",
-          backdropFilter: scrolled ? "blur(20px)" : "none",
-          WebkitBackdropFilter: scrolled ? "blur(20px)" : "none",
-          borderBottom: scrolled ? "1px solid rgba(255,255,255,0.04)" : "none",
-        }}
+    <div className="w-full bg-white text-[#0A0A0A] overflow-x-hidden">
+
+      {/* ── NAV ─────────────────────────────────────────────────────────── */}
+      <nav
+        className="fixed top-0 left-0 right-0 z-50 nav-glass"
+        role="navigation"
+        aria-label="Main navigation"
       >
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 md:px-10 h-14">
-          {/* Logo */}
-          <div className="flex items-center gap-2.5">
-            <MetaphorLogo size={18} />
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
+          {/* Mark */}
+          <Link href="/" className="flex items-center gap-2.5 group" aria-label="Metaphor home">
+            <MetaphorLogo className="w-6 h-6" />
             <span
-              className="text-sm font-semibold tracking-tight"
-              style={{
-                fontFamily: "'Satoshi', sans-serif",
-                color: "#F0F0EE",
-                letterSpacing: "-0.02em",
-              }}
+              className="text-[15px] font-semibold tracking-tight text-[#0A0A0A]"
+              style={{ fontFamily: "Satoshi, sans-serif" }}
             >
               Metaphor
             </span>
-          </div>
+          </Link>
 
-          {/* Nav links — text only, no icons */}
-          <nav className="hidden md:flex items-center gap-8">
-            {["Node Studio", "Architecture", "MCP Proxy"].map((label) => (
+          {/* Center nav */}
+          <div className="hidden md:flex items-center gap-1">
+            {["Platform", "How it works", "Use cases", "Security"].map((item) => (
               <a
-                key={label}
-                href={`#${label.toLowerCase().replace(/ /g, "-")}`}
-                className="text-[13px] transition-colors duration-150"
-                style={{
-                  fontFamily: "'Satoshi', sans-serif",
-                  color: "rgba(240,240,238,0.45)",
-                }}
-                onMouseEnter={e => (e.currentTarget.style.color = "#F0F0EE")}
-                onMouseLeave={e => (e.currentTarget.style.color = "rgba(240,240,238,0.45)")}
+                key={item}
+                href={`#${item.toLowerCase().replace(/\s/g, "-")}`}
+                className="px-3 py-1.5 text-[13.5px] text-[#6B7280] hover:text-[#0A0A0A] transition-colors rounded-lg hover:bg-[rgba(10,10,10,0.04)]"
+                style={{ fontFamily: "Satoshi, sans-serif" }}
               >
-                {label}
+                {item}
               </a>
             ))}
-          </nav>
+          </div>
 
-          {/* CTAs */}
-          <div className="flex items-center gap-3">
+          {/* Right CTAs */}
+          <div className="hidden md:flex items-center gap-3">
             <Link
               href="/login"
-              className="text-[13px] transition-colors duration-150 hidden sm:block"
-              style={{
-                fontFamily: "'Satoshi', sans-serif",
-                color: "rgba(240,240,238,0.45)",
-              }}
+              className="text-[13.5px] text-[#6B7280] hover:text-[#0A0A0A] transition-colors px-3 py-1.5 rounded-lg hover:bg-[rgba(10,10,10,0.04)]"
+              style={{ fontFamily: "Satoshi, sans-serif" }}
             >
-              Sign In
+              Sign in
             </Link>
             <Link
-              href="/projects"
-              className="btn-flora-primary text-[13px]"
-              style={{ minHeight: "36px", padding: "0 18px", borderRadius: "10px" }}
+              href="/onboard"
+              className="btn-primary text-[13.5px] min-h-[36px] px-4 rounded-full"
+              id="nav-cta"
             >
-              Launch Studio
-              <ArrowRight className="w-3.5 h-3.5" />
+              Build your network
             </Link>
           </div>
+
+          {/* Mobile hamburger */}
+          <button
+            className="md:hidden p-2 rounded-lg hover:bg-[rgba(10,10,10,0.04)]"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle menu"
+            aria-expanded={isMobileMenuOpen}
+          >
+            <div className="w-5 h-0.5 bg-[#0A0A0A] mb-1 transition-all" />
+            <div className="w-5 h-0.5 bg-[#0A0A0A] mb-1 transition-all" />
+            <div className="w-5 h-0.5 bg-[#0A0A0A] transition-all" />
+          </button>
         </div>
-      </header>
 
-      {/* ── Hero ── */}
-      <main className="relative z-10">
-        <section className="max-w-7xl mx-auto px-6 md:px-10 pt-40 pb-24 text-center">
-          {/* Badge */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="inline-flex items-center gap-2 mb-8 px-3.5 py-1.5 rounded-full"
-            style={{
-              background: "rgba(76,175,125,0.10)",
-              border: "1px solid rgba(76,175,125,0.22)",
-            }}
-          >
-            <span
-              className="w-1.5 h-1.5 rounded-full animate-pulse"
-              style={{ background: "#4CAF7D" }}
-            />
-            <span
-              className="text-[11px] font-mono"
-              style={{ color: "#4CAF7D" }}
+        {/* Mobile menu */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:hidden border-t border-[rgba(10,10,10,0.06)] bg-white/95 backdrop-blur-xl px-6 py-4 flex flex-col gap-3"
             >
-              MCP Protocol v2.0 · Now Generally Available
-            </span>
-          </motion.div>
+              {["Platform", "How it works", "Use cases", "Security"].map((item) => (
+                <a
+                  key={item}
+                  href="#"
+                  className="text-[14px] text-[#6B7280] py-2 border-b border-[rgba(10,10,10,0.06)]"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {item}
+                </a>
+              ))}
+              <Link href="/login" className="text-[14px] py-2 text-[#0A0A0A]">Sign in</Link>
+              <Link href="/onboard" className="btn-primary w-full justify-center mt-2">
+                Build your network
+              </Link>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </nav>
 
-          {/* Headline */}
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1], delay: 0.05 }}
-            className="mb-6 px-4"
-            style={{
-              fontFamily: "'Cormorant Garamond', Georgia, serif",
-              fontSize: "clamp(48px, 7vw, 92px)",
-              fontWeight: 500,
-              lineHeight: 1.07,
-              letterSpacing: "-0.015em",
-              color: "#F0F0EE",
-            }}
-          >
-            Where AI agents and tools share
-            <br />
-            <em
-              style={{
-                fontStyle: "italic",
-                fontWeight: 400,
-                color: "#F0F0EE",
-              }}
+      {/* ── §1 HERO ─────────────────────────────────────────────────────── */}
+      <section
+        id="hero"
+        className="min-h-[100dvh] flex items-center pt-16"
+        aria-labelledby="hero-heading"
+      >
+        <div className="max-w-7xl mx-auto px-6 w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center py-16 lg:py-0">
+
+          {/* Left — copy */}
+          <div className="flex flex-col gap-8">
+            <motion.div
+              initial={reduce ? false : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             >
-              one continuous mind.
-            </em>
-          </motion.h1>
+              <h1
+                id="hero-heading"
+                className="font-display text-[clamp(52px,6vw,88px)] leading-[1.05] tracking-[-0.025em] text-[#0A0A0A]"
+                style={{ fontWeight: 500 }}
+              >
+                Make your AI tools work as one.
+              </h1>
+            </motion.div>
 
-          {/* Subtitle */}
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1], delay: 0.12 }}
-            className="text-lg max-w-2xl mx-auto mb-10 leading-relaxed"
-            style={{
-              fontFamily: "'Satoshi', sans-serif",
-              color: "rgba(240,240,238,0.48)",
-            }}
-          >
-            Connect ChatGPT, Claude, and Orion to external tools, databases, and codebases.
-            Deterministic handoffs, verifiable context, zero prompt drift.
-          </motion.p>
-
-          {/* CTAs */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.18 }}
-            className="flex flex-wrap items-center justify-center gap-3"
-          >
-            <Link
-              href="/projects"
-              className="btn-flora-primary"
+            <motion.p
+              className="text-[17px] text-[#6B7280] leading-relaxed max-w-[460px]"
+              style={{ fontFamily: "Satoshi, sans-serif" }}
+              initial={reduce ? false : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
             >
-              Enter Node Studio
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+              Shared context. Intelligent handoffs. Coordinated execution — without you carrying the context between tools.
+            </motion.p>
 
-            <button
-              onClick={handleCopyCli}
-              className="btn-flora-mono"
-              aria-label="Copy CLI command to clipboard"
+            <motion.div
+              className="flex flex-wrap items-center gap-3"
+              initial={reduce ? false : { opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.28, ease: [0.16, 1, 0.3, 1] }}
             >
-              <Terminal className="w-4 h-4" style={{ color: "#4CAF7D" }} />
-              npx @metaphor/mcp-server
-              {copied
-                ? <Check className="w-3.5 h-3.5 ml-1" style={{ color: "#4CAF7D" }} />
-                : <Copy className="w-3.5 h-3.5 ml-1" style={{ color: "rgba(240,240,238,0.30)" }} />
-              }
-            </button>
-          </motion.div>
-        </section>
+              <Link
+                href="/onboard"
+                className="btn-primary flex items-center gap-2 group"
+                id="hero-primary-cta"
+              >
+                Build your network
+                <ArrowRight size={15} weight="bold" className="group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+              <a
+                href="#how-it-works"
+                className="btn-ghost"
+                id="hero-secondary-cta"
+              >
+                Explore how it works
+              </a>
+            </motion.div>
 
-        {/* ── Activity Stream Demo ── */}
-        <section
-          id="node-studio"
-          className="max-w-7xl mx-auto px-6 md:px-10 pb-28"
-        >
-          <motion.div
-            initial={{ opacity: 0, y: 32 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.28 }}
-          >
-            <ActivityStream />
-          </motion.div>
-
-          {/* Footnote */}
-          <p
-            className="text-center text-[11px] font-mono mt-5"
-            style={{ color: "rgba(240,240,238,0.22)" }}
-          >
-            Live data from{" "}
-            <code
-              className="font-mono"
-              style={{ color: "rgba(240,240,238,0.35)" }}
+            {/* Social proof strip — below hero per taste rules */}
+            <motion.div
+              className="flex items-center gap-6 pt-2"
+              initial={reduce ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
             >
-              /api/v1/mcp/audit-logs
-            </code>
-            {" "}· Rows update every ~3s
-          </p>
-        </section>
-
-        {/* ── Numbered Feature Sections ── */}
-        <section
-          id="architecture"
-          className="max-w-7xl mx-auto px-6 md:px-10 pb-32"
-        >
-          {/* Section eyebrow */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-16"
-          >
-            <span
-              className="text-[11px] font-mono uppercase tracking-widest"
-              style={{ color: "rgba(240,240,238,0.30)" }}
-            >
-              Core Architecture
-            </span>
-            <h2
-              className="mt-3"
-              style={{
-                fontFamily: "'Cormorant Garamond', Georgia, serif",
-                fontSize: "clamp(32px, 4vw, 52px)",
-                fontWeight: 400,
-                letterSpacing: "-0.015em",
-                color: "#F0F0EE",
-                lineHeight: 1.1,
-              }}
-            >
-              Engineered for absolute{" "}
-              <em style={{ fontStyle: "italic", fontWeight: 300 }}>
-                context continuity.
-              </em>
-            </h2>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <FeatureCard
-              num="01"
-              title="Deterministic Baton Passing"
-              description="Tasks don't get lost in infinite chat loops. Metaphor enforces a strict Task → Handoff → Execution lifecycle backed by PostgreSQL. Every baton is verifiable."
-              icon={Layers}
-              delay={0}
-            />
-            <FeatureCard
-              num="02"
-              title="Universal MCP Proxy"
-              description="Act as a proxy for external MCP tools. Your host agent calls request_tool_action and Metaphor handles stdio/SSE communication with zero configuration."
-              icon={Zap}
-              delay={0.08}
-            />
-            <FeatureCard
-              num="03"
-              title="Sandboxed Capability Scopes"
-              description="Each participant declares exact capabilities. Level-1 and Level-2 matching ensures the right agent or tool gets the baton every time — never a hallucination."
-              icon={ShieldCheck}
-              delay={0.16}
-            />
+              {[
+                { label: "Participants connected", value: "12+" },
+                { label: "Context handoffs", value: "1,049+" },
+                { label: "Setup time", value: "< 5 min" },
+              ].map((stat) => (
+                <div key={stat.label} className="flex flex-col">
+                  <span
+                    className="text-[18px] font-semibold text-[#0A0A0A] tracking-tight"
+                    style={{ fontFamily: "Satoshi, sans-serif" }}
+                  >
+                    {stat.value}
+                  </span>
+                  <span className="label-mono">{stat.label}</span>
+                </div>
+              ))}
+            </motion.div>
           </div>
-        </section>
 
-        {/* ── MCP Proxy CTA Banner ── */}
-        <section
-          id="mcp-proxy"
-          className="max-w-7xl mx-auto px-6 md:px-10 pb-32"
-        >
+          {/* Right — live network diagram */}
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="relative overflow-hidden rounded-2xl px-10 py-14 text-center"
-            style={{
-              background: "#0D0D0D",
-              border: "1px solid rgba(255,255,255,0.055)",
-            }}
+            className="relative w-full aspect-square max-w-[520px] mx-auto lg:mx-0"
+            initial={reduce ? false : { opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            aria-hidden="true"
           >
-            {/* Ghost numeral background */}
-            <span
-              className="absolute right-8 top-0 select-none pointer-events-none font-display font-bold leading-none"
+            {/* Subtle dot-grid background for the diagram area */}
+            <div
+              className="absolute inset-0 rounded-3xl"
               style={{
-                fontSize: "clamp(120px, 18vw, 220px)",
-                color: "rgba(255,255,255,0.025)",
-                fontFamily: "'Cormorant Garamond', serif",
-                lineHeight: 1,
+                background: "radial-gradient(circle at 50% 50%, rgba(99,102,241,0.04) 0%, transparent 70%)",
               }}
-              aria-hidden="true"
-            >
-              M
-            </span>
+            />
+            <ParticipantNetwork phase={networkPhase} />
+          </motion.div>
+        </div>
+      </section>
 
-            <div className="relative z-10 max-w-2xl mx-auto">
-              <span
-                className="text-[11px] font-mono uppercase tracking-widest mb-4 block"
-                style={{ color: "rgba(240,240,238,0.30)" }}
-              >
-                Ready to connect
-              </span>
+      {/* ── §2 THE CONTEXT GAP (GSAP pinned) ───────────────────────────── */}
+      <section
+        id="how-it-works"
+        ref={gapSectionRef}
+        className="relative min-h-[100dvh] bg-white flex items-center overflow-hidden"
+        aria-label="The Context Gap section"
+      >
+        <div ref={gapInnerRef} className="max-w-7xl mx-auto px-6 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center min-h-[80vh]">
+
+            {/* Left — label + copy */}
+            <div className="flex flex-col gap-6">
+              <div className="label-mono text-[#6366F1]">The context gap</div>
               <h2
-                className="mb-4"
-                style={{
-                  fontFamily: "'Cormorant Garamond', Georgia, serif",
-                  fontSize: "clamp(28px, 3.5vw, 44px)",
-                  fontWeight: 400,
-                  letterSpacing: "-0.015em",
-                  color: "#F0F0EE",
-                }}
+                className="font-display text-[clamp(40px,4.5vw,68px)] leading-[1.08] tracking-[-0.02em]"
+                style={{ fontWeight: 500 }}
               >
-                Your agents are already halfway there.
+                Every tool knows part of the work.
               </h2>
-              <p
-                className="text-base mb-8"
-                style={{
-                  fontFamily: "'Satoshi', sans-serif",
-                  color: "rgba(240,240,238,0.42)",
-                  lineHeight: 1.7,
-                }}
-              >
-                Add Metaphor as a remote MCP server. ChatGPT, Claude, Cursor, and Orion connect in under two minutes.
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-3">
-                <Link href="/projects" className="btn-flora-primary">
-                  Start Building
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-                <Link href="/login" className="btn-flora-ghost" style={{ color: "#F0F0EE" }}>
-                  View Documentation
-                </Link>
+
+              <div className="flex flex-col gap-4 mt-2">
+                {/* Participant chips */}
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { name: "ChatGPT", role: "Reasoning" },
+                    { name: "Claude", role: "Architecture" },
+                    { name: "GitHub", role: "Codebase" },
+                    { name: "Notion", role: "Knowledge" },
+                    { name: "Antigravity", role: "Development" },
+                    { name: "Cursor", role: "Implementation" },
+                  ].map((p, i) => (
+                    <div
+                      key={p.name}
+                      className={`gap-participant glass-card flex items-center gap-2.5 px-3 py-2.5 rounded-xl`}
+                      style={{ borderRadius: 12, opacity: 0, transform: "scale(0.7) translateY(12px)" }}
+                    >
+                      <div
+                        className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold shrink-0"
+                        style={{ background: PARTICIPANTS[i]?.color || "#6366F1" }}
+                      >
+                        {p.name[0]}
+                      </div>
+                      <div>
+                        <div className="text-[12px] font-semibold text-[#0A0A0A]" style={{ fontFamily: "Satoshi, sans-serif" }}>
+                          {p.name}
+                        </div>
+                        <div className="label-mono text-[9px]">{p.role}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bridge text — appears in beat 4 */}
+              <div className="gap-bridge opacity-0">
+                <p className="text-[15px] text-[#6B7280] leading-relaxed border-l-2 border-[#6366F1] pl-4">
+                  Every handoff starts with catching the next tool up.
+                </p>
+              </div>
+
+              {/* Final line — appears in beat 5 */}
+              <div className="gap-final-line opacity-0">
+                <p
+                  className="font-display text-[22px] text-[#0A0A0A] leading-snug"
+                  style={{ fontStyle: "italic", fontWeight: 400 }}
+                >
+                  The problem is not a lack of intelligence. It is a lack of connection.
+                </p>
               </div>
             </div>
-          </motion.div>
-        </section>
-      </main>
 
-      {/* ── Footer ── */}
-      <footer
-        className="text-center py-10"
-        style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}
+            {/* Right — fragments / intention visual */}
+            <div className="relative flex items-center justify-center min-h-[400px]">
+              {/* Central intention */}
+              <div
+                className="gap-intention opacity-0 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10"
+              >
+                <div
+                  className="px-4 py-3 glass-elevated rounded-2xl text-center max-w-[200px]"
+                >
+                  <div className="label-mono mb-1">Intention</div>
+                  <div className="text-[14px] font-semibold text-[#0A0A0A]" style={{ fontFamily: "Satoshi, sans-serif" }}>
+                    Build the Clario notification system.
+                  </div>
+                </div>
+              </div>
+
+              {/* Scattered context fragments */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                {FRAGMENTS.map((f, i) => (
+                  <div
+                    key={f.label}
+                    className={`gap-fragment gap-fragment-${i} absolute opacity-0 scale-0`}
+                    style={{
+                      top: `${20 + i * 12}%`,
+                      left: `${10 + ((i * 17) % 70)}%`,
+                    }}
+                  >
+                    <div
+                      className="px-2.5 py-1.5 rounded-xl border border-[rgba(10,10,10,0.08)] bg-white shadow-sm flex items-center gap-1.5 whitespace-nowrap"
+                    >
+                      <span className="text-[#6366F1] text-[10px]">{f.emoji}</span>
+                      <span className="text-[11px] text-[#374151]" style={{ fontFamily: "JetBrains Mono, monospace" }}>
+                        {f.label}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Progress indicator (reduced motion only) */}
+        {reduce && (
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+            <a href="#shared-layer" className="text-[13px] text-[#6B7280] flex items-center gap-1.5">
+              Continue reading <ArrowRight size={12} />
+            </a>
+          </div>
+        )}
+      </section>
+
+      {/* ── §3 THE SHARED LAYER (GSAP pinned) ──────────────────────────── */}
+      <section
+        id="shared-layer"
+        ref={layerSectionRef}
+        className="relative min-h-[100dvh] bg-white flex items-center overflow-hidden"
+        aria-label="The Shared Layer section"
       >
-        <p
-          className="text-[11px] font-mono"
-          style={{ color: "rgba(240,240,238,0.22)" }}
-        >
-          METAPHOR · Cognitive Context Substrate · Pseudonyms Ecosystem
-        </p>
-      </footer>
+        <div className="max-w-7xl mx-auto px-6 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center min-h-[80vh]">
+
+            {/* Left — label + copy */}
+            <div className="flex flex-col gap-6">
+              <div className="label-mono text-[#6366F1]">The shared layer</div>
+              <h2
+                className="font-display text-[clamp(40px,4.5vw,68px)] leading-[1.08] tracking-[-0.02em]"
+                style={{ fontWeight: 500 }}
+              >
+                Give every tool the context it needs.
+              </h2>
+
+              <p className="text-[16px] text-[#6B7280] leading-relaxed max-w-[440px]" style={{ fontFamily: "Satoshi, sans-serif" }}>
+                Metaphor keeps your project reality in one shared layer, then moves the right context to the right participant at the right moment.
+              </p>
+
+              {/* Handoff card */}
+              <div className="layer-card opacity-0">
+                <button
+                  className="w-full text-left glass-card p-5 rounded-2xl group"
+                  onClick={() => setExpandedCard(!expandedCard)}
+                  aria-expanded={expandedCard}
+                  aria-controls="handoff-detail"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="label-mono text-[#6366F1] mb-2">Clario notification system</div>
+                      <div className="text-[14px] font-semibold text-[#0A0A0A] mb-1" style={{ fontFamily: "Satoshi, sans-serif" }}>
+                        Draft the system architecture
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[12px] text-[#6B7280]" style={{ fontFamily: "Satoshi, sans-serif" }}>
+                        <span>Assigned to:</span>
+                        <span className="font-medium text-[#D97706]">Claude</span>
+                        <span className="text-[rgba(10,10,10,0.2)]">·</span>
+                        <span>4 decisions · 2 constraints · 3 artifacts</span>
+                      </div>
+                    </div>
+                    <div
+                      className="shrink-0 w-6 h-6 rounded-full border border-[rgba(10,10,10,0.1)] flex items-center justify-center transition-transform"
+                      style={{ transform: expandedCard ? "rotate(90deg)" : "rotate(0deg)" }}
+                    >
+                      <ArrowRight size={10} className="text-[#6B7280]" />
+                    </div>
+                  </div>
+
+                  <AnimatePresence>
+                    {expandedCard && (
+                      <motion.div
+                        id="handoff-detail"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-4 pt-4 border-t border-[rgba(10,10,10,0.06)] grid grid-cols-2 gap-4">
+                          {[
+                            { title: "Decisions", items: ["Push-based architecture selected", "Q4 deployment deadline"] },
+                            { title: "Constraints", items: ["Preserve current API contract", "Use existing TypeScript structure"] },
+                          ].map((group) => (
+                            <div key={group.title}>
+                              <div className="label-mono mb-2">{group.title}</div>
+                              {group.items.map((item) => (
+                                <div key={item} className="flex items-start gap-1.5 mb-1.5">
+                                  <Check size={10} weight="bold" className="text-[#16A34A] mt-0.5 shrink-0" />
+                                  <span className="text-[12px] text-[#374151]" style={{ fontFamily: "Satoshi, sans-serif" }}>{item}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </button>
+              </div>
+
+              <div className="layer-copy opacity-0">
+                <p
+                  className="font-display text-[20px] text-[#0A0A0A] leading-snug"
+                  style={{ fontStyle: "italic", fontWeight: 400 }}
+                >
+                  Metaphor finds the right capability, then prepares the right context.
+                </p>
+              </div>
+            </div>
+
+            {/* Right — signal network forming */}
+            <div className="relative flex items-center justify-center min-h-[440px]">
+              {/* Central Metaphor signal */}
+              <div className="layer-signal absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20" style={{ opacity: 0, transform: "translate(-50%,-50%) scale(0)" }}>
+                <div
+                  className="w-20 h-20 rounded-full border-2 border-[#6366F1] flex items-center justify-center"
+                  style={{
+                    background: "radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)",
+                    boxShadow: "0 0 32px rgba(99,102,241,0.15)",
+                  }}
+                >
+                  <span className="text-[11px] font-semibold text-[#6366F1]" style={{ fontFamily: "Satoshi, sans-serif" }}>Metaphor</span>
+                </div>
+              </div>
+
+              {/* Converging fragments */}
+              {FRAGMENTS.slice(0, 4).map((f, i) => {
+                const angles = [45, 135, 225, 315];
+                const angle = angles[i] * (Math.PI / 180);
+                const r = 120;
+                return (
+                  <div
+                    key={f.label}
+                    className="layer-fragment absolute"
+                    style={{
+                      top: "50%",
+                      left: "50%",
+                      transform: `translate(calc(-50% + ${Math.cos(angle) * r}px), calc(-50% + ${Math.sin(angle) * r}px))`,
+                      opacity: 0,
+                    }}
+                  >
+                    <div className="px-2.5 py-1.5 rounded-xl border border-[rgba(10,10,10,0.08)] bg-white shadow-sm whitespace-nowrap">
+                      <span className="text-[11px] text-[#374151]" style={{ fontFamily: "JetBrains Mono, monospace" }}>
+                        {f.label}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Capability scan participants */}
+              {[
+                { name: "Planning", color: "#10A37F", angle: 0 },
+                { name: "Architecture", color: "#D97706", angle: 90 },
+                { name: "Implementation", color: "#8B5CF6", angle: 180 },
+                { name: "Repository", color: "#0A0A0A", angle: 270 },
+              ].map((cap, i) => {
+                const angle = cap.angle * (Math.PI / 180);
+                const r = 160;
+                return (
+                  <div
+                    key={cap.name}
+                    className="layer-participant absolute opacity-0 scale-75"
+                    style={{
+                      top: "50%",
+                      left: "50%",
+                      transform: `translate(calc(-50% + ${Math.cos(angle) * r}px), calc(-50% + ${Math.sin(angle) * r}px))`,
+                    }}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-full border-2 flex items-center justify-center text-white text-[9px] font-bold"
+                      style={{ borderColor: cap.color, background: `${cap.color}15` }}
+                    >
+                      <span style={{ color: cap.color, fontFamily: "JetBrains Mono, monospace", fontSize: "8px" }}>
+                        {cap.name.slice(0, 2)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── §4 FOOTER CTA ───────────────────────────────────────────────── */}
+      <section
+        id="start"
+        className="relative py-32 px-6 bg-white overflow-hidden"
+        aria-labelledby="footer-cta-heading"
+      >
+        {/* Very subtle dot grid */}
+        <div className="absolute inset-0 metaphor-dot-grid opacity-40 pointer-events-none" />
+
+        <div className="relative max-w-4xl mx-auto text-center flex flex-col items-center gap-8">
+          <motion.h2
+            id="footer-cta-heading"
+            className="font-display text-[clamp(44px,5vw,80px)] leading-[1.06] tracking-[-0.025em] text-[#0A0A0A] max-w-3xl"
+            style={{ fontWeight: 500 }}
+            initial={reduce ? false : { opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.4 }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          >
+            Your tools are ready. Give them shared context.
+          </motion.h2>
+
+          <motion.p
+            className="text-[17px] text-[#6B7280] leading-relaxed max-w-[480px]"
+            style={{ fontFamily: "Satoshi, sans-serif" }}
+            initial={reduce ? false : { opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.4 }}
+            transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          >
+            Build a connected workspace where your agents, MCP servers, and tools move work forward together.
+          </motion.p>
+
+          <motion.div
+            className="flex flex-wrap items-center justify-center gap-3"
+            initial={reduce ? false : { opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.4 }}
+            transition={{ duration: 0.5, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <Link
+              href="/onboard"
+              className="btn-primary flex items-center gap-2 group"
+              id="footer-cta"
+            >
+              Build your network
+              <ArrowRight size={15} weight="bold" className="group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+            <Link href="/login" className="btn-ghost">Sign in</Link>
+          </motion.div>
+        </div>
+
+        {/* Footer links */}
+        <div className="relative mt-24 pt-8 border-t border-[rgba(10,10,10,0.06)] max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5">
+            <MetaphorLogo className="w-5 h-5 opacity-40" />
+            <span className="text-[12px] text-[#9CA3AF]" style={{ fontFamily: "Satoshi, sans-serif" }}>
+              © {new Date().getFullYear()} Metaphor
+            </span>
+          </div>
+          <div className="flex items-center gap-6">
+            {["Privacy", "Terms", "Security", "Documentation"].map((link) => (
+              <a
+                key={link}
+                href="#"
+                className="text-[12px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors"
+                style={{ fontFamily: "Satoshi, sans-serif" }}
+              >
+                {link}
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

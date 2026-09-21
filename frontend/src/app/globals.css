@@ -1,42 +1,54 @@
 @import "tailwindcss";
-/* Metaphor — PDS-v6 × Flora Edition
- * Display: Cormorant Garamond (editorial serif) — loaded via next/font/google
- * Body: Satoshi (premium sans)
- * Mono: JetBrains Mono
- * Canvas: Pure black #000000 + dot-matrix grain (Flora signature)
- * Accent: Organic mint #4CAF7D (Flora CTA) — single point of colour
- * Personality: Editorial cognitive workspace. No colour pollution on dark canvas.
+
+/* Metaphor — Identity System v2.0
+ * Canvas:   Pure white #FFFFFF — clarity over atmosphere
+ * Display:  Cormorant Garamond (editorial authority — earned its place)
+ * Body:     Satoshi (clean, modern, trustworthy)
+ * Mono:     JetBrains Mono (data, code, audit trails)
+ * Signal:   Indigo #6366F1 — the single Metaphor accent: precision, connection, trust
+ * Glass:    backdrop-blur(16–32px) + hairline borders — depth without weight
+ * Rule:     No gradients on surfaces. No colour pollution. One accent. Full stop.
  * ─────────────────────────────────────────────────────────────────────────── */
 
 @theme {
-  /* ── Light Mode Tokens ────────────────────────────────────────────────── */
-  --color-background: #F8F7F4;
-  --color-foreground: #111318;
+  /* ── Canvas & Surface ────────────────────────────────────────────────── */
+  --color-background: #FFFFFF;
+  --color-foreground: #0A0A0A;
 
-  --color-surface-1: #FFFFFF;
-  --color-surface-2: #F1F0EC;
-  --color-surface-3: #EBEBE6;
+  /* Glass surface stack — white with increasing solidity */
+  --color-surface-1: rgba(255, 255, 255, 0.80);
+  --color-surface-2: rgba(249, 250, 251, 0.90);
+  --color-surface-3: #F3F4F6;
 
-  --color-border-subtle: rgba(17, 19, 24, 0.06);
-  --color-border-mid:    rgba(17, 19, 24, 0.12);
-  --color-border-strong: rgba(17, 19, 24, 0.20);
+  /* Hairline borders — near-invisible elevation */
+  --color-border-subtle: rgba(10, 10, 10, 0.06);
+  --color-border-mid:    rgba(10, 10, 10, 0.10);
+  --color-border-strong: rgba(10, 10, 10, 0.18);
 
-  --color-muted: #9CA3AF;
+  --color-muted: #6B7280;
 
-  /* Flora CTA accent — organic mint green */
-  --color-cta:     #4CAF7D;
-  --color-cta-dim: rgba(76, 175, 125, 0.10);
-  --color-cta-hover: #3d9e6e;
+  /* ── Signal — The single Metaphor accent ─────────────────────────────── */
+  /* Indigo: precision, connection, network signal. Not generic AI-purple. */
+  --color-primary:       #6366F1;
+  --color-primary-dim:   rgba(99, 102, 241, 0.08);
+  --color-primary-hover: #4F46E5;
+  --color-primary-ring:  rgba(99, 102, 241, 0.25);
 
-  /* PDS unified accent (kept for ecosystem badges / links) */
-  --color-accent:     #4f46e5;
-  --color-accent-dim: rgba(79, 70, 229, 0.08);
+  /* Legacy aliases — kept for existing component compatibility */
+  --color-cta:        #6366F1;
+  --color-cta-dim:    rgba(99, 102, 241, 0.08);
+  --color-cta-hover:  #4F46E5;
+  --color-accent:     #6366F1;
+  --color-accent-dim: rgba(99, 102, 241, 0.08);
 
   /* Status Semantic Colors */
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-danger:  #f43f5e;
-  --color-info:    #94a3b8;
+  --color-success:     #16A34A;
+  --color-success-dim: rgba(22, 163, 74, 0.08);
+  --color-warning:     #D97706;
+  --color-warning-dim: rgba(217, 119, 6, 0.08);
+  --color-danger:      #DC2626;
+  --color-danger-dim:  rgba(220, 38, 38, 0.08);
+  --color-info:        #6B7280;
 
   /* ── Typography ─────────────────────────────────────────────────────────── */
   /* Editorial serif for display headings — the Flora signature */
@@ -58,14 +70,15 @@
   --text-2xs: 0.625rem;
   --text-2xs--line-height: 0.875rem;
 
-  /* ── Shadows (light mode — ink-tone) ──────────────────────────────────── */
-  --shadow-sm:    0 1px 2px rgba(17, 19, 24, 0.04);
-  --shadow-card:  0 1px 2px rgba(17, 19, 24, 0.04), 0 0 0 1px rgba(17, 19, 24, 0.06);
-  --shadow-card-hover: 0 4px 12px rgba(17, 19, 24, 0.08), 0 0 0 1px rgba(17, 19, 24, 0.10);
-  --shadow-md:    0 4px 12px rgba(17, 19, 24, 0.06), 0 1px 3px rgba(17, 19, 24, 0.03);
-  --shadow-lg:    0 16px 32px rgba(17, 19, 24, 0.08), 0 4px 8px rgba(17, 19, 24, 0.04);
-  --shadow-float: 0 24px 48px rgba(17, 19, 24, 0.10), 0 8px 16px rgba(17, 19, 24, 0.05);
-  --shadow-glow:  none;
+  /* ── Shadows (ink-tone on white, no pure-black) ─────────────────────── */
+  --shadow-sm:         0 1px 2px rgba(10, 10, 10, 0.04);
+  --shadow-card:       0 1px 3px rgba(10, 10, 10, 0.04), 0 0 0 1px rgba(10, 10, 10, 0.06);
+  --shadow-card-hover: 0 4px 16px rgba(10, 10, 10, 0.08), 0 0 0 1px rgba(10, 10, 10, 0.10);
+  --shadow-md:         0 4px 12px rgba(10, 10, 10, 0.06), 0 1px 3px rgba(10, 10, 10, 0.03);
+  --shadow-lg:         0 16px 40px rgba(10, 10, 10, 0.08), 0 4px 8px rgba(10, 10, 10, 0.04);
+  --shadow-float:      0 24px 60px rgba(10, 10, 10, 0.10), 0 8px 20px rgba(10, 10, 10, 0.05);
+  --shadow-glass:      0 8px 32px rgba(10, 10, 10, 0.06), 0 0 0 1px rgba(10, 10, 10, 0.06);
+  --shadow-glow:       0 0 0 3px rgba(99, 102, 241, 0.15);
 
   /* ── Motion System ────────────────────────────────────────────────────── */
   --motion-ease-reactive:  cubic-bezier(0.16, 1, 0.3, 1);
@@ -151,66 +164,35 @@
 }
 
 
-/* ── Dark Mode Overrides (.dark class on <html>) ─────────────────────────── */
+/* ── Metaphor is light-mode first. Dark mode reserved for future. ───────── */
 
-.dark {
-  /* Flora: pure black canvas. No more dark-navy #07080c. */
-  --color-background: #000000;
-  --color-foreground: #F0F0EE;
-
-  /* Flora card surfaces — very near-black, no hue */
-  --color-surface-1: rgba(13, 13, 13, 0.92);
-  --color-surface-2: rgba(18, 18, 18, 0.95);
-  --color-surface-3: rgba(24, 24, 24, 0.98);
-
-  --color-border-subtle: rgba(255, 255, 255, 0.05);
-  --color-border-mid:    rgba(255, 255, 255, 0.09);
-  --color-border-strong: rgba(255, 255, 255, 0.16);
-
-  --color-muted: rgba(240, 240, 238, 0.38);
-
-  /* Flora CTA stays the same — single warm point of colour */
-  --color-cta:       #4CAF7D;
-  --color-cta-dim:   rgba(76, 175, 125, 0.12);
-  --color-cta-hover: #5abf8a;
-
-  /* Ecosystem accent for links, badges — kept for compatibility */
-  --color-accent:     #818cf8;
-  --color-accent-dim: rgba(129, 140, 248, 0.15);
-
-  /* Dark shadows: depth only, no colour leak */
-  --shadow-card:       0 1px 3px rgba(0,0,0,0.60), 0 0 0 1px rgba(255,255,255,0.05);
-  --shadow-card-hover: 0 8px 32px -8px rgba(0,0,0,0.80), 0 0 0 1px rgba(255,255,255,0.09);
-  --shadow-glow:       0 0 24px -4px rgba(255,255,255,0.08);
-}
-
-/* ── PDS Token aliases (shared component compatibility) ────────────────── */
+/* ── PDS Token aliases (shared component compatibility) ─────────────────── */
 
 :root {
-  --pds-canvas:    var(--color-background);
-  --pds-surface-1: var(--color-surface-1);
-  --pds-surface-2: var(--color-surface-2);
-  --pds-surface-3: var(--color-surface-3);
+  --pds-canvas:        var(--color-background);
+  --pds-surface-1:     var(--color-surface-1);
+  --pds-surface-2:     var(--color-surface-2);
+  --pds-surface-3:     var(--color-surface-3);
   --pds-border-subtle: var(--color-border-subtle);
-  --pds-border-mid:    var(--color-border-mid, rgba(17, 19, 24, 0.12));
+  --pds-border-mid:    var(--color-border-mid);
   --pds-border-strong: var(--color-border-strong);
   --pds-text-primary:   var(--color-foreground);
-  --pds-text-secondary: #6B7280;
+  --pds-text-secondary: #374151;
   --pds-text-muted:     var(--color-muted);
-  --pds-accent:     var(--color-accent);
-  --pds-accent-dim: var(--color-accent-dim);
-  --pds-cta:        var(--color-cta);
-  --pds-shadow-sm:    var(--shadow-sm);
-  --pds-shadow-md:    var(--shadow-md);
-  --pds-shadow-lg:    var(--shadow-lg);
-  --pds-ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.05);
-  --pds-ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --pds-accent:         var(--color-primary);
+  --pds-accent-dim:     var(--color-primary-dim);
+  --pds-cta:            var(--color-primary);
+  --pds-shadow-sm:      var(--shadow-sm);
+  --pds-shadow-md:      var(--shadow-md);
+  --pds-shadow-lg:      var(--shadow-lg);
+  --pds-ease-spring:    cubic-bezier(0.175, 0.885, 0.32, 1.05);
+  --pds-ease-out:       cubic-bezier(0.16, 1, 0.3, 1);
   --pds-t-fast:  150ms;
   --pds-t-base:  300ms;
   --pds-t-slow:  500ms;
-  --pds-success: #22c55e;
-  --pds-warning: #f59e0b;
-  --pds-danger:  #ef4444;
+  --pds-success: #16A34A;
+  --pds-warning: #D97706;
+  --pds-danger:  #DC2626;
 }
 
 /* ── Reset & Base ─────────────────────────────────────────────────────────── */
@@ -221,7 +203,8 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  background-color: var(--color-background);
+  background-color: #FFFFFF;
+  color-scheme: light;
 }
 
 body {
@@ -253,7 +236,7 @@ h1, h2, h3, h4, h5, h6, .font-display {
 }
 
 ::selection {
-  background: var(--color-cta-dim);
+  background: rgba(99, 102, 241, 0.12);
   color: var(--color-foreground);
 }
 
@@ -264,77 +247,99 @@ h1, h2, h3, h4, h5, h6, .font-display {
 ::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 9999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-muted); }
 
-/* ── Flora Dot-Matrix Canvas Background ────────────────────────────────── */
-/* Pure-black canvas with a very subtle radial dot grid — no colour tint */
+/* ── White Dot-Grid Canvas (Metaphor light mode) ─────────────────────────── */
 
-.flora-dot-canvas {
-  background-color: #000000;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
-  background-size: 24px 24px;
+.metaphor-dot-grid {
+  background-color: #FFFFFF;
+  background-image: radial-gradient(rgba(10, 10, 10, 0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
 }
+/* Legacy alias */
+.flora-dot-canvas { background-color: #FFFFFF; background-image: radial-gradient(rgba(10, 10, 10, 0.07) 1px, transparent 1px); background-size: 28px 28px; }
+.flora-canvas-bg  { background-color: #FFFFFF; background-image: radial-gradient(rgba(10, 10, 10, 0.07) 1px, transparent 1px); background-size: 28px 28px; }
 
-/* Noise/grain overlay for texture depth — no colour */
+/* Subtle grain overlay */
+.metaphor-grain::after,
 .flora-grain::after {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.025;
+  opacity: 0.018;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 200px 200px;
-  mix-blend-mode: screen;
+  mix-blend-mode: multiply;
 }
 
-/* ── Glass Surfaces ──────────────────────────────────────────────────────── */
+/* ── Glass System ─────────────────────────────────────────────────────────── */
 
+/* Base glass — nav, panels, overlays */
+.glass,
 .pds-glass {
-  background: rgba(255, 255, 255, 0.70);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--color-border-subtle);
-  box-shadow: var(--shadow-card);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(10, 10, 10, 0.06);
 }
 
-.dark .pds-glass {
-  background: var(--color-surface-1);
-  border-color: var(--color-border-subtle);
-}
-
+/* Elevated glass — modals, command palette */
+.glass-elevated,
 .pds-glass-elevated {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(32px);
-  -webkit-backdrop-filter: blur(32px);
-  border: 1px solid var(--color-border-mid, rgba(17, 19, 24, 0.12));
-  box-shadow: var(--shadow-lg);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  border: 1px solid rgba(10, 10, 10, 0.08);
+  box-shadow: var(--shadow-float);
 }
 
-.dark .pds-glass-elevated {
-  background: var(--color-surface-3);
+/* Card glass */
+.glass-card {
+  background: rgba(255, 255, 255, 0.60);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(10, 10, 10, 0.06);
+  box-shadow: var(--shadow-card);
+  border-radius: 16px;
+  transition: box-shadow 250ms cubic-bezier(0.16, 1, 0.3, 1), border-color 250ms cubic-bezier(0.16, 1, 0.3, 1), transform 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  border-color: rgba(10, 10, 10, 0.10);
+  transform: translateY(-1px);
 }
 
-/* ── Interactive Cards ─────────────────────────────────────────────────── */
+/* Fallback for unsupported browsers */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass, .glass-elevated, .glass-card, .pds-glass, .pds-glass-elevated { background: #FFFFFF; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .glass-elevated, .glass-card, .pds-glass, .pds-glass-elevated { background: #FFFFFF; backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+
+/* ── Interactive Cards ─────────────────────────────────────────────────────── */
 
 .interactive-card {
-  transition:
-    transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 300ms cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 250ms cubic-bezier(0.16, 1, 0.3, 1), border-color 250ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-
 .interactive-card:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-card-hover);
 }
 
-/* Flora-style dark card: near-black, hairline border, no glow */
+/* Metaphor card — white surface, hairline border */
+.metaphor-card,
 .flora-card {
-  background: #0D0D0D;
-  border: 1px solid rgba(255, 255, 255, 0.055);
+  background: #FFFFFF;
+  border: 1px solid var(--color-border-subtle);
   border-radius: 20px;
-  transition: border-color 200ms ease;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 250ms cubic-bezier(0.16, 1, 0.3, 1), border-color 250ms cubic-bezier(0.16, 1, 0.3, 1), transform 250ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+.metaphor-card:hover,
 .flora-card:hover {
-  border-color: rgba(255, 255, 255, 0.10);
+  border-color: var(--color-border-mid);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
 }
 
 /* ── Status Dots ─────────────────────────────────────────────────────────── */
@@ -344,20 +349,21 @@ h1, h2, h3, h4, h5, h6, .font-display {
   border-radius: 50%;
   flex-shrink: 0;
 }
-
 .status-dot.active {
-  background: var(--color-cta);
-  animation: pulse-cta 2.5s infinite;
+  background: var(--color-primary);
+  animation: signalPulse 2.5s infinite;
 }
-
+@keyframes signalPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(99, 102, 241, 0); }
+}
 @keyframes pulse-cta {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(76, 175, 125, 0.4); }
-  50%       { box-shadow: 0 0 0 6px rgba(76, 175, 125, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(99, 102, 241, 0); }
 }
-
 @keyframes pulse-green {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
-  50%       { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
 }
 
 /* ── Typography Utils ─────────────────────────────────────────────────────── */
@@ -379,41 +385,31 @@ h1, h2, h3, h4, h5, h6, .font-display {
   letter-spacing: var(--tracking-serif);
 }
 
-/* Ghost numeral for numbered sections (01, 02, 03) */
+/* Ghost numeral for numbered sections — adapted for white canvas */
+.section-numeral,
 .flora-section-numeral {
   font-family: var(--font-display);
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.05);
+  color: rgba(10, 10, 10, 0.04);
   line-height: 1;
   pointer-events: none;
   user-select: none;
 }
 
-/* ── Navigation ───────────────────────────────────────────────────────────── */
+/* ── Navigation ──────────────────────────────────────────────────────────── */
 
-/* Slim editorial top bar — no pill, no heavy glass */
+.nav-glass,
 .flora-nav {
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-/* Light mode nav */
-.nav-glass {
-  background: rgba(248, 247, 244, 0.88);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-bottom: 1px solid var(--color-border-subtle);
-}
-.dark .nav-glass {
-  background: rgba(0, 0, 0, 0.80);
-  border-bottom-color: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid rgba(10, 10, 10, 0.06);
 }
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 
-/* Flora primary CTA — filled mint green */
+/* Primary — indigo signal */
+.btn-primary,
 .btn-flora-primary {
   display: inline-flex;
   align-items: center;
@@ -421,29 +417,35 @@ h1, h2, h3, h4, h5, h6, .font-display {
   gap: 8px;
   padding: 0 24px;
   min-height: 44px;
-  background: var(--color-cta);
+  background: var(--color-primary);
   color: #ffffff;
   font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   border: none;
   border-radius: 9999px;
   cursor: pointer;
-  transition: background 150ms ease, transform 150ms ease;
+  transition: background 150ms cubic-bezier(0.16,1,0.3,1), transform 150ms cubic-bezier(0.16,1,0.3,1), box-shadow 150ms cubic-bezier(0.16,1,0.3,1);
   white-space: nowrap;
+  position: relative;
+  overflow: hidden;
 }
+.btn-primary:hover:not(:disabled),
 .btn-flora-primary:hover:not(:disabled) {
-  background: var(--color-cta-hover);
+  background: var(--color-primary-hover);
   transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25);
 }
-.btn-flora-primary:active { transform: translateY(0); }
+.btn-primary:active,
+.btn-flora-primary:active { transform: translateY(0) scale(0.98); }
+.btn-primary:disabled,
 .btn-flora-primary:disabled { opacity: 0.4; cursor: not-allowed; }
-.btn-flora-primary:focus-visible {
-  outline: 2px solid var(--color-cta);
-  outline-offset: 3px;
-}
+.btn-primary:focus-visible,
+.btn-flora-primary:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
 
-/* Flora ghost — bordered, no fill */
+/* Ghost — bordered, transparent */
+.btn-ghost,
 .btn-flora-ghost {
   display: inline-flex;
   align-items: center;
@@ -456,42 +458,44 @@ h1, h2, h3, h4, h5, h6, .font-display {
   font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 500;
+  letter-spacing: -0.01em;
   border: 1px solid var(--color-border-strong);
   border-radius: 9999px;
   cursor: pointer;
   transition: border-color 150ms ease, background 150ms ease;
   white-space: nowrap;
 }
+.btn-ghost:hover:not(:disabled),
 .btn-flora-ghost:hover:not(:disabled) {
   border-color: var(--color-foreground);
-  background: rgba(255,255,255,0.04);
+  background: rgba(10, 10, 10, 0.03);
 }
-.btn-flora-ghost:focus-visible {
-  outline: 2px solid var(--color-border-strong);
-  outline-offset: 2px;
-}
+.btn-ghost:focus-visible,
+.btn-flora-ghost:focus-visible { outline: 2px solid var(--color-border-strong); outline-offset: 2px; }
 
-/* Mono CLI button — terminal aesthetic */
+/* Mono CLI */
+.btn-mono,
 .btn-flora-mono {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 0 16px;
-  min-height: 44px;
-  background: rgba(255,255,255,0.04);
+  min-height: 40px;
+  background: var(--color-surface-2);
   color: var(--color-foreground);
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 500;
   border: 1px solid var(--color-border-mid);
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
   transition: border-color 150ms ease, background 150ms ease;
   white-space: nowrap;
 }
+.btn-mono:hover:not(:disabled),
 .btn-flora-mono:hover:not(:disabled) {
   border-color: var(--color-border-strong);
-  background: rgba(255,255,255,0.07);
+  background: var(--color-surface-3);
 }
 
 /* Legacy PDS buttons — kept for shared components */
@@ -583,9 +587,9 @@ h1, h2, h3, h4, h5, h6, .font-display {
 }
 
 .pds-data-card {
-  background: var(--color-surface-1);
+  background: #FFFFFF;
   border: 1px solid var(--color-border-subtle);
-  border-left: 2px solid var(--color-accent);
+  border-left: 2px solid var(--color-primary);
   border-radius: 12px;
   box-shadow: var(--shadow-card);
   transition: box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -668,57 +672,55 @@ h1, h2, h3, h4, h5, h6, .font-display {
   }
 }
 
-/* ── Flora Studio Canvas (Node Editor) ─────────────────────────────────── */
+/* ── React Flow / World Graph (light mode) ───────────────────────────────── */
 
+.metaphor-flow-bg,
 .flora-canvas-bg {
-  background-color: #000000;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-color: #FAFAFA;
+  background-image: radial-gradient(rgba(10, 10, 10, 0.06) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
 .flora-glass {
-  background: rgba(10, 10, 10, 0.85);
+  background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.60);
+  border: 1px solid var(--color-border-subtle);
+  box-shadow: var(--shadow-glass);
 }
 
+.metaphor-node,
 .flora-node {
-  background: #0d0d0d;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #FFFFFF;
+  border: 1px solid var(--color-border-mid);
   border-radius: 14px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: var(--shadow-card);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
-
+.metaphor-node:hover,
 .flora-node:hover {
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-card-hover);
 }
-
+.metaphor-node.selected,
 .flora-node.selected {
-  border-color: var(--color-cta);
-  box-shadow: 0 0 0 1px var(--color-cta), 0 12px 32px rgba(76, 175, 125, 0.20);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-ring), var(--shadow-card-hover);
 }
-
+.metaphor-node-running,
 .flora-node-running {
-  border-color: var(--color-cta) !important;
-  box-shadow: 0 0 20px rgba(76, 175, 125, 0.30) !important;
+  border-color: var(--color-primary) !important;
   animation: floraRunningGlow 2s ease-in-out infinite;
 }
-
 @keyframes floraRunningGlow {
-  0%, 100% { border-color: rgba(76, 175, 125, 0.5); box-shadow: 0 0 12px rgba(76, 175, 125, 0.2); }
-  50% { border-color: rgba(76, 175, 125, 1); box-shadow: 0 0 24px rgba(76, 175, 125, 0.45); }
+  0%, 100% { box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.3); }
+  50%       { box-shadow: 0 0 20px rgba(99, 102, 241, 0.20); }
 }
 
-/* React Flow signal pulse */
 @keyframes signalFlow {
   from { stroke-dashoffset: 24; }
-  to { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: 0; }
 }
-
 .flora-wire-active {
   stroke-dasharray: 6, 6;
   animation: signalFlow 0.8s linear infinite;
@@ -727,15 +729,14 @@ h1, h2, h3, h4, h5, h6, .font-display {
 .react-flow__handle.flora-handle {
   width: 10px;
   height: 10px;
-  background: #111111;
-  border: 2px solid rgba(255, 255, 255, 0.25);
+  background: #FFFFFF;
+  border: 2px solid var(--color-border-strong);
   border-radius: 50%;
   transition: all 0.15s ease;
 }
-
 .react-flow__handle.flora-handle:hover {
-  background: var(--color-cta);
-  border-color: #ffffff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
   transform: scale(1.3);
-  box-shadow: 0 0 8px var(--color-cta);
+  box-shadow: 0 0 8px var(--color-primary-ring);
 }

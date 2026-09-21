@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Metaphor — The Context Operating System",
-  description: "Metaphor is the Context Operating System for intelligent applications — transforming fragmented events into a living structured knowledge graph.",
+  title: "Metaphor — Make your AI tools work as one",
+  description: "Metaphor connects your AI agents, MCP servers, and tools through shared context, intelligent handoffs, and coordinated execution — so work can move between them without you carrying the context.",
 };
 
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -28,11 +28,12 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&display=swap"
         />
       </head>
-      <body className="antialiased min-h-screen">
+      {/* Metaphor is light-mode first. White canvas, glass surfaces, indigo signal. */}
+      <body className="antialiased min-h-screen bg-white text-[#0A0A0A]">
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
-          enableSystem
+          defaultTheme="light"
+          enableSystem={false}
           disableTransitionOnChange
         >
           {children}

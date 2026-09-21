@@ -103,13 +103,8 @@ export function FloatingNav({
     <>
       {/* ── Full-width slim editorial top bar ── */}
       <header
-        className="fixed top-0 left-0 right-0 z-50 h-12 flex items-center px-5 md:px-8"
-        style={{
-          background: "rgba(0,0,0,0.75)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          borderBottom: "1px solid rgba(255,255,255,0.04)",
-        }}
+        className="fixed top-0 left-0 right-0 z-50 h-12 flex items-center px-5 md:px-8 nav-glass"
+        role="banner"
       >
         {/* Left — Logo + brand dropdown */}
         <div className="flex items-center gap-3 min-w-0" ref={brandRef}>
@@ -126,7 +121,7 @@ export function FloatingNav({
                 className="text-[13px] font-semibold tracking-tight hidden sm:block transition-colors duration-150"
                 style={{
                   fontFamily: "'Satoshi', sans-serif",
-                  color: "rgba(240,240,238,0.85)",
+                  color: "#0A0A0A",
                   letterSpacing: "-0.02em",
                 }}
               >
@@ -135,7 +130,7 @@ export function FloatingNav({
               <ChevronDown
                 className="w-3 h-3 transition-transform duration-150"
                 style={{
-                  color: "rgba(240,240,238,0.35)",
+                  color: "rgba(10,10,10,0.35)",
                   transform: isBrandDropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
                 }}
               />
@@ -146,10 +141,10 @@ export function FloatingNav({
               <div
                 className="absolute top-full left-0 mt-2 w-56 py-1.5 rounded-xl z-50 animate-in fade-in duration-100"
                 style={{
-                  background: "rgba(13,13,13,0.97)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(255,255,255,0.96)",
+                  border: "1px solid rgba(10,10,10,0.08)",
                   backdropFilter: "blur(24px)",
-                  boxShadow: "0 16px 48px rgba(0,0,0,0.70)",
+                  boxShadow: "0 16px 48px rgba(10,10,10,0.12)",
                 }}
                 role="menu"
               >
@@ -160,13 +155,13 @@ export function FloatingNav({
                 >
                   <div
                     className="text-[12px] font-semibold truncate"
-                    style={{ color: "rgba(240,240,238,0.90)", fontFamily: "'Satoshi', sans-serif" }}
+                    style={{ color: "#0A0A0A", fontFamily: "'Satoshi', sans-serif" }}
                   >
                     {user?.name || "Local User"}
                   </div>
                   <div
                     className="text-[11px] truncate mt-0.5"
-                    style={{ color: "rgba(240,240,238,0.35)", fontFamily: "'Satoshi', sans-serif" }}
+                    style={{ color: "rgba(10,10,10,0.40)", fontFamily: "'Satoshi', sans-serif" }}
                   >
                     {user?.email || "user@local"}
                   </div>
@@ -175,7 +170,7 @@ export function FloatingNav({
                 {/* Partitions */}
                 <div
                   className="px-3.5 py-2 text-[9px] font-mono uppercase tracking-widest mt-0.5"
-                  style={{ color: "rgba(240,240,238,0.25)" }}
+                  style={{ color: "rgba(10,10,10,0.30)" }}
                 >
                   Active Partition
                 </div>
@@ -186,33 +181,33 @@ export function FloatingNav({
                     className="w-full text-left px-3.5 py-2 text-[12px] transition-colors flex items-center justify-between cursor-pointer"
                     style={{
                       fontFamily: "'Satoshi', sans-serif",
-                      color: activePartition === p ? "rgba(240,240,238,0.90)" : "rgba(240,240,238,0.40)",
-                      background: activePartition === p ? "rgba(255,255,255,0.04)" : "transparent",
+                      color: activePartition === p ? "#0A0A0A" : "rgba(10,10,10,0.38)",
+                      background: activePartition === p ? "rgba(10,10,10,0.04)" : "transparent",
                       fontWeight: activePartition === p ? 600 : 400,
                     }}
                     onMouseEnter={e => {
-                      if (activePartition !== p) (e.currentTarget as HTMLButtonElement).style.color = "rgba(240,240,238,0.75)";
+                      if (activePartition !== p) (e.currentTarget as HTMLButtonElement).style.color = "rgba(10,10,10,0.70)";
                     }}
                     onMouseLeave={e => {
-                      if (activePartition !== p) (e.currentTarget as HTMLButtonElement).style.color = "rgba(240,240,238,0.40)";
+                      if (activePartition !== p) (e.currentTarget as HTMLButtonElement).style.color = "rgba(10,10,10,0.38)";
                     }}
                     role="menuitemradio"
                     aria-checked={activePartition === p}
                   >
                     <span>{p}</span>
-                    {activePartition === p && <Check className="w-3 h-3" style={{ color: "#4CAF7D" }} />}
+                    {activePartition === p && <Check className="w-3 h-3" style={{ color: "#6366F1" }} />}
                   </button>
                 ))}
 
-                <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", margin: "4px 0" }} />
+                <div style={{ borderTop: "1px solid rgba(10,10,10,0.08)", margin: "4px 0" }} />
 
                 <Link
                   href="/settings"
                   onClick={() => setIsBrandDropdownOpen(false)}
                   className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[12px] transition-colors cursor-pointer"
-                  style={{ fontFamily: "'Satoshi', sans-serif", color: "rgba(240,240,238,0.40)" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "rgba(240,240,238,0.80)")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "rgba(240,240,238,0.40)")}
+                  style={{ fontFamily: "'Satoshi', sans-serif", color: "rgba(10,10,10,0.40)" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "rgba(10,10,10,0.80)")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "rgba(10,10,10,0.40)")}
                   role="menuitem"
                 >
                   <User className="w-3.5 h-3.5" />
@@ -234,7 +229,7 @@ export function FloatingNav({
           </div>
 
           {/* Divider */}
-          <span style={{ width: 1, height: 16, background: "rgba(255,255,255,0.08)", display: "block" }} />
+          <span style={{ width: 1, height: 16, background: "rgba(10,10,10,0.10)", display: "block" }} />
 
           {/* Active scope breadcrumb */}
           {activeRoute && (
@@ -242,7 +237,7 @@ export function FloatingNav({
               className="text-[11px] hidden md:block"
               style={{
                 fontFamily: "'Satoshi', sans-serif",
-                color: "rgba(240,240,238,0.35)",
+                color: "rgba(10,10,10,0.38)",
                 letterSpacing: "-0.01em",
               }}
             >
@@ -265,14 +260,15 @@ export function FloatingNav({
                   fontStyle: isActive ? "italic" : "normal",
                   fontSize: isActive ? "14px" : "13px",
                   fontWeight: isActive ? 500 : 400,
-                  color: isActive ? "rgba(240,240,238,0.92)" : "rgba(240,240,238,0.38)",
+                  color: isActive ? "#0A0A0A" : "rgba(10,10,10,0.38)",
                   letterSpacing: isActive ? "-0.01em" : "-0.015em",
+                  background: isActive ? "rgba(10,10,10,0.04)" : "transparent",
                 }}
                 onMouseEnter={e => {
-                  if (!isActive) (e.currentTarget as HTMLAnchorElement).style.color = "rgba(240,240,238,0.72)";
+                  if (!isActive) (e.currentTarget as HTMLAnchorElement).style.color = "rgba(10,10,10,0.72)";
                 }}
                 onMouseLeave={e => {
-                  if (!isActive) (e.currentTarget as HTMLAnchorElement).style.color = "rgba(240,240,238,0.38)";
+                  if (!isActive) (e.currentTarget as HTMLAnchorElement).style.color = "rgba(10,10,10,0.38)";
                 }}
               >
                 {route.label}
@@ -290,18 +286,18 @@ export function FloatingNav({
               title="Command palette (⌘K)"
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg cursor-pointer transition-all duration-150"
               style={{
-                color: "rgba(240,240,238,0.35)",
-                border: "1px solid rgba(255,255,255,0.07)",
+                color: "rgba(10,10,10,0.38)",
+                border: "1px solid rgba(10,10,10,0.08)",
                 background: "transparent",
                 fontFamily: "'Satoshi', sans-serif",
               }}
               onMouseEnter={e => {
-                (e.currentTarget as HTMLButtonElement).style.color = "rgba(240,240,238,0.75)";
-                (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.14)";
+                (e.currentTarget as HTMLButtonElement).style.color = "rgba(10,10,10,0.75)";
+                (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(10,10,10,0.16)";
               }}
               onMouseLeave={e => {
-                (e.currentTarget as HTMLButtonElement).style.color = "rgba(240,240,238,0.35)";
-                (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.07)";
+                (e.currentTarget as HTMLButtonElement).style.color = "rgba(10,10,10,0.38)";
+                (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(10,10,10,0.08)";
               }}
               aria-label="Open command palette"
             >
@@ -310,20 +306,7 @@ export function FloatingNav({
             </button>
           )}
 
-          {/* Theme toggle */}
-          {mounted && (
-            <button
-              onClick={toggleTheme}
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              className="p-2 rounded-lg cursor-pointer transition-colors duration-150"
-              style={{ color: "rgba(240,240,238,0.35)", background: "transparent" }}
-              onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = "rgba(240,240,238,0.75)"}
-              onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = "rgba(240,240,238,0.35)"}
-              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-            </button>
-          )}
+          {/* Theme toggle — removed in light-mode-first identity */}
 
           {/* Weave toggle */}
           {onToggleWeave && (
@@ -332,15 +315,15 @@ export function FloatingNav({
               title="Weave Intelligence panel"
               className="p-2 rounded-lg cursor-pointer transition-all duration-150"
               style={{
-                color: isWeaveOpen ? "#4CAF7D" : "rgba(240,240,238,0.35)",
-                background: isWeaveOpen ? "rgba(76,175,125,0.10)" : "transparent",
-                border: isWeaveOpen ? "1px solid rgba(76,175,125,0.20)" : "1px solid transparent",
+                color: isWeaveOpen ? "#6366F1" : "rgba(10,10,10,0.38)",
+                background: isWeaveOpen ? "rgba(99,102,241,0.08)" : "transparent",
+                border: isWeaveOpen ? "1px solid rgba(99,102,241,0.20)" : "1px solid transparent",
               }}
               onMouseEnter={e => {
-                if (!isWeaveOpen) (e.currentTarget as HTMLButtonElement).style.color = "rgba(240,240,238,0.75)";
+                if (!isWeaveOpen) (e.currentTarget as HTMLButtonElement).style.color = "rgba(10,10,10,0.72)";
               }}
               onMouseLeave={e => {
-                if (!isWeaveOpen) (e.currentTarget as HTMLButtonElement).style.color = "rgba(240,240,238,0.35)";
+                if (!isWeaveOpen) (e.currentTarget as HTMLButtonElement).style.color = "rgba(10,10,10,0.38)";
               }}
               aria-label={isWeaveOpen ? "Close Weave panel" : "Open Weave Intelligence panel"}
               aria-pressed={isWeaveOpen}

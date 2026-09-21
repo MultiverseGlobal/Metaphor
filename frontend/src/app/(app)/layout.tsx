@@ -86,7 +86,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (pathname.startsWith("/work"))    fieldState = "resolving";
 
   return (
-    <div className="relative min-h-screen w-screen bg-background text-foreground overflow-x-hidden selection:bg-[rgba(76,175,125,0.15)]">
+    <div className="relative min-h-screen w-screen bg-white text-[#0A0A0A] overflow-x-hidden selection:bg-[rgba(99,102,241,0.12)]">
       {/* First-entry cinematic — shown only once */}
       <FirstEntrySequence onComplete={handleEntryComplete} />
 
