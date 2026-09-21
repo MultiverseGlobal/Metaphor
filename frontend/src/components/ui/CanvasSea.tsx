@@ -214,24 +214,27 @@ export function CanvasSea() {
     <>
       <canvas
         ref={canvasRef}
-        className="fixed inset-0 pointer-events-none w-full h-full bg-[#FFFFFF]"
-        style={{ zIndex: -1 }}
+        className="fixed inset-0 pointer-events-none w-full h-full"
+        style={{ zIndex: -1, backgroundColor: "#FFFFFF" }}
         aria-hidden="true"
       />
-      {/* Custom Ink Cursor */}
-      <div 
-        className="fixed top-0 left-0 pointer-events-none rounded-full bg-[var(--color-ink)] transition-transform duration-100 ease-out"
+      {/* Custom Ink Cursor — always visible regardless of CSS variable resolution */}
+      <div
+        className="fixed top-0 left-0 pointer-events-none rounded-full"
         style={{
-          width: isHovering ? '12px' : '8px',
-          height: isHovering ? '12px' : '8px',
-          transform: `translate(${mousePos.x - (isHovering ? 6 : 4)}px, ${mousePos.y - (isHovering ? 6 : 4)}px)`,
-          zIndex: 9999,
+          width: isHovering ? 14 : 8,
+          height: isHovering ? 14 : 8,
+          backgroundColor: "#111315",
+          transform: `translate(${mousePos.x - (isHovering ? 7 : 4)}px, ${mousePos.y - (isHovering ? 7 : 4)}px)`,
+          zIndex: 99999,
           opacity: mousePos.x === -100 ? 0 : 1,
+          transition: "width 120ms ease, height 120ms ease, opacity 200ms ease",
+          willChange: "transform",
+          mixBlendMode: "multiply",
         }}
       />
       <style dangerouslySetInnerHTML={{ __html: `
-        body { cursor: none !important; }
-        a, button, input, [role="button"] { cursor: none !important; }
+        *, *::before, *::after { cursor: none !important; }
       `}} />
     </>
   );

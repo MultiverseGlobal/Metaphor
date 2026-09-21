@@ -169,6 +169,7 @@
 /* ── PDS Token aliases (shared component compatibility) ─────────────────── */
 
 :root {
+  --color-ink: #111315; /* The single black ink token — cursor, headings, borders */
   --pds-canvas:        var(--color-background);
   --pds-surface-1:     var(--color-surface-1);
   --pds-surface-2:     var(--color-surface-2);
