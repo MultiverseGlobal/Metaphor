@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight, Check } from "@phosphor-icons/react";
 import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
 import { RippleButton } from "@/components/ui/RippleButton";
@@ -12,6 +12,24 @@ import { RippleButton } from "@/components/ui/RippleButton";
 export default function LandingPage() {
   const reduce = useReducedMotion();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Scroll animations for Section 2
+  const sec2Ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress: sec2Progress } = useScroll({
+    target: sec2Ref,
+    offset: ["start end", "end start"],
+  });
+  const sec2Y = useTransform(sec2Progress, [0, 1], [50, -50]);
+  const sec2Opacity = useTransform(sec2Progress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
+
+  // Scroll animations for Section 3
+  const sec3Ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress: sec3Progress } = useScroll({
+    target: sec3Ref,
+    offset: ["start end", "end start"],
+  });
+  const sec3Y = useTransform(sec3Progress, [0, 1], [50, -50]);
+  const sec3Opacity = useTransform(sec3Progress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
 
   return (
     <div className="w-full bg-transparent text-[var(--color-ink)] overflow-x-hidden min-h-screen flex flex-col items-center">
@@ -108,15 +126,14 @@ export default function LandingPage() {
       {/* ── §2 THE CONTEXT GAP ─────────────────────────────────────────── */}
       <section
         id="how-it-works"
-        className="min-h-[70dvh] flex items-center w-full max-w-5xl mx-auto px-6 py-32"
+        ref={sec2Ref}
+        className="min-h-[70dvh] flex items-center w-full max-w-5xl mx-auto px-6 py-32 relative"
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-16 md:gap-24 items-center">
-          <motion.div
-            initial={reduce ? false : { opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          >
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 gap-16 md:gap-24 items-center w-full"
+          style={{ y: reduce ? 0 : sec2Y, opacity: reduce ? 1 : sec2Opacity }}
+        >
+          <div>
             <div className="text-[11px] uppercase tracking-widest text-[#AEB7BC] mb-6 font-mono">The context gap</div>
             <h2 className="font-display text-[clamp(44px,5vw,64px)] leading-[1.05] tracking-[-0.01em] text-[var(--color-ink)] mb-6">
               Every tool knows part of the work.
@@ -124,24 +141,19 @@ export default function LandingPage() {
             <p className="text-[16px] text-[#3B4043] leading-relaxed">
               The problem is not a lack of intelligence. It is a lack of connection. Every handoff starts with catching the next tool up.
             </p>
-          </motion.div>
+          </div>
 
-          <motion.div
-            className="grid grid-cols-2 gap-4"
-            initial={reduce ? false : { opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          >
+          <div className="grid grid-cols-2 gap-4">
             {[
               { name: "ChatGPT", role: "Reasoning" },
               { name: "Claude", role: "Architecture" },
               { name: "GitHub", role: "Codebase" },
               { name: "Cursor", role: "Implementation" },
             ].map((p, i) => (
-              <div
+              <motion.div
                 key={p.name}
                 className="glass-clear px-4 py-4 rounded-[16px] border border-[rgba(10,10,10,0.04)]"
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
               >
                 <div className="text-[14px] font-medium text-[var(--color-ink)] mb-1">
                   {p.name}
@@ -149,26 +161,27 @@ export default function LandingPage() {
                 <div className="text-[11px] text-[#AEB7BC] font-mono tracking-wide uppercase">
                   {p.role}
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       </section>
 
       {/* ── §3 THE SHARED LAYER ────────────────────────────────────────── */}
       <section
         id="shared-layer"
-        className="min-h-[70dvh] flex items-center w-full max-w-5xl mx-auto px-6 py-32"
+        ref={sec3Ref}
+        className="min-h-[70dvh] flex items-center w-full max-w-5xl mx-auto px-6 py-32 relative"
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-16 md:gap-24 items-center">
-          <motion.div
-            className="order-2 md:order-1 relative"
-            initial={reduce ? false : { opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <div className="glass-regular p-6 rounded-[24px] border border-[rgba(10,10,10,0.06)] shadow-[0_14px_40px_rgba(0,0,0,0.04)]">
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 gap-16 md:gap-24 items-center w-full"
+          style={{ y: reduce ? 0 : sec3Y, opacity: reduce ? 1 : sec3Opacity }}
+        >
+          <div className="order-2 md:order-1 relative">
+            <motion.div 
+              className="glass-regular p-6 rounded-[24px] border border-[rgba(10,10,10,0.06)] shadow-[0_14px_40px_rgba(0,0,0,0.04)]"
+              whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+            >
               <div className="text-[11px] text-[#3B4043] font-mono tracking-wide uppercase mb-4">Draft system architecture</div>
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-[13px] text-[#3B4043]">Assigned to:</span>
@@ -184,16 +197,10 @@ export default function LandingPage() {
                   <span className="text-[13px] text-[#3B4043]">Preserve current API contract</span>
                 </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
 
-          <motion.div
-            className="order-1 md:order-2"
-            initial={reduce ? false : { opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          >
+          <div className="order-1 md:order-2">
             <div className="text-[11px] uppercase tracking-widest text-[#AEB7BC] mb-6 font-mono">The shared layer</div>
             <h2 className="font-display text-[clamp(44px,5vw,64px)] leading-[1.05] tracking-[-0.01em] text-[var(--color-ink)] mb-6">
               Give every tool the context it needs.
@@ -201,8 +208,8 @@ export default function LandingPage() {
             <p className="text-[16px] text-[#3B4043] leading-relaxed">
               Metaphor keeps your project reality in one shared layer, then moves the right context to the right participant at the right moment.
             </p>
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       </section>
 
       {/* ── §4 FOOTER ────────────────────────────────────────────────────── */}
