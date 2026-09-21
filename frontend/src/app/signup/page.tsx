@@ -13,7 +13,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const settingsMem = typeof window !== "undefined" ? getLocalSettings() : null;
   const isAlreadyOnboarded = settingsMem?.onboarded || (typeof window !== "undefined" && document.cookie.includes("metaphor_onboarded=true"));
-  const defaultTarget = isAlreadyOnboarded ? "/explorer" : "/onboarding";
+  const defaultTarget = isAlreadyOnboarded ? "/world" : "/onboard";
   const redirectTarget = searchParams.get("redirect") || defaultTarget;
 
   const [email, setEmail] = useState("");
@@ -95,6 +95,7 @@ function LoginForm() {
     
     // Ensure settings proxy is updated optimistically if needed
     pushSettingsToCloud({ onboarded: true });
+    document.cookie = "metaphor_onboarded=true; path=/; max-age=31536000";
     
     // Default redirect to /world for the new product architecture
     router.push(searchParams.get("redirect") || "/world");
