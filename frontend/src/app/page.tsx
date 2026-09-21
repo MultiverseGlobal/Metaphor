@@ -7,6 +7,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ArrowRight, Check } from "@phosphor-icons/react";
 import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
+import { RippleButton } from "@/components/ui/RippleButton";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -250,16 +251,22 @@ export default function LandingPage() {
       tl.to(".gap-fragment-4", { x: -20, y: -70, rotate: -5, duration: 0.35 }, 0.87);
       tl.to(".gap-fragment-5", { x: 50, y: 60, rotate: 10, duration: 0.35 }, 0.90);
 
-      // Beat 4: bridge broken
+      // Beat 4: User as the broken bridge carrying context via clipboard/messenger
+      tl.to(".gap-fragment", { opacity: 0, duration: 0.2 }, 1.1);
+      tl.fromTo(".gap-tool-icon", { opacity: 0, scale: 0 }, { opacity: 1, scale: 1, duration: 0.2, stagger: 0.1 }, 1.2);
+      
+      // User carries context
+      tl.to(".gap-tool-icon", { x: (i) => i % 2 === 0 ? 30 : -30, y: (i) => i % 2 === 0 ? -10 : 10, duration: 0.4, yoyo: true, repeat: 3 }, 1.4);
+
       tl.fromTo(".gap-bridge", { opacity: 0, scale: 0.9 }, {
         opacity: 1, scale: 1, duration: 0.2,
-      }, 1.1);
+      }, 2.4);
 
       // Beat 5: everything dims, final line appears
-      tl.to(".gap-participant, .gap-fragment, .gap-intention", { opacity: 0.12, duration: 0.2 }, 1.3);
+      tl.to(".gap-participant, .gap-intention, .gap-tool-icon", { opacity: 0.08, duration: 0.2 }, 2.6);
       tl.fromTo(".gap-final-line", { opacity: 0, y: 10 }, {
         opacity: 1, y: 0, duration: 0.3,
-      }, 1.4);
+      }, 2.8);
     }, gapSectionRef);
 
     return () => ctx.revert();
@@ -352,13 +359,13 @@ export default function LandingPage() {
             >
               Sign in
             </Link>
-            <Link
+            <RippleButton
               href="/onboard"
-              className="btn-primary text-[13.5px] min-h-[36px] px-4 rounded-full"
+              className="text-[13.5px] min-h-[36px] px-4 rounded-full"
               id="nav-cta"
             >
               Build your network
-            </Link>
+            </RippleButton>
           </div>
 
           {/* Mobile hamburger */}
@@ -394,9 +401,9 @@ export default function LandingPage() {
                 </a>
               ))}
               <Link href="/login" className="text-[14px] py-2 text-[#0A0A0A]">Sign in</Link>
-              <Link href="/onboard" className="btn-primary w-full justify-center mt-2">
+              <RippleButton href="/onboard" className="w-full justify-center mt-2">
                 Build your network
-              </Link>
+              </RippleButton>
             </motion.div>
           )}
         </AnimatePresence>
@@ -442,46 +449,23 @@ export default function LandingPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.28, ease: [0.16, 1, 0.3, 1] }}
             >
-              <Link
+              <RippleButton
                 href="/onboard"
-                className="btn-primary flex items-center gap-2 group"
                 id="hero-primary-cta"
               >
                 Build your network
                 <ArrowRight size={15} weight="bold" className="group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-              <a
+              </RippleButton>
+              <RippleButton
                 href="#how-it-works"
-                className="btn-ghost"
+                variant="ghost"
                 id="hero-secondary-cta"
               >
                 Explore how it works
-              </a>
+              </RippleButton>
             </motion.div>
 
-            {/* Social proof strip — below hero per taste rules */}
-            <motion.div
-              className="flex items-center gap-6 pt-2"
-              initial={reduce ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.5 }}
-            >
-              {[
-                { label: "Participants connected", value: "12+" },
-                { label: "Context handoffs", value: "1,049+" },
-                { label: "Setup time", value: "< 5 min" },
-              ].map((stat) => (
-                <div key={stat.label} className="flex flex-col">
-                  <span
-                    className="text-[18px] font-semibold text-[#0A0A0A] tracking-tight"
-                    style={{ fontFamily: "Satoshi, sans-serif" }}
-                  >
-                    {stat.value}
-                  </span>
-                  <span className="label-mono">{stat.label}</span>
-                </div>
-              ))}
-            </motion.div>
+
           </div>
 
           {/* Right — live network diagram */}
@@ -592,7 +576,7 @@ export default function LandingPage() {
               </div>
 
               {/* Scattered context fragments */}
-              <div className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 {FRAGMENTS.map((f, i) => (
                   <div
                     key={f.label}
@@ -612,6 +596,21 @@ export default function LandingPage() {
                     </div>
                   </div>
                 ))}
+
+                {/* User carrying context via clipboard/messenger */}
+                <div className="gap-tool-icon absolute top-[30%] left-[20%] opacity-0 scale-0 text-[24px]">📋</div>
+                <div className="gap-tool-icon absolute top-[60%] left-[70%] opacity-0 scale-0 text-[24px]">💬</div>
+                <div className="gap-tool-icon absolute top-[20%] left-[60%] opacity-0 scale-0 text-[24px]">📎</div>
+                
+                {/* Visual Broken Bridge Graphic */}
+                <div className="gap-bridge opacity-0 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-16 z-0 pointer-events-none">
+                  <svg width="240" height="40" viewBox="0 0 240 40" fill="none">
+                    <path d="M0 20 L100 20" stroke="#EF4444" strokeWidth="2" strokeDasharray="4 4" />
+                    <path d="M140 20 L240 20" stroke="#EF4444" strokeWidth="2" strokeDasharray="4 4" />
+                    <circle cx="120" cy="20" r="12" stroke="#EF4444" strokeWidth="2" fill="white" />
+                    <path d="M115 15 L125 25 M125 15 L115 25" stroke="#EF4444" strokeWidth="2" />
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
@@ -837,15 +836,14 @@ export default function LandingPage() {
             viewport={{ once: true, amount: 0.4 }}
             transition={{ duration: 0.5, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
           >
-            <Link
+            <RippleButton
               href="/onboard"
-              className="btn-primary flex items-center gap-2 group"
               id="footer-cta"
             >
               Build your network
               <ArrowRight size={15} weight="bold" className="group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-            <Link href="/login" className="btn-ghost">Sign in</Link>
+            </RippleButton>
+            <RippleButton href="/login" variant="ghost">Sign in</RippleButton>
           </motion.div>
         </div>
 

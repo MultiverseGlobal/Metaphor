@@ -72,7 +72,7 @@ function InsightCard({ insight }: { insight: Insight }) {
           
           <button 
             onClick={() => setExpanded(!expanded)}
-            className="text-[11px] font-mono text-muted group-hover:text-foreground flex items-center gap-1 bg-surface-2/60 px-2 py-1 rounded-md transition-colors"
+            className="text-[11px] font-mono text-[#6B7280] group-hover:text-[#0A0A0A] flex items-center gap-1 bg-[#F3F4F6] px-2 py-1 rounded-md transition-colors"
           >
             [Why?]
           </button>
@@ -87,7 +87,7 @@ function InsightCard({ insight }: { insight: Insight }) {
                 transition={{ duration: 0.8, ease: [0.25, 1, 0.5, 1] }} // Level 3 Cinematic
                 className="overflow-hidden transform-gpu"
               >
-                <div className="p-4 rounded-xl bg-surface-2/80 border border-border-subtle shadow-inner">
+                <div className="p-4 rounded-xl bg-[#F9FAFB] border border-[rgba(10,10,10,0.06)] shadow-inner">
                   <h4 className="text-[10px] font-mono uppercase tracking-widest text-muted mb-3">Supported By</h4>
                   <div className="space-y-4">
                     <div>
@@ -167,7 +167,7 @@ export default function ContextEnvironment() {
                 Explore your context...
               </h1>
               
-              <div className="w-full bg-surface-1/80 backdrop-blur-xl border border-border-strong rounded-2xl shadow-float p-2 flex items-center gap-2 transition-all focus-within:border-primary focus-within:ring-4 ring-primary/10">
+              <div className="w-full bg-white border border-[rgba(10,10,10,0.15)] rounded-2xl shadow-sm p-2 flex items-center gap-2 transition-all focus-within:border-[#6366F1] focus-within:ring-4 ring-[rgba(99,102,241,0.1)]">
                 <Search className="w-5 h-5 text-muted ml-3 shrink-0" />
                 <input
                   type="text"
@@ -192,7 +192,7 @@ export default function ContextEnvironment() {
                   <button
                     key={suggestion}
                     onClick={() => handleAsk(suggestion)}
-                    className="px-4 py-2 rounded-full border border-border-subtle bg-surface-1/50 backdrop-blur-sm text-xs text-muted hover:text-foreground hover:bg-surface-2 transition-colors cursor-pointer shadow-sm"
+                    className="px-4 py-2 rounded-full border border-[rgba(10,10,10,0.08)] bg-white text-xs text-[#6B7280] hover:text-[#0A0A0A] hover:bg-[#F9FAFB] transition-colors cursor-pointer shadow-sm"
                   >
                     "{suggestion}"
                   </button>
@@ -232,8 +232,8 @@ export default function ContextEnvironment() {
               </div>
 
               {/* Context Package */}
-              <div className="bg-surface-1/70 backdrop-blur-xl border border-border-subtle rounded-3xl shadow-float overflow-hidden">
-                <div className="px-6 py-4 border-b border-border-subtle bg-surface-2/60 flex items-center justify-between">
+              <div className="bg-white border border-[rgba(10,10,10,0.08)] rounded-3xl shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-[rgba(10,10,10,0.06)] bg-[#F9FAFB] flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <MetaphorLogo size={18} />
                     <span className="font-semibold text-foreground text-sm tracking-tight">Context Package</span>
@@ -249,7 +249,7 @@ export default function ContextEnvironment() {
                   {/* Synthesis */}
                   <section>
                     <h2 className="text-[10px] font-mono uppercase tracking-widest text-muted mb-4 border-b border-border-subtle pb-2">Synthesis</h2>
-                    <div className="prose prose-invert max-w-none text-foreground leading-relaxed">
+                    <div className="prose max-w-none text-foreground leading-relaxed" style={{ fontFamily: "Satoshi, sans-serif" }}>
                       {result.synthesis}
                     </div>
                   </section>
@@ -269,7 +269,7 @@ export default function ContextEnvironment() {
                     <h2 className="text-[10px] font-mono uppercase tracking-widest text-muted mb-4 border-b border-border-subtle pb-2">Related Evidence</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {result.evidence.map((doc) => (
-                        <div key={doc} className="flex items-center justify-between p-3 rounded-xl bg-surface-2/40 border border-border-subtle hover:border-border-strong hover:bg-surface-2 transition-all cursor-pointer group">
+                        <div key={doc} className="flex items-center justify-between p-3 rounded-xl bg-[#F9FAFB] border border-[rgba(10,10,10,0.06)] hover:border-[rgba(10,10,10,0.15)] hover:bg-white transition-all cursor-pointer group shadow-sm">
                           <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">{doc}</span>
                           <ChevronRight className="w-4 h-4 text-muted group-hover:translate-x-1 group-hover:text-foreground transition-all" />
                         </div>

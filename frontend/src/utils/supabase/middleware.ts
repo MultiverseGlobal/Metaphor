@@ -52,7 +52,7 @@ export async function updateSession(request: NextRequest) {
   const isUnlocked = request.cookies.has("metaphor_unlocked");
   const isAuthenticated = !hasSupabaseConfig || !!user || isUnlocked;
 
-  const isProtectedRoute = request.nextUrl.pathname.startsWith('/home') || request.nextUrl.pathname.startsWith('/inbox');
+  const isProtectedRoute = request.nextUrl.pathname.startsWith('/world') || request.nextUrl.pathname.startsWith('/inbox');
   const isLoginRoute = request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup';
 
   if (!isAuthenticated && isProtectedRoute) {
@@ -69,29 +69,29 @@ export async function updateSession(request: NextRequest) {
   const isExplicitLanding = request.cookies.has("metaphor_signed_out") || request.nextUrl.searchParams.has("landing");
   if (isAuthenticated && isLandingPage && !isExplicitLanding) {
     const url = request.nextUrl.clone()
-    url.pathname = hasOnboarded ? '/home' : '/onboarding'
+    url.pathname = hasOnboarded ? '/world' : '/onboard'
     return NextResponse.redirect(url)
   }
 
   if (isAuthenticated && isLoginRoute) {
     const url = request.nextUrl.clone()
     const redirectParam = request.nextUrl.searchParams.get('redirect')
-    url.pathname = redirectParam || (hasOnboarded ? '/home' : '/onboarding')
+    url.pathname = redirectParam || (hasOnboarded ? '/world' : '/onboard')
     url.searchParams.delete('redirect')
     return NextResponse.redirect(url)
   }
 
   if (isAuthenticated && isProtectedRoute && !hasOnboarded) {
     const url = request.nextUrl.clone()
-    url.pathname = '/onboarding'
+    url.pathname = '/onboard'
     url.searchParams.set('redirect', request.nextUrl.pathname)
     return NextResponse.redirect(url)
   }
 
-  if (isAuthenticated && hasOnboarded && request.nextUrl.pathname === '/onboarding') {
+  if (isAuthenticated && hasOnboarded && request.nextUrl.pathname.startsWith('/onboard')) {
     const url = request.nextUrl.clone()
     const redirectParam = request.nextUrl.searchParams.get('redirect')
-    url.pathname = redirectParam || '/home'
+    url.pathname = redirectParam || '/world'
     url.searchParams.delete('redirect')
     return NextResponse.redirect(url)
   }

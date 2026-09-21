@@ -92,6 +92,15 @@ function ToolCard({
   const isConnected = state === "connected";
   const isConnecting = state === "connecting";
   const isError = state === "error";
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const handleAction = () => {
+    if (tool.connectionType === "mcp") {
+      setIsExpanded(!isExpanded);
+    } else {
+      onConnect(tool.id);
+    }
+  };
 
   return (
     <motion.div
@@ -155,7 +164,7 @@ function ToolCard({
       <div className="flex items-center gap-2">
         {!isConnected ? (
           <button
-            onClick={() => onConnect(tool.id)}
+            onClick={handleAction}
             disabled={isConnecting}
             className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-[12px] font-semibold transition-all"
             style={{
@@ -213,6 +222,45 @@ function ToolCard({
           </a>
         )}
       </div>
+
+      {/* Inline Connection Panel for MCP */}
+      <AnimatePresence>
+        {isExpanded && !isConnected && tool.connectionType === "mcp" && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="pt-4 mt-2 border-t border-[rgba(10,10,10,0.06)] flex flex-col gap-3">
+              <p className="text-[12px] text-[#6B7280]" style={{ fontFamily: "Satoshi, sans-serif" }}>
+                Add this to your <span className="label-mono">mcp_config.json</span>:
+              </p>
+              <div className="p-3 bg-[#F9FAFB] border border-[rgba(10,10,10,0.08)] rounded-lg text-[11px] text-[#0A0A0A] overflow-x-auto" style={{ fontFamily: "JetBrains Mono, monospace" }}>
+                <pre>
+{`{
+  "mcpServers": {
+    "${tool.id}": {
+      "command": "npx",
+      "args": ["-y", "@metaphor/${tool.id}"]
+    }
+  }
+}`}
+                </pre>
+              </div>
+              <button
+                onClick={() => {
+                  setIsExpanded(false);
+                  onConnect(tool.id);
+                }}
+                className="btn-primary w-full text-[12px] py-1.5 min-h-[36px]"
+              >
+                Verify Connection
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -262,14 +310,8 @@ export default function OnboardStep2() {
     setToolStates((prev) => ({ ...prev, [id]: "connecting" }));
 
     const tool = TOOLS.find((t) => t.id === id);
-    if (tool?.connectionType === "mcp") {
-      // Navigate to MCP setup screen
-      await new Promise((r) => setTimeout(r, 300));
-      router.push(`/onboard/connecting/${id}`);
-      return;
-    }
 
-    // Simulate OAuth / API key flow (replace with real implementation)
+    // Simulate connection flow
     await new Promise((r) => setTimeout(r, 1400 + Math.random() * 600));
 
     // Randomly succeed/error for demo (in production, hook real auth)
@@ -280,7 +322,7 @@ export default function OnboardStep2() {
   const handleContinue = async () => {
     setIsProceeding(true);
     await new Promise((r) => setTimeout(r, 200));
-    router.push("/onboard/ready");
+    router.push("/signup");
   };
 
   return (
