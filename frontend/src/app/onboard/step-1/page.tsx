@@ -113,7 +113,7 @@ export default function OnboardStep1() {
       </header>
 
       {/* ── Main ── */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 w-full max-w-2xl mt-32 mb-24">
+      <main className="flex-1 flex flex-col items-center justify-center px-6 w-full max-w-2xl pt-16 mt-32 mb-24">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}

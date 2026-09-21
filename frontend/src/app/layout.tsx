@@ -44,7 +44,7 @@ export default function RootLayout({
       <head>
       </head>
       {/* Metaphor is light-mode first. White canvas, glass surfaces, indigo signal. */}
-      <body className={`${cormorant.variable} ${geist.variable} ${jetbrainsMono.variable} antialiased min-h-screen bg-white text-[#0A0A0A]`}>
+      <body className={`${cormorant.variable} ${geist.variable} ${jetbrainsMono.variable} antialiased min-h-screen bg-transparent text-[#0A0A0A]`}>
         <CanvasSea />
         <ThemeProvider
           attribute="class"

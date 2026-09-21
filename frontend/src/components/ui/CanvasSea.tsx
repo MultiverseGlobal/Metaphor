@@ -32,6 +32,9 @@ export function CanvasSea() {
     return () => mediaQuery.removeEventListener("change", handler);
   }, []);
 
+  const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
+  const [isHovering, setIsHovering] = useState(false);
+
   useEffect(() => {
     if (prefersReducedMotion) return;
 
@@ -64,6 +67,16 @@ export function CanvasSea() {
 
     const handleMouseMove = (e: MouseEvent) => {
       mouseMovedSinceLastFrame = true;
+      setMousePos({ x: e.clientX, y: e.clientY });
+      
+      // Check if hovering over clickable element
+      const target = e.target as HTMLElement;
+      setIsHovering(
+        window.getComputedStyle(target).cursor === "pointer" ||
+        target.tagName.toLowerCase() === "a" ||
+        target.tagName.toLowerCase() === "button"
+      );
+
       // Add a point to the wake
       points.push({
         x: e.clientX,
@@ -198,11 +211,28 @@ export function CanvasSea() {
   }
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="fixed inset-0 z-[-10] pointer-events-none w-full h-full bg-[var(--color-background)]"
-      style={{ backgroundColor: "#F7F8F6" }} // sea-base fallback
-      aria-hidden="true"
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        className="fixed inset-0 pointer-events-none w-full h-full bg-[#FFFFFF]"
+        style={{ zIndex: -1 }}
+        aria-hidden="true"
+      />
+      {/* Custom Ink Cursor */}
+      <div 
+        className="fixed top-0 left-0 pointer-events-none rounded-full bg-[var(--color-ink)] transition-transform duration-100 ease-out"
+        style={{
+          width: isHovering ? '12px' : '8px',
+          height: isHovering ? '12px' : '8px',
+          transform: `translate(${mousePos.x - (isHovering ? 6 : 4)}px, ${mousePos.y - (isHovering ? 6 : 4)}px)`,
+          zIndex: 9999,
+          opacity: mousePos.x === -100 ? 0 : 1,
+        }}
+      />
+      <style dangerouslySetInnerHTML={{ __html: `
+        body { cursor: none !important; }
+        a, button, input, [role="button"] { cursor: none !important; }
+      `}} />
+    </>
   );
 }
