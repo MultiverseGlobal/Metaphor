@@ -1,7 +1,6 @@
 "use client";
 
-import React from "react";
-import { Link as LinkIcon, PuzzlePiece, Cpu } from "phosphor-react";
+import { Link as LinkIcon, Puzzle, Cpu } from "lucide-react";
 
 export default function ConnectionsPage() {
   return (
@@ -23,7 +22,7 @@ export default function ConnectionsPage() {
           </div>
           <div className="bg-white border border-[rgba(10,10,10,0.06)] rounded-xl p-6 flex flex-col items-center justify-center text-center gap-3">
             <div className="w-12 h-12 rounded-full bg-[rgba(10,10,10,0.04)] flex items-center justify-center text-[#6B7280]">
-              <PuzzlePiece size={24} />
+              <Puzzle size={24} />
             </div>
             <p className="text-[14px] text-[#374151]" style={{ fontFamily: "Satoshi, sans-serif" }}>
               No custom MCP servers configured yet.
