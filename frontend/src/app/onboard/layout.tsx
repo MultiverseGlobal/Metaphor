@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 export default function OnboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-transparent flex flex-col">
       {children}
     </div>
   );
