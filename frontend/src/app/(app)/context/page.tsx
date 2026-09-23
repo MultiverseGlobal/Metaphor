@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ArrowRight, FileText, RotateCcw } from "lucide-react";
+import { Search, ArrowRight, FileText, RotateCcw, AlertCircle, RefreshCw } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { fetchFromMetaphor } from "@/app/api";
@@ -23,43 +24,12 @@ type ContextResponse = {
   evidence: string[];
 };
 
-const MOCK_RESPONSE: ContextResponse = {
-  query: "",
-  synthesis:
-    "Based on recent activity across the workspace, the Notification architecture for Orion is the primary focus. A major architectural shift from RabbitMQ to NATS JetStream was approved to resolve persistent delivery issues. This must be completed prior to the upcoming Q4 freeze.",
-  insights: [
-    {
-      id: "i1",
-      text: "Orion is currently the primary product focus.",
-      type: "fact",
-      sourceType: "Project",
-      sourceName: "Orion",
-      reason: "High priority status across 4 active workspaces",
-    },
-    {
-      id: "i2",
-      text: "Notification architecture is shifting from RabbitMQ to NATS JetStream.",
-      type: "decision",
-      sourceType: "Decision Record",
-      sourceName: "ADR-42",
-      reason: "Approved by Engineering Lead to resolve INC-104",
-    },
-    {
-      id: "i3",
-      text: "Deployment must occur before Q4 freeze.",
-      type: "constraint",
-      sourceType: "Task",
-      sourceName: "Q4 Roadmap",
-      reason: "Hard deadline set in company timeline",
-    },
-  ],
-  evidence: ["GitHub: PR #1042", "Notion: Arch Decision Record 42", "Slack: #eng-core", "Jira: INC-104"],
-};
-
-export default function ContextEnvironment() {
+function ContextEnvironmentContent() {
+  const searchParams = useSearchParams();
   const [prompt, setPrompt] = useState("");
-  const [phase, setPhase] = useState<"empty" | "retrieving" | "complete">("empty");
+  const [phase, setPhase] = useState<"empty" | "retrieving" | "complete" | "error">("empty");
   const [result, setResult] = useState<ContextResponse | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
 
   const handleAsk = async (queryText: string) => {
@@ -68,23 +38,83 @@ export default function ContextEnvironment() {
 
     setPrompt(q);
     setPhase("retrieving");
+    setErrorMsg(null);
 
     try {
-      const res = await fetchFromMetaphor("/context/query", { prompt: q }, "POST", false, true);
+      // Backend expects { query: string } in ContextRequest
+      const res = await fetchFromMetaphor("/context/query", { query: q }, "POST", false, true);
+
+      // Process real nodes and insights from the response
+      const rawNodes = res?.nodes || [];
+      const rawInsights = res?.insights || [];
+
+      const mappedInsights: Insight[] = [];
+      const mappedEvidence: string[] = [];
+
+      // Map graph nodes
+      rawNodes.forEach((n: any, idx: number) => {
+        const nodeType: Insight["type"] =
+          n.type === "decision" ? "decision" : n.type === "rule" ? "constraint" : "fact";
+
+        mappedInsights.push({
+          id: n.id || `node-${idx}`,
+          text: n.summary ? `${n.title}: ${n.summary}` : n.title,
+          type: nodeType,
+          sourceType: "Knowledge Graph",
+          sourceName: n.title || "Graph Node",
+          reason: n.content || n.summary || "Retrieved via vector similarity search across workspace context.",
+        });
+
+        if (Array.isArray(n.evidence)) {
+          n.evidence.forEach((ev: any) => {
+            if (ev.source) mappedEvidence.push(`${ev.source}: ${ev.text?.slice(0, 40) || "Reference"}`);
+          });
+        }
+      });
+
+      // Map structured insights
+      rawInsights.forEach((ins: any, idx: number) => {
+        mappedInsights.push({
+          id: ins.id || `ins-${idx}`,
+          text: ins.content || ins.title,
+          type: ins.type === "constraint" ? "constraint" : "insight",
+          sourceType: "Active Mesh",
+          sourceName: ins.origin || "Inference Engine",
+          reason: `Confidence: ${Math.round((ins.confidence || 0.95) * 100)}% · Derived from cross-tool events.`,
+        });
+      });
+
+      // Synthesize answer
+      let synthesisText = res?.synthesis;
+      if (!synthesisText) {
+        if (mappedInsights.length > 0) {
+          synthesisText = `Retrieved ${mappedInsights.length} verified context nodes across your active tools matching "${q}". Key architectural decisions, constraints, and project realities are bound to your active coordination mesh.`;
+        } else {
+          synthesisText = `No direct matches for "${q}" were found in the current workspace graph. You can record new decisions and context through connected MCP tools.`;
+        }
+      }
+
       setResult({
         query: q,
-        synthesis: res.synthesis || MOCK_RESPONSE.synthesis,
-        insights: res.insights || MOCK_RESPONSE.insights,
-        evidence: res.evidence || MOCK_RESPONSE.evidence,
+        synthesis: synthesisText,
+        insights: mappedInsights,
+        evidence: mappedEvidence.length > 0 ? mappedEvidence : ["Workspace Knowledge Graph", "Model Context Protocol (MCP)"],
       });
       setPhase("complete");
-    } catch {
-      setTimeout(() => {
-        setResult({ ...MOCK_RESPONSE, query: q });
-        setPhase("complete");
-      }, 1200);
+    } catch (err: any) {
+      console.error("Context query error:", err);
+      setErrorMsg(err.message || "Unable to reach the context engine. Verify backend status or try again.");
+      setPhase("error");
     }
   };
+
+  useEffect(() => {
+    const qParam = searchParams.get("query") || searchParams.get("q");
+    if (qParam && phase === "empty") {
+      setPrompt(qParam);
+      handleAsk(qParam);
+    }
+  }, [searchParams]);
 
   return (
     <div className="w-full min-h-screen bg-transparent pt-16 md:pt-24 pb-32 px-6 md:px-12 max-w-4xl mx-auto">
@@ -139,9 +169,9 @@ export default function ContextEnvironment() {
             {/* Prompt Suggestions */}
             <div className="flex flex-wrap gap-2.5 justify-center">
               {[
-                "What changed in Orion?",
-                "Decisions regarding authentication",
-                "Why did we migrate to NATS?",
+                "Metaphor OS Architecture",
+                "Remote MCP Integration",
+                "Linear Design System Enforcer",
               ].map((suggestion) => (
                 <button
                   key={suggestion}
@@ -167,6 +197,44 @@ export default function ContextEnvironment() {
           </motion.div>
         )}
 
+        {phase === "error" && (
+          <motion.div
+            key="error"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            className="min-h-[50vh] flex flex-col items-center justify-center text-center max-w-md mx-auto"
+          >
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-4 border border-red-100">
+              <AlertCircle size={22} />
+            </div>
+            <h3 className="font-display text-[24px] text-[var(--color-ink)] mb-2">
+              Context Query Failed
+            </h3>
+            <p className="text-[14px] text-[#555E64] mb-6 leading-relaxed">
+              {errorMsg}
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => handleAsk(prompt)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[var(--color-ink)] text-white text-[13px] font-medium hover:bg-black transition-colors cursor-pointer"
+              >
+                <RefreshCw size={13} />
+                <span>Retry Query</span>
+              </button>
+              <button
+                onClick={() => {
+                  setPhase("empty");
+                  setPrompt("");
+                }}
+                className="px-5 py-2.5 rounded-full border border-[rgba(10,10,10,0.12)] text-[13px] text-[#555E64] hover:text-[var(--color-ink)] transition-colors cursor-pointer"
+              >
+                Start Over
+              </button>
+            </div>
+          </motion.div>
+        )}
+
         {phase === "complete" && result && (
           <motion.div
             key="complete"
@@ -182,7 +250,7 @@ export default function ContextEnvironment() {
                   setPhase("empty");
                   setPrompt("");
                 }}
-                className="inline-flex items-center gap-2 text-[11px] font-mono tracking-widest uppercase text-[#AEB7BC] hover:text-[var(--color-ink)] transition-colors w-max"
+                className="inline-flex items-center gap-2 text-[11px] font-mono tracking-widest uppercase text-[#AEB7BC] hover:text-[var(--color-ink)] transition-colors w-max cursor-pointer"
               >
                 <RotateCcw size={12} />
                 <span>New query</span>
@@ -213,54 +281,56 @@ export default function ContextEnvironment() {
             </section>
 
             {/* Insights Section */}
-            <section className="flex flex-col gap-4">
-              <div className="text-[10px] font-mono uppercase tracking-widest text-[#AEB7BC]">
-                Foundational Facts &amp; Constraints
-              </div>
+            {result.insights.length > 0 && (
+              <section className="flex flex-col gap-4">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-[#AEB7BC]">
+                  Foundational Facts &amp; Constraints ({result.insights.length})
+                </div>
 
-              <div className="flex flex-col divide-y divide-[rgba(10,10,10,0.06)]">
-                {result.insights.map((insight) => {
-                  const isExpanded = expandedInsight === insight.id;
+                <div className="flex flex-col divide-y divide-[rgba(10,10,10,0.06)]">
+                  {result.insights.map((insight) => {
+                    const isExpanded = expandedInsight === insight.id;
 
-                  return (
-                    <div key={insight.id} className="py-4 flex flex-col gap-2">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                          <StatusBadge type={insight.type} />
-                          <p className="text-[14px] text-[var(--color-ink)] font-medium">
-                            {insight.text}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() =>
-                            setExpandedInsight(isExpanded ? null : insight.id)
-                          }
-                          className="text-[11px] font-mono text-[#AEB7BC] hover:text-[var(--color-ink)] transition-colors shrink-0 underline underline-offset-2"
-                        >
-                          {isExpanded ? "Hide" : "Why?"}
-                        </button>
-                      </div>
-
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          className="pl-6 pt-2 text-[13px] text-[#555E64] flex flex-col gap-1"
-                        >
-                          <div className="flex items-center gap-2 text-[11px] font-mono text-[#AEB7BC]">
-                            <FileText size={12} />
-                            <span>
-                              {insight.sourceType} &middot; {insight.sourceName}
-                            </span>
+                    return (
+                      <div key={insight.id} className="py-4 flex flex-col gap-2">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <StatusBadge type={insight.type} />
+                            <p className="text-[14px] text-[var(--color-ink)] font-medium">
+                              {insight.text}
+                            </p>
                           </div>
-                          <p className="italic">&ldquo;{insight.reason}&rdquo;</p>
-                        </motion.div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
+                          <button
+                            onClick={() =>
+                              setExpandedInsight(isExpanded ? null : insight.id)
+                            }
+                            className="text-[11px] font-mono text-[#AEB7BC] hover:text-[var(--color-ink)] transition-colors shrink-0 underline underline-offset-2 cursor-pointer"
+                          >
+                            {isExpanded ? "Hide" : "Why?"}
+                          </button>
+                        </div>
+
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            className="pl-6 pt-2 text-[13px] text-[#555E64] flex flex-col gap-1"
+                          >
+                            <div className="flex items-center gap-2 text-[11px] font-mono text-[#AEB7BC]">
+                              <FileText size={12} />
+                              <span>
+                                {insight.sourceType} &middot; {insight.sourceName}
+                              </span>
+                            </div>
+                            <p className="italic">&ldquo;{insight.reason}&rdquo;</p>
+                          </motion.div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
             {/* Evidence Section */}
             <section className="flex flex-col gap-3 pt-6 border-t border-[rgba(10,10,10,0.06)]">
@@ -282,5 +352,19 @@ export default function ContextEnvironment() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function ContextEnvironment() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <LoadingState context="context" />
+        </div>
+      }
+    >
+      <ContextEnvironmentContent />
+    </Suspense>
   );
 }

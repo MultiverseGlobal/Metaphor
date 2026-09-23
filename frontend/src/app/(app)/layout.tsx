@@ -2,16 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
 import { FloatingNav } from "@/components/layout/FloatingNav";
 import { CommandPalette } from "@/components/ui/CommandPalette";
-
-const PAGE_VARIANTS = {
-  initial:  { opacity: 0, y: 6, filter: "blur(4px)" },
-  animate:  { opacity: 1, y: 0, filter: "blur(0px)" },
-  exit:     { opacity: 0, y: -4, filter: "blur(2px)" },
-};
-const PAGE_TRANSITION = { duration: 0.3, ease: [0.16, 1, 0.3, 1] as const };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
@@ -31,7 +23,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   return (
-    <div className="relative min-h-screen w-screen bg-transparent text-[var(--color-ink)] overflow-x-hidden">
+    <div className="relative min-h-screen w-full bg-transparent text-[var(--color-ink)] overflow-x-hidden">
       {/* Command palette */}
       <CommandPalette open={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} />
 
@@ -40,20 +32,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Page Area */}
       <div className="flex w-full min-h-screen relative pt-24">
-        <main className="flex-1 w-full relative">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={pathname}
-              variants={PAGE_VARIANTS}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              transition={PAGE_TRANSITION}
-              className="w-full min-h-[calc(100vh-6rem)] flex flex-col"
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+        <main id="main-content" className="flex-1 w-full relative">
+          <div
+            key={pathname}
+            className="w-full min-h-[calc(100vh-6rem)] flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-forwards"
+          >
+            {children}
+          </div>
         </main>
       </div>
     </div>

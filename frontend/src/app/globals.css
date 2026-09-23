@@ -5,9 +5,9 @@
  * Display:  Cormorant Garamond (editorial authority — earned its place)
  * Body:     Satoshi (clean, modern, trustworthy)
  * Mono:     JetBrains Mono (data, code, audit trails)
- * Signal:   Indigo #6366F1 — the single Metaphor accent: precision, connection, trust
+ * Signal:   Monochrome Obsidian #111315 — clarity over atmosphere
  * Glass:    backdrop-blur(16–32px) + hairline borders — depth without weight
- * Rule:     No gradients on surfaces. No colour pollution. One accent. Full stop.
+ * Rule:     No gradients on surfaces. No colour pollution. One accent: Obsidian.
  * ─────────────────────────────────────────────────────────────────────────── */
 
 @theme {
@@ -28,19 +28,19 @@
 
   --color-muted: #6B7280;
 
-  /* ── Signal — The single Metaphor accent ─────────────────────────────── */
-  /* Indigo: precision, connection, network signal. Not generic AI-purple. */
-  --color-primary:       #6366F1;
-  --color-primary-dim:   rgba(99, 102, 241, 0.08);
-  --color-primary-hover: #4F46E5;
-  --color-primary-ring:  rgba(99, 102, 241, 0.25);
+  /* ── Signal — Monochrome Obsidian ────────────────────────────────────── */
+  /* Obsidian: precision, clarity, architectural confidence. */
+  --color-primary:       #111315;
+  --color-primary-dim:   rgba(17, 19, 21, 0.05);
+  --color-primary-hover: #2A2E33;
+  --color-primary-ring:  rgba(17, 19, 21, 0.15);
 
   /* Legacy aliases — kept for existing component compatibility */
-  --color-cta:        #6366F1;
-  --color-cta-dim:    rgba(99, 102, 241, 0.08);
-  --color-cta-hover:  #4F46E5;
-  --color-accent:     #6366F1;
-  --color-accent-dim: rgba(99, 102, 241, 0.08);
+  --color-cta:        #111315;
+  --color-cta-dim:    rgba(17, 19, 21, 0.05);
+  --color-cta-hover:  #2A2E33;
+  --color-accent:     #111315;
+  --color-accent-dim: rgba(17, 19, 21, 0.05);
 
   /* Status Semantic Colors */
   --color-success:     #16A34A;
@@ -79,7 +79,7 @@
   --shadow-lg:         0 16px 40px rgba(10, 10, 10, 0.08), 0 4px 8px rgba(10, 10, 10, 0.04);
   --shadow-float:      0 24px 60px rgba(10, 10, 10, 0.10), 0 8px 20px rgba(10, 10, 10, 0.05);
   --shadow-glass:      0 8px 32px rgba(10, 10, 10, 0.06), 0 0 0 1px rgba(10, 10, 10, 0.06);
-  --shadow-glow:       0 0 0 3px rgba(99, 102, 241, 0.15);
+  --shadow-glow:       0 0 0 3px rgba(17, 19, 21, 0.10);
 
   /* ── Motion System ────────────────────────────────────────────────────── */
   --motion-ease-reactive:  cubic-bezier(0.16, 1, 0.3, 1);
@@ -238,7 +238,7 @@ h1, h2, h3, h4, h5, h6, .font-display {
 }
 
 ::selection {
-  background: rgba(99, 102, 241, 0.12);
+  background: rgba(17, 19, 21, 0.08);
   color: var(--color-foreground);
 }
 
@@ -356,12 +356,12 @@ h1, h2, h3, h4, h5, h6, .font-display {
   animation: signalPulse 2.5s infinite;
 }
 @keyframes signalPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
-  50%       { box-shadow: 0 0 0 6px rgba(99, 102, 241, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(17, 19, 21, 0.3); }
+  50%       { box-shadow: 0 0 0 6px rgba(17, 19, 21, 0); }
 }
 @keyframes pulse-cta {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
-  50%       { box-shadow: 0 0 0 6px rgba(99, 102, 241, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(17, 19, 21, 0.3); }
+  50%       { box-shadow: 0 0 0 6px rgba(17, 19, 21, 0); }
 }
 @keyframes pulse-green {
   0%, 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4); }
@@ -410,7 +410,7 @@ h1, h2, h3, h4, h5, h6, .font-display {
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 
-/* Primary — indigo signal */
+/* Primary — monochrome obsidian */
 .btn-primary,
 .btn-flora-primary {
   display: inline-flex;
@@ -437,14 +437,14 @@ h1, h2, h3, h4, h5, h6, .font-display {
 .btn-flora-primary:hover:not(:disabled) {
   background: var(--color-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25);
+  box-shadow: 0 4px 16px rgba(17, 19, 21, 0.12);
 }
 .btn-primary:active,
 .btn-flora-primary:active { transform: translateY(0) scale(0.98); }
 .btn-primary:disabled,
 .btn-flora-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn-primary:focus-visible,
-.btn-flora-primary:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+.btn-flora-primary:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 3px; }
 
 /* Ghost — bordered, transparent */
 .btn-ghost,
@@ -716,8 +716,8 @@ h1, h2, h3, h4, h5, h6, .font-display {
   animation: floraRunningGlow 2s ease-in-out infinite;
 }
 @keyframes floraRunningGlow {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.3); }
-  50%       { box-shadow: 0 0 20px rgba(99, 102, 241, 0.20); }
+  0%, 100% { box-shadow: 0 0 0 1px rgba(17, 19, 21, 0.2); }
+  50%       { box-shadow: 0 0 20px rgba(17, 19, 21, 0.10); }
 }
 
 @keyframes signalFlow {

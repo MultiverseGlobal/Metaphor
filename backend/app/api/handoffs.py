@@ -1,23 +1,38 @@
 import uuid
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
 from pydantic import BaseModel
 
-from app.database.session import get_db
-from app.api.auth import get_authorized_consumer
+from app.database.session import get_session
+from app.core.security import get_authorized_participant
+from app.models.identity import Participant
 from app.services.retrieval import RetrievalScope
 from app.models.task_handoff import Task
-from app.services.handoff import HandoffService
+from app.services.handoff import HandoffService, get_workspace_autonomy_mode, set_workspace_autonomy_mode
 
 router = APIRouter(prefix="/handoffs", tags=["Handoffs"])
 
+
+async def get_handoff_scope(
+    participant: Participant = Depends(get_authorized_participant)
+) -> RetrievalScope:
+    allowed = participant.allowed_scopes if isinstance(participant.allowed_scopes, list) else ["global"]
+    return RetrievalScope(
+        participant_id=participant.id,
+        organization_id=participant.organization_id,
+        workspace_id=participant.workspace_id,
+        allowed_scopes=allowed
+    )
+
 class CreateHandoffRequest(BaseModel):
-    target_consumer_id: uuid.UUID
     title: str
     objective: str
     instructions: Optional[str] = None
     priority: str = "normal"
+    from_tool: str = "ChatGPT"
+    to_tool: str = "GitHub"
+    target_consumer_id: Optional[uuid.UUID] = None
     context_refs: List[Dict[str, Any]] = []
     artifact_refs: List[Dict[str, Any]] = []
     decision_refs: List[Dict[str, Any]] = []
@@ -26,8 +41,8 @@ class CreateHandoffRequest(BaseModel):
 @router.post("", response_model=Task)
 async def create_handoff(
     request: CreateHandoffRequest,
-    scope: RetrievalScope = Depends(get_authorized_consumer),
-    db: AsyncSession = Depends(get_db)
+    scope: RetrievalScope = Depends(get_handoff_scope),
+    db: AsyncSession = Depends(get_session)
 ):
     service = HandoffService(db)
     return await service.create_handoff(
@@ -37,6 +52,8 @@ async def create_handoff(
         objective=request.objective,
         instructions=request.instructions,
         priority=request.priority,
+        from_tool=request.from_tool,
+        to_tool=request.to_tool,
         context_refs=request.context_refs,
         artifact_refs=request.artifact_refs,
         decision_refs=request.decision_refs,
@@ -45,18 +62,19 @@ async def create_handoff(
 
 @router.get("", response_model=List[Task])
 async def list_pending_handoffs(
-    role: str = "target",
-    scope: RetrievalScope = Depends(get_authorized_consumer),
-    db: AsyncSession = Depends(get_db)
+    role: str = Query("target", description="Role: target or source"),
+    status: Optional[str] = Query(None, description="Filter by status (pending, completed, rejected)"),
+    scope: RetrievalScope = Depends(get_handoff_scope),
+    db: AsyncSession = Depends(get_session)
 ):
     service = HandoffService(db)
-    return await service.list_pending_handoffs(scope=scope, role=role)
+    return await service.list_pending_handoffs(scope=scope, role=role, status_filter=status)
 
 @router.get("/{handoff_id}", response_model=Task)
 async def get_handoff(
     handoff_id: uuid.UUID,
-    scope: RetrievalScope = Depends(get_authorized_consumer),
-    db: AsyncSession = Depends(get_db)
+    scope: RetrievalScope = Depends(get_handoff_scope),
+    db: AsyncSession = Depends(get_session)
 ):
     service = HandoffService(db)
     return await service.get_handoff(scope, handoff_id)
@@ -64,35 +82,17 @@ async def get_handoff(
 @router.post("/{handoff_id}/accept", response_model=Task)
 async def accept_handoff(
     handoff_id: uuid.UUID,
-    scope: RetrievalScope = Depends(get_authorized_consumer),
-    db: AsyncSession = Depends(get_db)
+    scope: RetrievalScope = Depends(get_handoff_scope),
+    db: AsyncSession = Depends(get_session)
 ):
     service = HandoffService(db)
     return await service.accept_handoff(scope, handoff_id)
 
-@router.post("/{handoff_id}/start", response_model=Task)
-async def start_handoff(
-    handoff_id: uuid.UUID,
-    scope: RetrievalScope = Depends(get_authorized_consumer),
-    db: AsyncSession = Depends(get_db)
-):
-    service = HandoffService(db)
-    return await service.start_handoff(scope, handoff_id)
-
-@router.post("/{handoff_id}/complete", response_model=Task)
-async def complete_handoff(
-    handoff_id: uuid.UUID,
-    scope: RetrievalScope = Depends(get_authorized_consumer),
-    db: AsyncSession = Depends(get_db)
-):
-    service = HandoffService(db)
-    return await service.complete_handoff(scope, handoff_id)
-
 @router.post("/{handoff_id}/reject", response_model=Task)
 async def reject_handoff(
     handoff_id: uuid.UUID,
-    scope: RetrievalScope = Depends(get_authorized_consumer),
-    db: AsyncSession = Depends(get_db)
+    scope: RetrievalScope = Depends(get_handoff_scope),
+    db: AsyncSession = Depends(get_session)
 ):
     service = HandoffService(db)
     return await service.reject_handoff(scope, handoff_id)
@@ -100,8 +100,43 @@ async def reject_handoff(
 @router.post("/{handoff_id}/cancel", response_model=Task)
 async def cancel_handoff(
     handoff_id: uuid.UUID,
-    scope: RetrievalScope = Depends(get_authorized_consumer),
-    db: AsyncSession = Depends(get_db)
+    scope: RetrievalScope = Depends(get_handoff_scope),
+    db: AsyncSession = Depends(get_session)
 ):
     service = HandoffService(db)
     return await service.cancel_handoff(scope, handoff_id)
+
+
+# ── Autonomy Policy ──────────────────────────────────────────────────────────
+
+class AutonomyPolicyResponse(BaseModel):
+    mode: str
+    label: str
+    description: str
+
+class SetAutonomyModeRequest(BaseModel):
+    mode: str  # manual | assisted | autonomous
+
+POLICY_META = {
+    "manual":     {"label": "Manual",     "description": "Every handoff requires explicit human approval before dispatch."},
+    "assisted":   {"label": "Assisted",   "description": "Safe handoffs auto-approve. High priority, constrained, or large bundles escalate to human review."},
+    "autonomous": {"label": "Autonomous", "description": "All handoffs execute immediately without human review. Zero-click pipeline."},
+}
+
+@router.get("/autonomy-policy", response_model=AutonomyPolicyResponse)
+async def get_autonomy_policy(
+    scope: RetrievalScope = Depends(get_handoff_scope),
+):
+    mode = get_workspace_autonomy_mode(scope.organization_id)
+    meta = POLICY_META.get(mode, POLICY_META["assisted"])
+    return AutonomyPolicyResponse(mode=mode, **meta)
+
+
+@router.put("/autonomy-policy", response_model=AutonomyPolicyResponse)
+async def update_autonomy_policy(
+    request: SetAutonomyModeRequest,
+    scope: RetrievalScope = Depends(get_handoff_scope),
+):
+    mode = set_workspace_autonomy_mode(request.mode, scope.organization_id)
+    meta = POLICY_META.get(mode, POLICY_META["assisted"])
+    return AutonomyPolicyResponse(mode=mode, **meta)

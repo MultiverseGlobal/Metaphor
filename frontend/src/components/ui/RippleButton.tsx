@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import Link from "next/link";
-import { useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface RippleButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   href?: string;

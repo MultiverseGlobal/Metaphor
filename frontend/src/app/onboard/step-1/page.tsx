@@ -1,212 +1,113 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
-import Link from "next/link";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight } from "@phosphor-icons/react";
+import { motion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
-
-// ── Step 1 — Name the beginning ───────────────────────────────────────────────
-
-const MAX_NAME = 48;
-const MAX_DESCRIPTION = 160;
-
-interface FormState {
-  name: string;
-  description: string;
-}
-
-function getStoredState(): FormState {
-  if (typeof window === "undefined") return { name: "", description: "" };
-  try {
-    const raw = sessionStorage.getItem("metaphor_onboard_step1");
-    return raw ? JSON.parse(raw) : { name: "", description: "" };
-  } catch {
-    return { name: "", description: "" };
-  }
-}
-
-function validateName(v: string) {
-  if (!v.trim()) return "Give your project a name";
-  if (v.trim().length < 2) return "Must be at least 2 characters";
-  if (v.length > MAX_NAME) return `Keep it under ${MAX_NAME} characters`;
-  return null;
-}
 
 export default function OnboardStep1() {
   const router = useRouter();
-  const [form, setForm] = useState<FormState>({ name: "", description: "" });
-  const [errors, setErrors] = useState<Partial<FormState>>({});
-  const [touched, setTouched] = useState({ name: false, description: false });
+  const [projectName, setProjectName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Restore state from sessionStorage (survives back-nav)
   useEffect(() => {
-    setForm(getStoredState());
+    try {
+      const stored = sessionStorage.getItem("metaphor_onboard_step1");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.name) setProjectName(parsed.name);
+      }
+    } catch {}
   }, []);
 
-  // Persist state on every change
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("metaphor_onboard_step1", JSON.stringify(form));
-    }
-  }, [form]);
+  const handleContinue = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const finalName = projectName.trim() || "Global Context";
 
-  const handleChange = useCallback((field: keyof FormState, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-    if (touched[field]) {
-      if (field === "name") {
-        const err = validateName(value);
-        setErrors((prev) => ({ ...prev, name: err || undefined }));
-      }
-    }
-  }, [touched]);
+    try {
+      sessionStorage.setItem(
+        "metaphor_onboard_step1",
+        JSON.stringify({ name: finalName })
+      );
+    } catch {}
 
-  const handleBlur = (field: keyof FormState) => {
-    setTouched((prev) => ({ ...prev, [field]: true }));
-    if (field === "name") {
-      const err = validateName(form.name);
-      setErrors((prev) => ({ ...prev, name: err || undefined }));
-    }
-  };
-
-  const handleContinue = async () => {
-    const nameErr = validateName(form.name);
-    if (nameErr) {
-      setErrors({ name: nameErr });
-      setTouched({ name: true, description: true });
-      return;
-    }
     setIsSubmitting(true);
-    // Brief pause for natural feel
-    await new Promise((r) => setTimeout(r, 180));
     router.push("/onboard/step-2");
   };
 
   return (
-    <div className="min-h-screen bg-transparent flex flex-col items-center">
-      {/* ── Header ── */}
-      <header className="fixed top-8 w-full max-w-4xl px-6 flex items-center justify-between z-50 pointer-events-none">
-        <div className="flex items-center justify-between w-full h-[52px] px-8 rounded-full glass-clear backdrop-blur-xl border border-[rgba(10,10,10,0.06)] shadow-[0_14px_40px_rgba(0,0,0,0.04)] pointer-events-auto">
-          <Link href="/" className="flex items-center gap-2 group" aria-label="Metaphor home">
-            <MetaphorLogo className="w-5 h-5 opacity-90 group-hover:opacity-100 transition-opacity" />
-            <span
-              className="text-[14px] font-medium tracking-wide text-[var(--color-ink)]"
-            >
-              Metaphor
-            </span>
-          </Link>
-          {/* Progress */}
-          <div className="flex items-center gap-4">
-            <div className="flex gap-2">
-              <div className="w-8 h-1 rounded-full bg-[var(--color-ink)]" />
-              <div className="w-8 h-1 rounded-full bg-[rgba(10,10,10,0.10)]" />
-            </div>
-            <span
-              className="text-[11px] text-[#AEB7BC] font-mono tracking-widest uppercase"
-            >
-              01 / 02
-            </span>
-          </div>
+    <div className="w-full min-h-screen flex flex-col justify-between p-6 md:p-12 max-w-3xl mx-auto">
+      {/* Top Header */}
+      <div className="flex items-center justify-between pb-6 border-b border-[rgba(10,10,10,0.06)]">
+        <div className="flex items-center gap-2.5">
+          <MetaphorLogo size={20} />
+          <span className="font-display text-[17px] font-medium text-[var(--color-ink)]">
+            Metaphor
+          </span>
         </div>
-      </header>
+        <div className="text-[11px] font-mono tracking-widest uppercase text-[#AEB7BC]">
+          Step 1 of 3 &middot; Identity
+        </div>
+      </div>
 
-      {/* ── Main ── */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 w-full max-w-2xl pt-16 mt-32 mb-24">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full flex flex-col gap-16"
+      {/* Main Content Area */}
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="my-auto py-12 flex flex-col items-center text-center"
+      >
+        <span className="text-[11px] font-mono tracking-widest uppercase text-[#AEB7BC] mb-4">
+          Project Anchor
+        </span>
+
+        <h1
+          className="font-display text-[clamp(44px,6vw,68px)] leading-[1.04] tracking-[-0.015em] text-[var(--color-ink)] mb-4"
+          style={{ fontWeight: 400 }}
         >
-          {/* Heading */}
-          <div className="flex flex-col gap-6 text-center items-center">
-            <h1
-              className="font-display text-[clamp(44px,5vw,56px)] leading-[1.05] tracking-[-0.01em] text-[var(--color-ink)]"
-              style={{ fontWeight: 400 }}
+          What are you building?
+        </h1>
+
+        <p className="text-[17px] text-[#555E64] max-w-md mb-12 leading-relaxed">
+          Name your project or primary workspace to anchor the shared context graph across your tools.
+        </p>
+
+        <form onSubmit={handleContinue} className="w-full max-w-md">
+          <div className="relative mb-10">
+            <input
+              type="text"
+              autoFocus
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              placeholder="e.g. Orion, Atlas, Context Engine"
+              className="w-full px-0 py-3 bg-transparent border-b text-[24px] text-center text-[var(--color-ink)] placeholder:text-[rgba(10,10,10,0.2)] outline-none transition-colors"
+              style={{
+                fontFamily: "'Cormorant Garamond', var(--next-font-display), serif",
+                fontStyle: "italic",
+                borderBottomColor: projectName ? "var(--color-ink)" : "rgba(10,10,10,0.18)",
+              }}
+            />
+          </div>
+
+          <div className="flex items-center justify-center gap-4">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-[var(--color-ink)] text-white hover:bg-black transition-all text-[14px] font-medium shadow-sm hover:translate-y-[-1px] cursor-pointer disabled:opacity-50"
             >
-              What are you working on?
-            </h1>
-            <p className="text-[16px] text-[#3B4043] leading-relaxed max-w-md">
-              Give Metaphor a starting point. Every context, handoff, and coordination flows from this.
-            </p>
+              <span>Continue to Tool Mesh</span>
+              <ArrowRight size={15} />
+            </button>
           </div>
+        </form>
+      </motion.div>
 
-          {/* Form */}
-          <div className="flex flex-col gap-12 w-full max-w-md mx-auto">
-
-            {/* Project name */}
-            <div className="flex flex-col gap-4">
-              <label
-                htmlFor="project-name"
-                className="text-[11px] tracking-widest uppercase text-[#AEB7BC] font-mono text-center"
-              >
-                Project name
-              </label>
-
-              <div className="relative">
-                <input
-                  id="project-name"
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => handleChange("name", e.target.value)}
-                  onBlur={() => handleBlur("name")}
-                  maxLength={MAX_NAME + 5}
-                  placeholder="e.g. Clario notification system"
-                  className="w-full px-0 py-2 bg-transparent border-b text-center text-[24px] text-[var(--color-ink)] placeholder:text-[rgba(10,10,10,0.15)] outline-none transition-all"
-                  style={{
-                    fontFamily: "'Cormorant Garamond', var(--next-font-display), serif",
-                    fontStyle: "italic",
-                    borderBottomColor: errors.name
-                      ? "rgba(220,38,38,0.5)"
-                      : form.name
-                      ? "var(--color-ink)"
-                      : "rgba(10,10,10,0.10)",
-                  }}
-                  aria-invalid={!!errors.name}
-                  aria-describedby={errors.name ? "name-error" : undefined}
-                  autoFocus
-                />
-              </div>
-
-              {/* Error */}
-              <AnimatePresence>
-                {errors.name && (
-                  <motion.span
-                    id="name-error"
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="text-[13px] text-red-500 text-center"
-                  >
-                    {errors.name}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* CTA */}
-            <div className="flex justify-center mt-8">
-              <motion.button
-                onClick={handleContinue}
-                disabled={isSubmitting}
-                className="text-[14px] font-medium text-white bg-[#111315] hover:bg-[#2A2E33] transition-colors h-[48px] px-8 rounded-full flex items-center justify-center gap-3 w-full sm:w-auto"
-                whileTap={{ scale: 0.98 }}
-              >
-                {isSubmitting ? (
-                  <span>Setting up...</span>
-                ) : (
-                  <>
-                    <span>Continue to tools</span>
-                    <ArrowRight size={15} weight="bold" />
-                  </>
-                )}
-              </motion.button>
-            </div>
-          </div>
-        </motion.div>
-      </main>
+      {/* Footer hint */}
+      <div className="pt-6 border-t border-[rgba(10,10,10,0.06)] flex items-center justify-between text-[11px] font-mono text-[#AEB7BC]">
+        <span>You can rename or partition workspaces later</span>
+        <span>Press Enter &rarr;</span>
+      </div>
     </div>
   );
 }

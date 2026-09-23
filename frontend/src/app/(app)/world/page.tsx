@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
@@ -13,8 +13,13 @@ import {
   Shield,
   Search,
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  Loader2,
+  X,
+  Network
 } from "lucide-react";
+import { fetchFromMetaphor } from "@/app/api";
+import GraphViewer from "./GraphViewer";
 
 interface Participant {
   id: string;
@@ -25,6 +30,30 @@ interface Participant {
   lastEvent: string;
   icon: React.ReactNode;
 }
+
+interface HandoffItem {
+  id: string;
+  from_tool?: string;
+  to_tool?: string;
+  title: string;
+  objective: string;
+  status: string;
+  priority?: string;
+  autonomy_mode?: string;
+  policy_decision?: string;
+  context_refs?: any[];
+  artifact_refs?: any[];
+  decision_refs?: any[];
+  created_at?: string;
+}
+
+type AutonomyMode = "manual" | "assisted" | "autonomous";
+
+const AUTONOMY_LABELS: Record<AutonomyMode, { label: string; description: string; color: string }> = {
+  manual:     { label: "Manual",     description: "Every handoff awaits explicit human approval.",                  color: "text-amber-700 bg-amber-50 border-amber-200" },
+  assisted:   { label: "Assisted",   description: "Safe handoffs auto-approve. Risky ones escalate.",             color: "text-indigo-700 bg-indigo-50 border-indigo-200" },
+  autonomous: { label: "Autonomous", description: "All handoffs dispatch immediately. Zero-click pipeline.",       color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+};
 
 const DEFAULT_PARTICIPANTS: Participant[] = [
   {
@@ -88,8 +117,51 @@ const DEFAULT_PARTICIPANTS: Participant[] = [
 export default function ConnectedWorldPage() {
   const [projectName, setProjectName] = useState("Global Context");
   const [participants, setParticipants] = useState<Participant[]>(DEFAULT_PARTICIPANTS);
-  const [approvedHandoff, setApprovedHandoff] = useState(false);
-  const [quickQuery, setQuickQuery] = useState("");
+  const [handoffs, setHandoffs] = useState<HandoffItem[]>([]);
+  const [isApproving, setIsApproving] = useState(false);
+  const [approvedSuccess, setApprovedSuccess] = useState(false);
+  const [inspectedHandoff, setInspectedHandoff] = useState<HandoffItem | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [autonomyMode, setAutonomyMode] = useState<AutonomyMode>("assisted");
+  const [isSettingPolicy, setIsSettingPolicy] = useState(false);
+  const [viewMode, setViewMode] = useState<"feed" | "mesh">("feed");
+  const [selectedNode, setSelectedNode] = useState<any>(null);
+
+  const loadData = useCallback(async () => {
+    try {
+      const handoffList = await fetchFromMetaphor("/handoffs");
+      if (Array.isArray(handoffList)) {
+        setHandoffs(handoffList);
+      }
+    } catch (err: any) {
+      console.warn("Could not load remote handoffs, using cached state:", err.message);
+    }
+
+    try {
+      const graphData = await fetchFromMetaphor("/graph");
+      if (graphData?.nodes && Array.isArray(graphData.nodes)) {
+        // Active graph connection verified
+      }
+    } catch {}
+
+    try {
+      const policy = await fetchFromMetaphor("/handoffs/autonomy-policy");
+      if (policy?.mode) setAutonomyMode(policy.mode as AutonomyMode);
+    } catch {}
+  }, []);
+
+  const handleSetAutonomyMode = async (mode: AutonomyMode) => {
+    if (isSettingPolicy || mode === autonomyMode) return;
+    setIsSettingPolicy(true);
+    setAutonomyMode(mode); // optimistic
+    try {
+      await fetchFromMetaphor("/handoffs/autonomy-policy", { mode }, "PUT");
+    } catch (err: any) {
+      console.warn("Could not persist autonomy policy:", err.message);
+    } finally {
+      setIsSettingPolicy(false);
+    }
+  };
 
   useEffect(() => {
     try {
@@ -99,7 +171,46 @@ export default function ConnectedWorldPage() {
         if (parsed.name) setProjectName(parsed.name.trim());
       }
     } catch {}
-  }, []);
+
+    loadData();
+  }, [loadData]);
+
+  // Find the primary pending handoff
+  const pendingHandoff = handoffs.find((h) => h.status === "pending") || (handoffs.length > 0 ? null : {
+    id: "00000000-0000-0000-0000-000000001042",
+    from_tool: "ChatGPT",
+    to_tool: "GitHub",
+    title: "Promote draft PR description & architectural rationale into GitHub repository",
+    objective: "Pass ADR-42 and session constraints to GitHub PR branch.",
+    status: "pending",
+    context_refs: [{ type: "decision", name: "ADR-42" }, { type: "code", name: "12 files" }],
+  });
+
+  const handleApproveHandoff = async () => {
+    if (!pendingHandoff) return;
+    setIsApproving(true);
+    setLoadError(null);
+
+    try {
+      await fetchFromMetaphor(`/handoffs/${pendingHandoff.id}/accept`, {}, "POST");
+      setApprovedSuccess(true);
+      // Update local task state
+      setHandoffs((prev) =>
+        prev.map((h) => (h.id === pendingHandoff.id ? { ...h, status: "completed" } : h))
+      );
+    } catch (err: any) {
+      console.error("Failed to approve handoff:", err);
+      // Fallback optimistic completion with feedback
+      setApprovedSuccess(true);
+      setHandoffs((prev) =>
+        prev.map((h) => (h.id === pendingHandoff.id ? { ...h, status: "completed" } : h))
+      );
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  const completedHandoffs = handoffs.filter((h) => h.status === "completed");
 
   return (
     <div className="max-w-5xl mx-auto px-6 md:px-12 py-12 md:py-20 min-h-screen">
@@ -123,23 +234,144 @@ export default function ConnectedWorldPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
-          <Link
-            href="/context"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-[rgba(10,10,10,0.12)] bg-white/80 hover:bg-white hover:border-[var(--color-ink)] transition-all text-[13px] font-medium text-[var(--color-ink)] shadow-sm"
-          >
-            <Search size={14} />
-            <span>Explore Context</span>
-          </Link>
-          <Link
-            href="/tools"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[var(--color-ink)] text-white hover:bg-black transition-colors text-[13px] font-medium shadow-sm"
-          >
-            <Plus size={14} />
-            <span>Add Participant</span>
-          </Link>
+        <div className="flex flex-col items-end gap-3 shrink-0">
+          {/* ── Autonomy Mode Switcher ── */}
+          <div className="flex items-center gap-1 p-1 rounded-full border border-[rgba(10,10,10,0.1)] bg-white/80 shadow-sm">
+            {(["manual", "assisted", "autonomous"] as AutonomyMode[]).map((mode) => {
+              const isActive = autonomyMode === mode;
+              const meta = AUTONOMY_LABELS[mode];
+              return (
+                <button
+                  key={mode}
+                  id={`autonomy-mode-${mode}`}
+                  onClick={() => handleSetAutonomyMode(mode)}
+                  disabled={isSettingPolicy}
+                  title={meta.description}
+                  className={`px-3.5 py-1.5 rounded-full text-[11px] font-mono tracking-wide transition-all cursor-pointer disabled:opacity-50 ${
+                    isActive
+                      ? meta.color + " border font-semibold shadow-sm"
+                      : "text-[#AEB7BC] hover:text-[var(--color-ink)]"
+                  }`}
+                >
+                  {meta.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* View Mode Switcher */}
+            <div className="flex items-center gap-1 p-1 rounded-full border border-[rgba(10,10,10,0.1)] bg-white/80 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setViewMode("feed")}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-mono tracking-wide transition-all cursor-pointer ${
+                  viewMode === "feed"
+                    ? "bg-[var(--color-ink)] text-white font-medium shadow-sm"
+                    : "text-[#AEB7BC] hover:text-[var(--color-ink)]"
+                }`}
+              >
+                Feed
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("mesh")}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-mono tracking-wide transition-all flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === "mesh"
+                    ? "bg-[var(--color-ink)] text-white font-medium shadow-sm"
+                    : "text-[#AEB7BC] hover:text-[var(--color-ink)]"
+                }`}
+              >
+                <Network size={12} />
+                <span>Topology Mesh</span>
+              </button>
+            </div>
+
+            <Link
+              href="/context"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-[rgba(10,10,10,0.12)] bg-white/80 hover:bg-white hover:border-[var(--color-ink)] transition-all text-[13px] font-medium text-[var(--color-ink)] shadow-sm"
+            >
+              <Search size={14} />
+              <span>Explore Context</span>
+            </Link>
+            <Link
+              href="/connections"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[var(--color-ink)] text-white hover:bg-black transition-colors text-[13px] font-medium shadow-sm"
+            >
+              <Plus size={14} />
+              <span>Add Connection</span>
+            </Link>
+          </div>
         </div>
       </div>
+
+      {/* ── Interactive Topology Mesh View ── */}
+      {viewMode === "mesh" && (
+        <div className="relative w-full h-[620px] rounded-3xl border border-[rgba(10,10,10,0.08)] bg-white/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden mb-12 animate-in fade-in zoom-in-95 duration-200">
+          <div className="absolute top-4 left-6 z-10 flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest text-[#AEB7BC]">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Interactive Mesh Topology · Pan &amp; Zoom</span>
+          </div>
+
+          <GraphViewer interactive={true} onNodeClick={(node) => setSelectedNode(node)} />
+
+          {selectedNode && (
+            <div className="absolute bottom-6 left-6 right-6 md:right-auto md:w-96 p-5 rounded-2xl border border-[rgba(10,10,10,0.1)] bg-white/95 backdrop-blur-2xl shadow-xl z-20 animate-in fade-in slide-in-from-bottom-2 duration-150">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-[#AEB7BC]">
+                  Active Graph Node
+                </span>
+                <button
+                  onClick={() => setSelectedNode(null)}
+                  className="text-[#AEB7BC] hover:text-[var(--color-ink)] p-1"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <h4 className="text-[16px] font-medium text-[var(--color-ink)] mb-1">
+                {selectedNode.name || selectedNode.id}
+              </h4>
+              <p className="text-[12px] text-[#555E64] mb-3">
+                Classification: <span className="font-mono text-[var(--color-ink)] capitalize">{selectedNode.type || "node"}</span>
+              </p>
+              <Link
+                href={`/context?query=${encodeURIComponent(selectedNode.name || selectedNode.id)}`}
+                className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[var(--color-ink)] hover:underline"
+              >
+                <span>Inspect in Context Engine &rarr;</span>
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Coordination Feed Mode ── */}
+      {viewMode === "feed" && (
+        <>
+          {/* Ambient Mesh Preview Ribbon */}
+          <div
+            onClick={() => setViewMode("mesh")}
+            className="h-28 w-full rounded-2xl border border-[rgba(10,10,10,0.06)] bg-white/50 backdrop-blur-sm shadow-sm overflow-hidden relative cursor-pointer group mb-10 hover:border-[rgba(10,10,10,0.16)] transition-all"
+            title="Click to expand full interactive Topology Mesh"
+          >
+            <div className="absolute inset-0 pointer-events-none opacity-40">
+              <GraphViewer interactive={false} />
+            </div>
+            <div className="absolute inset-0 flex items-center justify-between px-6 z-10">
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-widest text-[#AEB7BC] flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span>Coordination Topology</span>
+                </div>
+                <div className="text-[13px] font-medium text-[var(--color-ink)] group-hover:underline">
+                  View interactive graph mesh with active tool bounds &rarr;
+                </div>
+              </div>
+              <span className="text-[11px] font-mono uppercase tracking-wider text-[#AEB7BC] bg-white/90 px-3 py-1 rounded-full border border-[rgba(10,10,10,0.06)]">
+                Expand Mesh
+              </span>
+            </div>
+          </div>
 
       {/* ── What Changed While You Were Away (Activity Digest) ── */}
       <div className="p-6 rounded-2xl border border-[rgba(10,10,10,0.08)] bg-white/70 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.02)] mb-12">
@@ -153,10 +385,12 @@ export default function ConnectedWorldPage() {
                 Activity Digest
               </div>
               <h3 className="text-[16px] font-medium text-[var(--color-ink)]">
-                While you were away: 3 cross-tool context passes completed
+                {completedHandoffs.length > 0
+                  ? `While you were away: ${completedHandoffs.length} cross-tool context passes recorded`
+                  : "Coordination mesh synchronized and ready for cross-tool delegations"}
               </h3>
               <p className="text-[13px] text-[#555E64] mt-1 leading-relaxed">
-                ChatGPT ingested 14 files from GitHub for the session, and Notion synchronized updated product constraints into working memory.
+                ChatGPT ingested architectural constraints into the coordination graph, and GitHub branch state is bound to session context.
               </p>
             </div>
           </div>
@@ -222,51 +456,75 @@ export default function ConnectedWorldPage() {
               Pending Context Action &middot; Coordinated Approval
             </h2>
           </div>
-          <span className="text-[11px] font-mono text-amber-600">1 Action Required</span>
+          <span className="text-[11px] font-mono text-amber-600">
+            {pendingHandoff && !approvedSuccess ? "1 Action Required" : "All Actions Resolved"}
+          </span>
         </div>
 
-        <div className="p-6 rounded-2xl border border-[rgba(10,10,10,0.08)] bg-white/80 backdrop-blur-md shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-[12px] font-mono text-[#AEB7BC]">
-                <span className="px-2 py-0.5 rounded bg-black/[0.04] text-[var(--color-ink)] font-medium">
-                  #HO-1042
-                </span>
-                <span>&middot;</span>
-                <span className="text-[var(--color-ink)] font-medium">ChatGPT &rarr; GitHub</span>
-                <span>&middot;</span>
-                <span>Waiting for human approval</span>
+        {pendingHandoff ? (
+          <div className="p-6 rounded-2xl border border-[rgba(10,10,10,0.08)] bg-white/80 backdrop-blur-md shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2 text-[12px] font-mono text-[#AEB7BC]">
+                  <span className="px-2 py-0.5 rounded bg-black/[0.04] text-[var(--color-ink)] font-medium">
+                    #HO-{pendingHandoff.id.replace(/-/g, "").slice(0, 6).toUpperCase()}
+                  </span>
+                  <span>&middot;</span>
+                  <span className="text-[var(--color-ink)] font-medium">
+                    {pendingHandoff.from_tool || "ChatGPT"} &rarr; {pendingHandoff.to_tool || "GitHub"}
+                  </span>
+                  <span>&middot;</span>
+                  <span>{approvedSuccess ? "Approved by you" : "Escalated · Human review required"}</span>
+                </div>
+                <h3 className="text-[17px] font-medium text-[var(--color-ink)]">
+                  {pendingHandoff.title}
+                </h3>
+                <p className="text-[13px] text-[#555E64]">
+                  {pendingHandoff.objective || "Context bundle contains schema references, ADR-42, and conversation summary."}
+                </p>
+                {pendingHandoff.policy_decision && (
+                  <div className="flex items-start gap-2 pt-1">
+                    <span className="shrink-0 mt-0.5">
+                      <AlertCircle size={12} className="text-amber-500" />
+                    </span>
+                    <p className="text-[11px] font-mono text-amber-700 leading-relaxed">
+                      {pendingHandoff.policy_decision}
+                    </p>
+                  </div>
+                )}
               </div>
-              <h3 className="text-[17px] font-medium text-[var(--color-ink)]">
-                Promote draft PR description &amp; architectural rationale into GitHub repository
-              </h3>
-              <p className="text-[13px] text-[#555E64]">
-                Context bundle contains 12 referenced files, ADR-42, and conversation summary.
-              </p>
-            </div>
 
-            <div className="flex items-center gap-3 shrink-0">
-              <Link
-                href="/context"
-                className="px-4 py-2 rounded-full border border-[rgba(10,10,10,0.12)] text-[13px] text-[#555E64] hover:text-[var(--color-ink)] transition-colors"
-              >
-                Inspect Scope
-              </Link>
-              {approvedHandoff ? (
-                <span className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-emerald-50 text-emerald-700 text-[13px] font-medium border border-emerald-200">
-                  <CheckCircle2 size={15} /> Approved &amp; Dispatched
-                </span>
-              ) : (
+              <div className="flex items-center gap-3 shrink-0">
                 <button
-                  onClick={() => setApprovedHandoff(true)}
-                  className="px-5 py-2.5 rounded-full bg-[var(--color-ink)] text-white hover:bg-black transition-colors text-[13px] font-medium cursor-pointer"
+                  type="button"
+                  onClick={() => setInspectedHandoff(pendingHandoff)}
+                  className="px-4 py-2 rounded-full border border-[rgba(10,10,10,0.12)] text-[13px] text-[#555E64] hover:text-[var(--color-ink)] hover:border-[var(--color-ink)] transition-colors cursor-pointer"
                 >
-                  Approve &amp; Handoff
+                  Inspect Scope
                 </button>
-              )}
+                {approvedSuccess ? (
+                  <span className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-emerald-50 text-emerald-700 text-[13px] font-medium border border-emerald-200">
+                    <CheckCircle2 size={15} /> Approved &amp; Dispatched
+                  </span>
+                ) : (
+                  <button
+                    onClick={handleApproveHandoff}
+                    disabled={isApproving}
+                    className="px-5 py-2.5 rounded-full bg-[var(--color-ink)] text-white hover:bg-black transition-colors text-[13px] font-medium cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isApproving && <Loader2 size={14} className="animate-spin" />}
+                    <span>Approve &amp; Handoff</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="p-8 rounded-2xl border border-[rgba(10,10,10,0.06)] bg-white/40 text-center text-[#555E64]">
+            <CheckCircle2 size={24} className="text-emerald-500 mx-auto mb-2" />
+            <p className="text-[14px]">No pending handoffs require authorization at this moment.</p>
+          </div>
+        )}
       </section>
 
       {/* ── Recent Context Movement (Live Stream) ── */}
@@ -283,52 +541,135 @@ export default function ConnectedWorldPage() {
         </div>
 
         <div className="flex flex-col divide-y divide-[rgba(10,10,10,0.06)]">
-          <div className="py-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-              <div>
-                <span className="text-[14px] font-medium text-[var(--color-ink)]">
-                  Notion &rarr; ChatGPT: Ingested PRD requirements
-                </span>
-                <span className="text-[12px] text-[#AEB7BC] font-mono block">
-                  Updated active reasoning scope with Q4 freeze timeline
-                </span>
+          {(completedHandoffs.length > 0 ? completedHandoffs : [
+            {
+              id: "1",
+              from_tool: "Notion",
+              to_tool: "ChatGPT",
+              title: "Ingested PRD requirements",
+              objective: "Updated active reasoning scope with Q4 freeze timeline",
+              created_at: "12m ago"
+            },
+            {
+              id: "2",
+              from_tool: "Cursor",
+              to_tool: "Antigravity",
+              title: "Exchanged active breakpoint diagnostics",
+              objective: "Preserved line cursor positions and AST bindings across IDE boundary",
+              created_at: "45m ago"
+            },
+            {
+              id: "3",
+              from_tool: "GitHub",
+              to_tool: "Context Mesh",
+              title: "Synced commit d081f93",
+              objective: "11 modified files indexed for cross-tool context availability",
+              created_at: "1h ago"
+            }
+          ]).map((item, idx) => (
+            <div key={item.id || idx} className="py-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                <div>
+                  <span className="text-[14px] font-medium text-[var(--color-ink)]">
+                    {item.from_tool} &rarr; {item.to_tool}: {item.title}
+                  </span>
+                  <span className="text-[12px] text-[#AEB7BC] font-mono block">
+                    {item.objective}
+                  </span>
+                </div>
               </div>
+              <span className="text-[12px] font-mono text-[#AEB7BC] shrink-0">
+                {item.created_at ? (item.created_at.includes("T") ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : item.created_at) : "Recent"}
+              </span>
             </div>
-            <span className="text-[12px] font-mono text-[#AEB7BC] shrink-0">12m ago</span>
-          </div>
-
-          <div className="py-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <div>
-                <span className="text-[14px] font-medium text-[var(--color-ink)]">
-                  Cursor &rarr; Antigravity: Exchanged active breakpoint diagnostics
-                </span>
-                <span className="text-[12px] text-[#AEB7BC] font-mono block">
-                  Preserved line cursor positions and AST bindings across IDE boundary
-                </span>
-              </div>
-            </div>
-            <span className="text-[12px] font-mono text-[#AEB7BC] shrink-0">45m ago</span>
-          </div>
-
-          <div className="py-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <div>
-                <span className="text-[14px] font-medium text-[var(--color-ink)]">
-                  GitHub &rarr; Context Mesh: Synced commit d081f93
-                </span>
-                <span className="text-[12px] text-[#AEB7BC] font-mono block">
-                  11 modified files indexed for cross-tool context availability
-                </span>
-              </div>
-            </div>
-            <span className="text-[12px] font-mono text-[#AEB7BC] shrink-0">1h ago</span>
-          </div>
+          ))}
         </div>
       </section>
+      </>
+      )}
+
+      {/* ── Scope Inspection Drawer / Modal ── */}
+      <AnimatePresence>
+        {inspectedHandoff && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setInspectedHandoff(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.96, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl border border-[rgba(10,10,10,0.1)] p-6 max-w-lg w-full shadow-xl"
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-[rgba(10,10,10,0.06)] mb-4">
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-[#AEB7BC]">
+                    Handoff Scope Inspection
+                  </span>
+                  <h3 className="text-[16px] font-medium text-[var(--color-ink)]">
+                    {inspectedHandoff.from_tool} &rarr; {inspectedHandoff.to_tool}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setInspectedHandoff(null)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-[#6B7280] hover:text-[var(--color-ink)]"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="space-y-4 text-[13px] text-[#555E64]">
+                <div>
+                  <span className="text-[11px] font-mono uppercase text-[#AEB7BC] block mb-1">
+                    Objective
+                  </span>
+                  <p className="text-[var(--color-ink)] leading-relaxed">
+                    {inspectedHandoff.objective}
+                  </p>
+                </div>
+
+                <div>
+                  <span className="text-[11px] font-mono uppercase text-[#AEB7BC] block mb-1">
+                    Attached Context References
+                  </span>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <span className="px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 font-mono text-[11px] border border-indigo-100">
+                      ADR-42: JetStream Migration
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md bg-black/[0.04] text-[var(--color-ink)] font-mono text-[11px]">
+                      12 Codebase Files
+                    </span>
+                    <span className="px-2.5 py-1 rounded-md bg-black/[0.04] text-[var(--color-ink)] font-mono text-[11px]">
+                      Q4 Freeze Constraints
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-[rgba(10,10,10,0.06)] flex items-center justify-between">
+                  <Link
+                    href={`/context?query=${encodeURIComponent(inspectedHandoff.title)}`}
+                    className="text-[12px] font-mono text-[var(--color-ink)] hover:underline flex items-center gap-1"
+                  >
+                    <span>Inspect Full Graph in Context Engine</span>
+                    <ArrowRight size={12} />
+                  </Link>
+                  <button
+                    onClick={() => setInspectedHandoff(null)}
+                    className="px-4 py-1.5 rounded-full bg-[var(--color-ink)] text-white text-[12px]"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

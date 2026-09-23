@@ -51,7 +51,7 @@ export async function updateSession(request: NextRequest) {
   const isAuthenticated = !!user || isUnlocked || (!hasSupabaseConfig && hasOnboarded);
 
   const pathname = request.nextUrl.pathname;
-  const isProtectedRoute = pathname.startsWith('/world') || pathname.startsWith('/inbox') || pathname.startsWith('/tools') || pathname.startsWith('/handoffs') || pathname.startsWith('/connections');
+  const isProtectedRoute = pathname.startsWith('/world') || pathname.startsWith('/tools') || pathname.startsWith('/handoffs') || pathname.startsWith('/context') || pathname.startsWith('/connections') || pathname.startsWith('/settings');
   const isAuthRoute = pathname === '/login' || pathname === '/signup';
   const isOnboardRoute = pathname.startsWith('/onboard');
 

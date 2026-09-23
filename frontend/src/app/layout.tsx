@@ -43,7 +43,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
       </head>
-      {/* Metaphor is light-mode first. White canvas, glass surfaces, indigo signal. */}
+      {/* Metaphor is light-mode first. White canvas, glass surfaces, monochrome obsidian signal. */}
       <body className={`${cormorant.variable} ${geist.variable} ${jetbrainsMono.variable} antialiased min-h-screen bg-transparent text-[#0A0A0A]`}>
         <CanvasSea />
         <ThemeProvider
