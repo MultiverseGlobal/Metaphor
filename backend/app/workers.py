@@ -4,9 +4,8 @@ from app.database.session import get_session_context
 from sqlmodel import select
 from app.models.operations import SyncJob
 from arq import create_pool
-from arq.connections import RedisSettings
-import urllib.parse
 from app.core.config import settings
+from app.core.redis_utils import parse_redis_settings
 
 logger = logging.getLogger(__name__)
 
@@ -16,10 +15,8 @@ async def resume_stuck_jobs():
     Called from main.py startup lifespan.
     """
     try:
-        parsed = urllib.parse.urlparse(settings.REDIS_URL)
-        redis_host = parsed.hostname or "localhost"
-        redis_port = parsed.port or 6379
-        redis = await create_pool(RedisSettings(host=redis_host, port=redis_port))
+        redis_settings = parse_redis_settings(settings.REDIS_URL)
+        redis = await create_pool(redis_settings)
 
         async with get_session_context() as session:
             stmt = select(SyncJob).where(SyncJob.status != "completed", SyncJob.status != "failed")

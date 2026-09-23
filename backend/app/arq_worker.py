@@ -173,15 +173,12 @@ async def startup(ctx):
 
 async def shutdown(ctx):
     pass
-
-# Extract host/port from REDIS_URL
-import urllib.parse
-parsed = urllib.parse.urlparse(settings.REDIS_URL)
-redis_host = parsed.hostname or "localhost"
-redis_port = parsed.port or 6379
+ 
+from app.core.redis_utils import parse_redis_settings
 
 class WorkerSettings:
     functions = [process_integration_sync, cleanup_expired_chat_sessions]
-    redis_settings = RedisSettings(host=redis_host, port=redis_port)
+    redis_settings = parse_redis_settings(settings.REDIS_URL)
     on_startup = startup
     on_shutdown = shutdown
+
