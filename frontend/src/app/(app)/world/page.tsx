@@ -19,7 +19,7 @@ import {
   Network
 } from "lucide-react";
 import { fetchFromMetaphor } from "@/app/api";
-import GraphViewer from "./GraphViewer";
+import GraphViewer from "../GraphViewer";
 
 interface Participant {
   id: string;
