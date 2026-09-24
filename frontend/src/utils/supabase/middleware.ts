@@ -81,11 +81,11 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Gate protected routes — redirect unauthenticated users to /login
+  // Gate protected routes — redirect unauthenticated users to landing page (/)
+  // so they see the marketing page and can choose to sign in or sign up.
   if (hasSupabaseConfig && !isAuthenticated && isProtectedRoute) {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    url.searchParams.set('redirect', pathname)
+    url.pathname = '/'
     return NextResponse.redirect(url)
   }
 
