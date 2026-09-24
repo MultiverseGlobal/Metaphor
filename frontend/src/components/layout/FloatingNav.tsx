@@ -109,8 +109,8 @@ export function FloatingNav({
         role="banner"
       >
         <div className="pointer-events-auto flex items-center h-[52px] px-6 md:px-8 rounded-full bg-white/85 backdrop-blur-xl border border-[rgba(10,10,10,0.06)] shadow-[0_14px_40px_rgba(0,0,0,0.04)] gap-4 md:gap-6">
-          {/* Logo Mark */}
-          <Link href="/world" className="flex items-center gap-2 group shrink-0" aria-label="Metaphor - Return to Connected World">
+          {/* Logo Mark - Links back to landing page */}
+          <Link href="/" className="flex items-center gap-2 group shrink-0" aria-label="Metaphor - Return to Landing Page">
             <MetaphorLogo size={20} className="text-[var(--color-ink)] group-hover:scale-105 transition-transform" />
             <span className="md:hidden font-display text-[15px] font-medium text-[var(--color-ink)]">
               Metaphor
@@ -174,10 +174,23 @@ export function FloatingNav({
               {isWaffleOpen && (
                 <div
                   ref={waffleRef}
-                  className="absolute right-0 top-10 w-56 p-2 rounded-2xl bg-white/95 backdrop-blur-xl border border-[rgba(10,10,10,0.08)] shadow-[0_16px_40px_rgba(0,0,0,0.08)] z-50 animate-in fade-in zoom-in-95 duration-150"
+                  className="absolute right-0 top-10 w-60 p-2 rounded-2xl bg-white/95 backdrop-blur-xl border border-[rgba(10,10,10,0.08)] shadow-[0_16px_40px_rgba(0,0,0,0.08)] z-50 animate-in fade-in zoom-in-95 duration-150"
                 >
                   <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest text-[#9CA3AF]">
                     Pseudonyms Ecosystem
+                  </div>
+                  <div className="p-1 mb-1">
+                    <Link
+                      href="/"
+                      onClick={() => setIsWaffleOpen(false)}
+                      className="block p-2 rounded-xl bg-[rgba(17,19,21,0.03)] hover:bg-[rgba(17,19,21,0.07)] border border-[rgba(10,10,10,0.08)] transition-colors"
+                    >
+                      <div className="text-[12px] font-medium text-[var(--color-ink)] flex items-center justify-between">
+                        <span>Landing Page</span>
+                        <span className="text-[10px] font-mono text-[#6B7280]">Home &rarr;</span>
+                      </div>
+                      <div className="text-[10px] text-[#6B7280]">Public overview & platform info</div>
+                    </Link>
                   </div>
                   <div className="grid grid-cols-2 gap-1.5 p-1">
                     <div className="p-2 rounded-xl bg-[rgba(17,19,21,0.04)] border border-[rgba(17,19,21,0.08)] text-left">
@@ -290,6 +303,15 @@ export function FloatingNav({
 
             {/* Navigation Links */}
             <nav className="flex-1 py-4 space-y-1 overflow-y-auto" aria-label="Mobile navigation routes">
+              <Link
+                href="/"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center justify-between px-3 py-2.5 rounded-xl text-base text-[#4B5563] hover:text-[var(--color-ink)] hover:bg-[rgba(10,10,10,0.02)] transition-colors border-b border-[rgba(10,10,10,0.04)] mb-2"
+                style={{ fontFamily: "var(--font-display), 'Cormorant Garamond', Georgia, serif" }}
+              >
+                <span>Landing Page (Overview)</span>
+                <span className="text-xs font-mono text-[#9CA3AF]">&rarr;</span>
+              </Link>
               {ROUTES.map((route) => {
                 const isActive = isRouteActive(route.path);
                 return (

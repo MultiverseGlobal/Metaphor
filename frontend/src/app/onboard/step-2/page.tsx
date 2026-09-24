@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowLeft, Check, CircleNotch, Link as LinkIcon } from "@phosphor-icons/react";
 import { MetaphorLogo } from "@/components/ui/MetaphorLogo";
+import { createClient } from "@/utils/supabase/client";
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -151,6 +152,18 @@ export default function OnboardStep2() {
           }
         });
         localStorage.setItem("metaphor_connections_v2", JSON.stringify(existingList));
+      }
+
+      // If user is already authenticated, finalize onboarding and enter world directly
+      const supabase = createClient();
+      const { data } = await supabase.auth.getSession();
+      if (data?.session?.user) {
+        if (typeof window !== "undefined") {
+          document.cookie = "metaphor_onboarded=true; path=/; max-age=31536000";
+          document.cookie = "metaphor_unlocked=true; path=/; max-age=31536000";
+        }
+        router.push("/world");
+        return;
       }
     } catch {}
 

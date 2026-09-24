@@ -45,8 +45,9 @@ export async function updateSession(request: NextRequest) {
   }
 
   const hasOnboarded = request.cookies.has("metaphor_onboarded");
-  // isAuthenticated: verified Supabase user, OR Supabase is not configured (local dev without keys)
-  const isAuthenticated = !!user || (!hasSupabaseConfig && hasOnboarded);
+  const isUnlocked = request.cookies.has("metaphor_unlocked");
+  // isAuthenticated: verified Supabase user, OR unlocked demo/guest session, OR completed onboarding, OR local dev
+  const isAuthenticated = !!user || isUnlocked || hasOnboarded || !hasSupabaseConfig;
 
   const pathname = request.nextUrl.pathname;
 
@@ -61,14 +62,6 @@ export async function updateSession(request: NextRequest) {
 
   const isAuthRoute = pathname === '/login' || pathname === '/signup';
   const isOnboardRoute = pathname.startsWith('/onboard');
-  const isRoot = pathname === '/';
-
-  // Redirect root "/" for already-authenticated+onboarded users straight to /world
-  if (isRoot && user && hasOnboarded) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/world'
-    return NextResponse.redirect(url)
-  }
 
   // Allow unrestricted access to onboarding and auth flows
   if (isOnboardRoute || isAuthRoute) {
@@ -81,9 +74,8 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Gate protected routes — redirect unauthenticated users to landing page (/)
-  // so they see the marketing page and can choose to sign in or sign up.
-  if (hasSupabaseConfig && !isAuthenticated && isProtectedRoute) {
+  // Gate protected routes — redirect unauthenticated visitors without an active or demo session to the landing page (/)
+  if (!isAuthenticated && isProtectedRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)

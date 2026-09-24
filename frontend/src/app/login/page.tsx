@@ -74,7 +74,7 @@ function LoginForm() {
 
     if (error) {
       if (error.message.toLowerCase().includes("invalid login credentials")) {
-        setError("Account not found or password incorrect.");
+        setError("Account not found or password incorrect. If you haven't created an account yet, click 'Create account' above.");
       } else {
         setError("Error signing in: " + error.message);
       }
@@ -85,18 +85,34 @@ function LoginForm() {
     setMessage("Success! Redirecting...");
 
     let finalTarget = redirectTarget;
+    if (typeof window !== "undefined") {
+      document.cookie = "metaphor_unlocked=true; path=/; max-age=31536000";
+    }
     if (data?.user) {
       const onboarded = !!data.user.user_metadata?.project_name;
       pushSettingsToCloud({ onboarded });
-      if (onboarded) {
+      if (typeof window !== "undefined") {
         document.cookie = "metaphor_onboarded=true; path=/; max-age=31536000";
-        if (finalTarget === "/onboard") {
-          finalTarget = "/world";
+        if (data.user.user_metadata?.full_name) {
+          localStorage.setItem("metaphor_user_name", data.user.user_metadata.full_name);
         }
+      }
+      if (finalTarget === "/onboard") {
+        finalTarget = "/world";
       }
     }
 
     router.push(finalTarget);
+  };
+
+  const handleGuestAccess = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("metaphor_user_name", "Guest Explorer");
+      document.cookie = "metaphor_onboarded=true; path=/; max-age=31536000";
+      document.cookie = "metaphor_unlocked=true; path=/; max-age=31536000";
+    }
+    pushSettingsToCloud({ onboarded: true });
+    router.push("/world");
   };
   const handleForgotPassword = async () => {
     if (!email) {
@@ -264,6 +280,16 @@ function LoginForm() {
               <span>{loading ? "Authenticating..." : "Sign In"}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
+
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={handleGuestAccess}
+                className="text-[12px] text-[#555E64] hover:text-[var(--color-ink)] underline underline-offset-4 transition-colors font-mono cursor-pointer"
+              >
+                Explore demo workspace without account &rarr;
+              </button>
+            </div>
           </form>
         </motion.div>
       </main>

@@ -63,6 +63,16 @@ function SignUpForm() {
     }
   };
 
+  const handleGuestAccess = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("metaphor_user_name", name || "Guest Explorer");
+      document.cookie = "metaphor_onboarded=true; path=/; max-age=31536000";
+      document.cookie = "metaphor_unlocked=true; path=/; max-age=31536000";
+    }
+    pushSettingsToCloud({ onboarded: true });
+    router.push(redirectTarget);
+  };
+
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -84,7 +94,7 @@ function SignUpForm() {
       if (tData) toolsObj = JSON.parse(tData);
     } catch {}
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -97,8 +107,43 @@ function SignUpForm() {
     });
 
     if (error) {
-      // If Supabase is unconfigured or returns offline demo, gracefully complete transition
-      console.warn("Supabase auth warning:", error.message);
+      // If user already exists, seamlessly try signing them in with their password!
+      const isAlreadyRegistered =
+        error.message?.toLowerCase().includes("already registered") ||
+        error.message?.toLowerCase().includes("already exists") ||
+        (error as any).status === 422;
+
+      if (isAlreadyRegistered) {
+        const { error: signInError, data: signInData } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (!signInError && signInData?.session) {
+          setMessage("Existing account verified. Launching your world...");
+          if (typeof window !== "undefined") {
+            localStorage.setItem(
+              "metaphor_user_name",
+              name || signInData.user?.user_metadata?.full_name || email.split("@")[0]
+            );
+            document.cookie = "metaphor_onboarded=true; path=/; max-age=31536000";
+            document.cookie = "metaphor_unlocked=true; path=/; max-age=31536000";
+          }
+          pushSettingsToCloud({ onboarded: true });
+          setTimeout(() => {
+            router.push(redirectTarget);
+          }, 400);
+          return;
+        } else {
+          setError("An account with this email already exists. Please verify your password or sign in.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      setError(error.message || "Failed to create account. Please try again.");
+      setLoading(false);
+      return;
     }
 
     setMessage("Workspace configured. Launching your world...");
@@ -107,13 +152,14 @@ function SignUpForm() {
     if (typeof window !== "undefined") {
       localStorage.setItem("metaphor_user_name", name || email.split("@")[0]);
       document.cookie = "metaphor_onboarded=true; path=/; max-age=31536000";
+      document.cookie = "metaphor_unlocked=true; path=/; max-age=31536000";
     }
 
     pushSettingsToCloud({ onboarded: true });
 
     setTimeout(() => {
       router.push(redirectTarget);
-    }, 500);
+    }, 400);
   };
 
   return (
@@ -338,6 +384,16 @@ function SignUpForm() {
                 <span>{loading ? "Creating workspace..." : "Create Workspace & Enter World"}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={handleGuestAccess}
+                  className="text-[12px] text-[#555E64] hover:text-[var(--color-ink)] underline underline-offset-4 transition-colors font-mono cursor-pointer"
+                >
+                  Explore demo workspace without account &rarr;
+                </button>
+              </div>
             </form>
           </motion.div>
         </div>
